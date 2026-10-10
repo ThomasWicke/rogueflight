@@ -68,6 +68,7 @@ button:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
 .cell.drop{outline:2px solid var(--signal);outline-offset:-2px}
 .ghost-part{position:fixed;width:64px;height:64px;pointer-events:none;z-index:40;transform:translate(-50%,-60%) scale(1.15);filter:drop-shadow(0 6px 10px rgba(0,0,0,.5))}
 .cell.on{border-style:solid;border-color:rgba(127,211,255,.35);background:rgba(127,211,255,.08)}
+.cell.blocked{border-color:var(--red);border-style:solid;box-shadow:inset 0 0 0 2px rgba(255,90,78,.35)}
 .cell.loose{opacity:.35;border-color:var(--red)}
 .cell.cock{border-color:var(--signal)}
 .ov{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
@@ -317,6 +318,7 @@ button:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
 .gr-grid i{aspect-ratio:1;border:1px dashed rgba(127,211,255,.22);border-radius:5px;display:grid;place-items:center}
 .gr-grid i.on{border-style:solid;border-color:rgba(127,211,255,.35);background:rgba(127,211,255,.08)}
 .gr-grid i.cock{border-color:var(--signal)}
+.gr-grid i.free{border-color:var(--good);background:rgba(111,220,154,.08)}
 .gr-grid i.loose{border-style:solid;border-color:var(--red);opacity:.45}
 .gr-grid img{width:94%;height:94%}
 .gr-bals{display:flex;justify-content:center;gap:14px}
@@ -351,3 +353,4 @@ button:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
 .gr-bolts circle{fill:var(--signal);stroke:#0c1a2c;stroke-width:1.5}
 .legend i.gr-bolt{background:var(--signal)}
 .legend i.gr-loose{border:1.5px solid var(--red);border-radius:3px;opacity:.7}
+.legend i.gr-free{border:1.5px dashed var(--good);border-radius:3px}

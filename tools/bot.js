@@ -89,13 +89,13 @@ function template(inv, st) {
   for (const t of Object.keys(n)) for (; n[t] > 0; n[t]--) placeValid(cells, t, st);
   return cells;
 }
-// bolt a part onto a random free cell where it connects; with no such cell it stays in the inventory
+// bolt a part onto a random free cell where it connects and blocks nothing; with no such cell it stays in the inventory
 function placeValid(cells, type, st) {
   const occ = new Set(cells.map((x) => x.c + ',' + x.r)), ok = [];
   for (let c = 0; c < COLS; c++) for (let r = 0; r < ROWS; r++) {
     if (occ.has(c + ',' + r)) continue;
     const K = makeCraft([...cells, { c, r, type }], st);
-    if (!K.loose) ok.push({ c, r });
+    if (!K.loose && !K.blocked) ok.push({ c, r });
   }
   if (ok.length) cells.push({ ...ok[Math.floor(Math.random() * ok.length)], type });
 }
@@ -119,7 +119,7 @@ function mutate(cells) {
 }
 function evaluate(cells, run, st) {
   const K = makeCraft(cells, st);
-  if (K.loose || !(K.counts.prop || K.counts.rocket)) return { score: -1 };
+  if (K.loose || K.blocked || !(K.counts.prop || K.counts.rocket)) return { score: -1 };
   let best = { score: -1 };
   for (const thr of POL.throttles) {
     const { S, K: K2 } = fly(K, st, POL.make(thr)());

@@ -46,7 +46,7 @@ Code style is dense (many one-line functions, short names: `S` flight state, `K`
 
 ### Building (`makeCraft`, `linkage`)
 - 7×5 grid, cockpit fixed at (2,2). Sockets per edge `[right(nose), top, left(tail), bottom]` in `SOCK`. Structural parts (`STRUCT`: cockpit, frame, tank) pass connections on; leaf parts must bolt to a structural part.
-- Wings mount on their bottom or side edges, balloons on their bottom edge (the string), props on their back edge, rockets on their top, bottom or nose edge. Engines work wherever they sit; nothing needs a free square in front or behind.
+- Wings mount on their bottom or side edges, balloons on their bottom edge (the string), props on their back edge, rockets on their top, bottom or nose edge. Props are blocked (no thrust, red outline) if the cell in front is occupied, rockets if the cell behind is occupied.
 - The bench overlay shows bolts and open sockets, the centre-of-mass marker, the centre-of-lift arrow, and dashed thrust lines (red when more than `GIMBAL`=0.4 m off the centre of mass).
 - Editor input: tap places the selected part or removes the same part. Press and hold (280 ms) to pick a part up; drop it on an empty cell to move it or onto a part to swap.
 

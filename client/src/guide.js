@@ -23,13 +23,13 @@ function artBuild() {
   let h = '';
   for (let r = 0; r < 3; r++) for (let c = 0; c < 5; c++) {
     const t = L[c + ',' + r];
-    h += `<i class="${t ? 'on' : ''}${t === 'cockpit' ? ' cock' : ''}${t === 'balloon' ? ' loose' : ''}">${t ? img(t) : ''}</i>`;
+    h += `<i class="${t ? 'on' : ''}${t === 'cockpit' ? ' cock' : ''}${t === 'balloon' ? ' loose' : ''}${c === 4 && r === 1 ? ' free' : ''}">${t ? img(t) : ''}</i>`;
   }
   // joints as [column, row] of the edge midpoint, in cells; one cell is 44 px plus a 3 px gap
   const at = (u) => u * 47 - 1.5;
   const bolts = [[1.5, 1], [2.5, 1], [1, 1.5], [2, 1.5], [3, 1.5], [1.5, 2]].map(([x, y]) => `<circle cx="${at(x)}" cy="${at(y)}" r="4.5"/>`).join('');
   return `<div class="gr-bench"><div class="gr-grid">${h}</div><svg class="gr-bolts" viewBox="0 0 232 138" aria-hidden="true">${bolts}</svg></div>
-  <div class="legend" style="justify-content:center"><span><i class="gr-bolt"></i>Bolt</span><span><i class="gr-loose"></i>Loose</span><span>Nose →</span></div>`;
+  <div class="legend" style="justify-content:center"><span><i class="gr-bolt"></i>Bolt</span><span><i class="gr-loose"></i>Loose</span><span><i class="gr-free"></i>Keep free</span><span>Nose →</span></div>`;
 }
 // side view: wing above the cockpit, mass marker just ahead of the lift arrow
 const balanceSvg = (liftX, ok) => `<svg viewBox="0 0 120 92" class="gr-bal ${ok ? 'ok' : 'bad'}" aria-hidden="true">
@@ -76,6 +76,7 @@ const SLIDES = [
   { t: 'Building', art: artBuild, p: [
     'Everything connects to the cockpit. Frames and tanks pass the connection on; wings, engines and balloons must touch one of them.',
     'Each part only bolts on at certain edges: propellers at their back, so they sit on the nose side; wings underneath or at the sides; balloons by their string. The bench shows the open sockets.',
+    'Propellers need a free square in front, rockets one behind for the exhaust. Blocked engines do nothing.',
     'Loose parts stay behind on the ground. Tap to place or remove, hold a part to move it.'] },
   { t: 'Balance', art: artBalance, p: [
     'Keep the mass marker a little in front of the lift arrow. Then the craft holds its nose steady.',

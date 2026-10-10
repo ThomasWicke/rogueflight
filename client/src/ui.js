@@ -193,10 +193,11 @@ function renderHangar(){
 function renderBuild(){
   const r=R(), st=curStats(), K=makeCraft(r.cells,st);
   const link=linkage(r.cells), conn=link.seen;
+  const blockedSet=new Set(K.parts.filter(p=>p.blocked).map(p=>p.gc+','+p.gr));
   const map=new Map(r.cells.map(x=>[x.c+','+x.r,x]));
   let cells='';
   for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){const k=x+','+y,p=map.get(k);
-    const cls='cell'+(p?' on':'')+(p&&!conn.has(k)?' loose':'')+(p&&p.type==='cockpit'?' cock':'');
+    const cls='cell'+(p?' on':'')+(p&&!conn.has(k)?' loose':'')+(p&&p.type==='cockpit'?' cock':'')+(blockedSet.has(k)?' blocked':'');
     cells+=`<button class="${cls}" data-c="${x}" data-r="${y}" type="button" aria-label="${p?PARTS[p.type].name:'Empty'} at column ${x+1}, row ${y+1}">${p?`<img alt="" src="${ICON[p.type]}">`:''}</button>`}
   const W=K.m*G0*st.grav, n=K.counts;
   const propT=n.prop*st.prop*st.rhoMul/W, rockT=n.rocket*st.rocket/W;
@@ -216,13 +217,13 @@ function renderBuild(){
     if(jointKey.has(p.c+','+p.r+','+e)&&live)ov+=`<ellipse cx="${x}" cy="${y}" rx=".09" ry=".09" class="bolt"/>`;
     else{const hz=e%2===0;ov+=`<rect x="${hz?x-(e===0?.07:0):x-.16}" y="${hz?y-.16:y-(e===3?.07:0)}" width="${hz?.07:.32}" height="${hz?.32:.07}" class="sock"/>`}}}
   // thrust lines: each engine's push runs along its row; it should pass through the mass marker
-  for(const p of K.parts){if(p.type!=='prop'&&p.type!=='rocket')continue;const y=p.gr+.5,bad=offLine(p.type==='prop'?K.propLine:K.rocketLine);
+  for(const p of K.parts){if((p.type!=='prop'&&p.type!=='rocket')||p.blocked)continue;const y=p.gr+.5,bad=offLine(p.type==='prop'?K.propLine:K.rocketLine);
     ov+=`<line x1="0" y1="${y}" x2="7" y2="${y}" stroke="${bad?'#ff6b5b':'rgba(233,241,247,.28)'}" stroke-width=".05" stroke-dasharray=".14 .12"/>`}
   if(K.parts.length){const cx=K.com.x,cy=K.com.y;
     if(off!=null)ov+=`<g class="col"><line x1="${cx+off}" y1="${cy-.55}" x2="${cx+off}" y2="${cy+.1}"/><path d="M${cx+off-.14} ${cy-.4}L${cx+off} ${cy-.62}L${cx+off+.14} ${cy-.4}Z"/></g>`;
     ov+=`<g class="com"><ellipse cx="${cx}" cy="${cy}" rx=".17" ry=".17" class="c0"/><path d="M${cx} ${cy}L${cx+.17} ${cy}A.17 .17 0 0 1 ${cx} ${cy+.17}Z M${cx} ${cy}L${cx-.17} ${cy}A.17 .17 0 0 1 ${cx} ${cy-.17}Z" class="c1"/></g>`}
   const w=curWx();
-  const warns=[];if(K.loose)warns.push(plural(K.loose,'loose part'));
+  const warns=[];if(K.loose)warns.push(plural(K.loose,'loose part'));if(K.blocked)warns.push(K.blocked+' blocked engine'+(K.blocked>1?'s':''));
   if(offLine(K.propLine))warns.push('propeller off-center');if(offLine(K.rocketLine))warns.push('rocket off-center');
   const rows=[['Mass',mul(K.m)+' t','']];
   if(off!=null)rows.push(['Balance',balTxt,balCls]);
