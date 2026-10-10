@@ -7,12 +7,12 @@ const img = (t, cls = '') => `<img class="${cls}" alt="" src="${ICON[t]}">`;
 /* ---------- illustrations (small HTML/SVG pictures, styled in style.css under .gr-) ---------- */
 const artRun = () => `<div class="gr-run">
   <div class="gr-pips">${Array.from({ length: 8 }, (_, i) => `<i class="${i < 2 ? 'done' : i === 2 ? 'now storm' : i === 5 || i === 7 ? 'storm' : ''}">${i + 1}</i>`).join('')}</div>
-  <div class="gr-flights"><span class="label">Show 3</span><span class="fpips"><i class="used"></i><i class="used"></i><i></i></span></div>
+  <div class="gr-flights"><span class="label">Contract 3</span><span class="fpips"><i class="used"></i><i class="used"></i><i></i></span></div>
   <div class="cbar"><i style="transform:scaleX(.72)"></i><span>1,440 / 2,000</span></div></div>`;
-const artPacks = () => `<div class="gr-packs"><div class="gr-pack"><div class="pk-face"><div class="pk-brace"></div><div class="pk-mark">?</div><div class="pk-band">SCRAP</div></div></div>
+const artPacks = () => `<div class="gr-packs"><div class="gr-pack"><div class="pk-face"><div class="pk-brace"></div><div class="pk-mark">?</div><div class="pk-band">PARTS</div></div></div>
   <svg class="gr-arrow" viewBox="0 0 40 20" aria-hidden="true"><path d="M2 10h30M26 4l8 6-8 6"/></svg>
   <div class="gr-four">${img('tank')}${img('wing')}${img('prop')}<span>?</span></div></div>
-  <div class="gr-row"><span class="label">First town</span><b>4 crates</b><span class="label">Then</span><b>2 per town</b></div>`;
+  <div class="gr-row"><span class="label">Contract 1</span><b>4 packs</b><span class="label">Then</span><b>2 per contract</b></div>`;
 // a small bench: amber bolts where parts connect, and a balloon that touches nothing structural (loose, so it stays behind)
 function artBuild() {
   const L = { '1,0': 'wing', '2,0': 'wing', '0,1': 'rocket', '1,1': 'cockpit', '2,1': 'frame', '3,1': 'prop', '1,2': 'tank', '4,0': 'balloon' };
@@ -49,12 +49,12 @@ const artAlt = () => `<div class="gr-alt">
   <div class="gr-clock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/></svg><b>5:00</b><span>per flight</span></div>`;
 /* ---------- slides ---------- */
 const SLIDES = [
-  { t: 'The tour', art: artRun, p: [
-    'Eight towns, three flights each. Every flight scores distance × mult; reach the town\'s target or the tour ends.',
-    'Storm clouds on the route mean bad weather, forecast from the start. Build for it early.'] },
-  { t: 'Crates & dealer', art: artPacks, p: [
-    'Every town starts with scrap crates: 4 in the first (tank, wing, engine + 1), then 2.',
-    'The junk dealer is always open, but new stock only arrives after a sold-out show.'] },
+  { t: 'The run', art: artRun, p: [
+    '8 contracts, 3 flights each. Your flights add up: reach the target or the run ends.',
+    'Storm clouds on the route mark storm contracts, known from the start. Build for them early.'] },
+  { t: 'Packs & shop', art: artPacks, p: [
+    'Each contract starts with packs of parts: 4 in the first (tank, wing, engine + 1), then 2.',
+    'The shop is always open, but new stock only arrives after you clear a contract.'] },
   { t: 'Building', art: artBuild, p: [
     'Everything connects to the cockpit through frames and tanks. Hold a part to move it.',
     'Propellers need a free square in front, rockets one behind. Blocked engines do nothing.'] },

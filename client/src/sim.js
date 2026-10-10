@@ -145,7 +145,7 @@ const QUOTA=[500,1100,2000,4000,7500,16000,30000,54000];
 function quotaFor(i,level){const q=i<CONTRACTS?QUOTA[i]:QUOTA[CONTRACTS-1]*Math.pow(2.5,i-CONTRACTS+1);return Math.round(q*(1+.25*(level||0))/10)*10}
 // Ceiling levels: every level adds +25% quota; even levels also add a rule (cumulative)
 const MAX_CEILING=10;
-const CEILING_RULES={2:'Dealer prices +1',4:'Show 5 has a storm too',6:'1 scrap crate per town after the first',8:'Storms hit harder',10:'4-minute flight clock'};
+const CEILING_RULES={2:'Shop prices +1',4:'Contract 5 has a storm too',6:'1 pack per contract after the first',8:'Storms hit harder',10:'4-minute flight clock'};
 const ceilingRules=level=>Object.keys(CEILING_RULES).filter(k=>+k<=(level||0)).map(k=>CEILING_RULES[k]);
 const isStorm=(i,level)=>i===CONTRACTS-1||i%3===2||((level||0)>=4&&i===4);
 // storm strength grows with the contract; from Ceiling 8 every storm counts as two contracts later

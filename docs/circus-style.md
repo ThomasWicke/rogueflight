@@ -69,7 +69,8 @@ uncommon = tin plate (rounded rect with rivets), rare = enamel badge (shield/cir
 - Swing and ragtime band feel; foley (wood, canvas, rope, tin, crowd). A procedural engine.
 - A three-note brass motif is the signature (logo, contract cleared, win).
 
-## Fiction mapping (light renames; tooltips keep the system words)
-Contract = a show in a named town. Quota = crowd target. Score = crowd. Coins = cash.
-Packs = scrap crates. Mods = sponsor decals (levels = bigger, shinier decals). Storms = weather fronts.
-Storm reward = a gift from the town. Ceiling = circuit tier. Run over = tour cancelled. Endless = the encore tour.
+## Words: plain game terms
+The circus lives in the art, the sound, town names and the Gazette headlines. Every label, button and rule uses plain game terms,
+the same everywhere: **Run**, **Contract** (shown with its town's name), **Flight**, **Score**, **Target**, **Coins**, **Shop**,
+**Packs**, **Mods** (the art draws them as decals), **Tuning**, **Storm**, **Storm reward**, **Ceiling**, **Endless**.
+Avoid synonyms (tour, season, show, crowd, cash, dealer, crate, gift, encore).

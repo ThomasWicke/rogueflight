@@ -29,13 +29,13 @@
 <!-- the barn: the show poster on top, the workbench in the middle, the dealer / launch / decals bar at the thumb -->
 <section class="screen barn" id="hangar" hidden>
   <div class="htop">
-    <div class="chips left"><span class="chip cash" aria-label="Cash"><i class="cn"></i><b id="hCoins">0</b></span><span class="chip" id="hCeil" hidden></span></div>
+    <div class="chips left"><span class="chip cash" aria-label="Coins"><i class="cn"></i><b id="hCoins">0</b></span><span class="chip" id="hCeil" hidden></span></div>
     <div class="chips"><button class="chip help" id="hSound" type="button" aria-label="Sound on">&#9835;</button><button class="chip help" id="hHelp" type="button" aria-label="How to play">?</button></div>
   </div>
   <div class="poster" id="cstrip"></div>
   <div class="bench" id="bench"></div>
   <div class="hbar">
-    <button class="tool" id="tShop" type="button"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12.5V4.6c0-.9.7-1.6 1.6-1.6h7.9l9 9-9.5 9.5z" fill="currentColor" stroke="#22283a" stroke-width="2" stroke-linejoin="round"/><circle cx="8" cy="8" r="1.8" fill="#22283a"/></svg><span>Dealer</span></button>
+    <button class="tool" id="tShop" type="button"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12.5V4.6c0-.9.7-1.6 1.6-1.6h7.9l9 9-9.5 9.5z" fill="currentColor" stroke="#22283a" stroke-width="2" stroke-linejoin="round"/><circle cx="8" cy="8" r="1.8" fill="#22283a"/></svg><span>Shop</span></button>
     <button class="big" id="launch" type="button">LAUNCH</button>
     <button class="tool" id="tMods" type="button"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 16.9 6.3 20l1.2-6.4L2.8 9.2l6.4-.8z" fill="currentColor" stroke="#22283a" stroke-width="2" stroke-linejoin="round"/></svg><span id="tModsL">Mods</span></button>
   </div>
@@ -46,7 +46,7 @@
   <div class="dr-scrim" id="dealerScrim"></div>
   <div class="dr-panel dealer">
     <div class="dr-grab" aria-hidden="true"></div>
-    <div class="dr-head"><span class="label" id="dealerTitle">Junk dealer</span><button class="dr-x" id="dealerX" type="button" aria-label="Close">&times;</button></div>
+    <div class="dr-head"><span class="label" id="dealerTitle">Shop</span><button class="dr-x" id="dealerX" type="button" aria-label="Close">&times;</button></div>
     <div class="dr-body" id="dealerBody"></div>
   </div>
 </div>

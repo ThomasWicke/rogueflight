@@ -2,7 +2,7 @@
 
 Roguelite flying-machine builder for phones. Build a craft on a 7×5 grid (Bad Piggies style), launch it, fly it with simple but honest physics, and hit escalating score quotas across 8 contracts per run (Slay the Spire / CloverPit structure). Plain JS + Vite, no framework. Installed and played as a PWA, deployed on Cloudflare Pages.
 
-Visual identity: **The Flying Circus**. A broke barnstorming troupe tours eight towns per season in a junk plane flown by a goat; every flight is a show and the score is the crowd. Read `docs/circus-style.md` before drawing or styling anything.
+Visual identity: **The Flying Circus**. A broke barnstorming troupe tours eight towns per season in a junk plane flown by a goat; every flight is a show and the score is the crowd. Read `docs/circus-style.md` before drawing or styling anything. Labels and rules use plain game terms (Run, Contract, Flight, Score, Target, Coins, Shop, Packs, Mods, Tuning, Storm reward, Ceiling, Endless); the fiction stays in visuals, town names and headlines.
 
 The game was prototyped as a single-file Claude artifact under the working title **Skyward** and ported here. Old run codes from the prototype start with `SKYWARD ` instead of `ROGUEFLIGHT `.
 

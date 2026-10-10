@@ -71,20 +71,20 @@ function renderTitle(){
   let h='';
   if(r){
     const tw=townOf(r.seed,r.stage);
-    h+=`<div class="card stack"><span class="label">On tour</span>
-      <p class="hint">Show ${r.stage+1}${r.endless?' (encore tour)':' of '+CONTRACTS}: <strong>${tw.town}</strong> · ${r.coins} cash · ${plural(r.mods.length,'mod')}${r.level?' · Ceiling '+r.level:''}</p>
-      <button class="big" id="cont" type="button">Back on the road</button>
-      <button class="ghost${armAbandon?' armed':''}" id="aband" type="button">${armAbandon?'Tap again to cancel':'Cancel the tour'}</button></div>`;
+    h+=`<div class="card stack"><span class="label">Current run</span>
+      <p class="hint">Contract ${r.stage+1}${r.endless?' (endless)':' of '+CONTRACTS}: <strong>${tw.town}</strong> · ${r.coins} coins · ${plural(r.mods.length,'mod')}${r.level?' · Ceiling '+r.level:''}</p>
+      <button class="big" id="cont" type="button">Continue run</button>
+      <button class="ghost${armAbandon?' armed':''}" id="aband" type="button">${armAbandon?'Tap again to abandon':'Abandon run'}</button></div>`;
   }else{
-    h+=`<div class="card"><span class="label">A new season</span>
+    h+=`<div class="card"><span class="label">New run</span>
       ${m.level>0?`<div style="margin-top:12px"><div class="row" style="margin-bottom:6px"><span class="label">Ceiling</span></div><div class="seg" id="lvl">${Array.from({length:m.level+1},(_,i)=>`<button type="button" data-l="${i}" aria-pressed="${i===pickLevel}">${i}</button>`).join('')}</div>
         ${pickLevel?`<div class="crules"><span>+${pickLevel*25}% score targets</span>${ceilingRules(pickLevel).map(t=>`<span>${t}</span>`).join('')}</div>`:''}</div>`:''}
-      <div style="margin-top:12px"><button class="big" id="start" type="button">Start the tour</button></div></div>`;
+      <div style="margin-top:12px"><button class="big" id="start" type="button">Start run</button></div></div>`;
   }
   h+=`<div><button class="ghost howto${m.guideSeen?'':' new'}" id="howto" type="button">How to play</button></div>`;
-  h+=`<div class="card"><span class="label">Scrapbook</span>
-    <dl class="stats"><dt>Tours</dt><dd>${m.runs}</dd><dt>Seasons won</dt><dd>${m.wins}</dd><dt>Most shows in a tour</dt><dd>${m.deepest||m.bestStage}</dd><dt>Best score</dt><dd>${fmt(m.bestFlight)}</dd>${m.level?`<dt>Highest Ceiling</dt><dd>${m.level}</dd>`:''}</dl>
-    <div class="row" style="margin-top:12px"><span class="label">Unlocks</span><span class="hint">shows in one tour</span></div>
+  h+=`<div class="card"><span class="label">Stats</span>
+    <dl class="stats"><dt>Runs</dt><dd>${m.runs}</dd><dt>Wins</dt><dd>${m.wins}</dd><dt>Most contracts in a run</dt><dd>${m.deepest||m.bestStage}</dd><dt>Best score</dt><dd>${fmt(m.bestFlight)}</dd>${m.level?`<dt>Highest Ceiling</dt><dd>${m.level}</dd>`:''}</dl>
+    <div class="row" style="margin-top:12px"><span class="label">Unlocks</span><span class="hint">contracts in one run</span></div>
     <ul class="unl">${UNLOCKS.map(u=>{const d=m.bestStage>=u.at;return `<li class="${d?'done':''}"><i>${d?'\u2713':u.at}</i><span>${u.text}</span></li>`}).join('')}</ul>${m.lastRun?'<div style="margin-top:12px"><button class="ghost" type="button" data-copyrun="last">Copy last run</button></div>':''}</div>`;
   $('titleBody').innerHTML=h;
   startTitleScene();
@@ -156,14 +156,14 @@ function routeStrip(r){
     if(done)h+=`<path d="M${x(i)-3} ${y(i)}l2.4 2.6 4.4-5" class="rtick"/>`;
     if(w)h+=`<g class="rcloud" transform="translate(${x(i)} ${y(i)-15})"><path d="M-8 3a4 4 0 0 1 2-7a5 5 0 0 1 9-1a4 4 0 0 1 5 5a3 3 0 0 1-1 3z"/><path d="M-1 4l-2 5 3-1-1 4" class="rbolt"/></g>`;}
   const names=[];for(let i=r.stage+1;i<n;i++){const w=weatherOf(r,i);if(w)names.push(`<span title="${WEATHER[w].d(severity(r,i))}"><b>${i+1}</b>${WEATHER[w].name}</span>`)}
-  return `<svg class="route" viewBox="0 0 ${W} 46" role="img" aria-label="Tour route: show ${r.stage+1} of ${n}">${h}</svg>${names.length?`<div class="fcast">${names.join('')}</div>`:''}`;
+  return `<svg class="route" viewBox="0 0 ${W} 46" role="img" aria-label="Route: contract ${r.stage+1} of ${n}">${h}</svg>${names.length?`<div class="fcast">${names.join('')}</div>`:''}`;
 }
 function forecast(r){const out=[];for(let i=r.stage+1;i<CONTRACTS;i++){const w=weatherOf(r,i);if(w)out.push(`<span title="${WEATHER[w].d(severity(r,i))}"><b>${i+1}</b>${WEATHER[w].name}</span>`)}
   return out.length?`<div class="fcast">${out.join('')}</div>`:''}
 // the show poster: town, which show of the season, the crowd target with a thermometer, ticket stubs for flights left
 function renderStrip(){
   const r=R(),q=quotaFor(r.stage,r.level),w=curWx(),t=townOf(r.seed,r.stage);
-  const sub=`Show ${r.stage+1}${r.endless?' · encore tour':' of '+CONTRACTS}`;
+  const sub=`Contract ${r.stage+1}${r.endless?' · endless':' of '+CONTRACTS}`;
   const stubs=`<span class="fpips" aria-label="${FLIGHTS-r.flight} flights left">${Array.from({length:FLIGHTS},(_,i)=>`<i class="${i<r.flight?'used':''}"></i>`).join('')}</span>`;
   const storm=w?`<div class="pstorm"><b>${WEATHER[w].name}</b>${WEATHER[w].d(severity(r,r.stage))}</div>`:'';
   const p=r.phase==='shop'?0:Math.min(1,r.score/q);
@@ -181,7 +181,7 @@ function renderHangar(){
   renderBuild();
   dbody.onclick=null;
   if(tab==='shop')renderShop();else if(tab==='mods')renderMods();
-  $('launch').textContent=r.phase==='shop'?`START SHOW ${r.stage+1}`:'LAUNCH!';
+  $('launch').textContent=r.phase==='shop'?`START CONTRACT ${r.stage+1}`:'LAUNCH!';
 }
 
 function renderBuild(){
@@ -228,14 +228,14 @@ function renderBuild(){
   if(n.balloon)rows.push(['Balloons',ratio(bal),'']);
   bench.innerHTML=`
   <div class="card">
-    <div class="row"><span class="label">Workbench</span><button class="ghost${armClear?' armed':''}" id="clear" type="button" ${r.cells.length<=1?'disabled':''}>${armClear?'Tap again':'Clear'}</button></div>
+    <div class="row"><span class="label">Build</span><button class="ghost${armClear?' armed':''}" id="clear" type="button" ${r.cells.length<=1?'disabled':''}>${armClear?'Tap again':'Clear'}</button></div>
     <div class="grid" id="grid">${cells}<svg class="ov" viewBox="0 0 7 5" preserveAspectRatio="none" aria-hidden="true">${ov}</svg></div>
     <div class="legend"><span><i class="lg-com"></i>Mass</span><span><i class="lg-col"></i>Lift</span><span style="margin-left:auto">Nose \u2192</span></div>
     <div class="pal" id="pal">${PALETTE.map(t=>`<button type="button" data-t="${t}" aria-pressed="${t===sel}"><img alt="" src="${ICON[t]}"><span>${PARTS[t].name}</span><small class="${left(t)?'':'none'}">${left(t)}/${owned(t)}</small></button>`).join('')}</div>
     <div class="blurb" id="blurb">${warns.length?`<span class="warn">${warns.join(' \u00b7 ')}</span>`:''}</div>
   </div>
   <div class="card">
-    <span class="label">Spec sheet</span>
+    <span class="label">Craft</span>
     <dl class="stats">${rows.map(([a,b,c])=>`<dt>${a}</dt><dd class="${c}">${b}</dd>`).join('')}</dl>
   </div>`;
   $('grid').onclick=e=>{if(skipClick){skipClick=false;return}const b=e.target.closest('.cell');if(b)placeAt(+b.dataset.c,+b.dataset.r)};
@@ -294,10 +294,10 @@ function renderShop(){
   const tunes=S.tunes.map((o,i)=>{const T=TUNES[o.k],L=r.tune[o.k]||0;return `<div class="offer${o.sold?' sold':''}"><div class="glyph C" aria-hidden="true">+</div><div><h3>${T.name}</h3><p>${T.d} \u00b7 Lv ${L+1}${T.max?'/'+T.max:''}</p></div>${btn('tune',i,o)}</div>`}).join('');
   const parts=S.parts.map((o,i)=>`<div class="offer${o.sold?' sold':''}"><img alt="" src="${ICON[o.t]}"><div><h3>${PARTS[o.t].name}</h3><p>${owned(o.t)} owned</p></div>${btn('part',i,o)}</div>`).join('');
   const rc=rerollCost(r);
-  $('dealerTitle').textContent='Junk dealer';
+  $('dealerTitle').textContent='Shop';
   dbody.innerHTML=`
   <div class="card"><span class="label">Parts</span><div class="offers">${parts}</div></div>
-  <div class="card"><span class="label">Tune-ups</span><div class="offers">${tunes}</div></div>
+  <div class="card"><span class="label">Tuning</span><div class="offers">${tunes}</div></div>
   <div class="card"><div class="row"><span class="label">Mods</span><span class="hint${full?' warn':''}">${r.mods.length}/${modSlots(r)}${full?' full':''}</span></div><div class="offers">${mods}</div></div>
   <div class="row" style="justify-content:flex-end"><button class="ghost" id="reroll" type="button" ${rc>r.coins?'disabled':''}>Reroll <i class="cn"></i>${rc}</button></div>`;
   dbody.onclick=e=>{
@@ -322,7 +322,7 @@ function renderMods(){
   $('dealerTitle').textContent='Your mods';
   dbody.innerHTML=`
   <div class="card"><div class="row"><span class="label">Mods</span><span class="hint">${r.mods.length}/${modSlots(r)}</span></div><div class="offers">${slots}</div></div>
-  <div class="card"><span class="label">Tune-ups</span><p class="hint" style="margin-top:6px">${tl||'\u2014'}</p></div>
+  <div class="card"><span class="label">Tuning</span><p class="hint" style="margin-top:6px">${tl||'\u2014'}</p></div>
   ${bl?`<div class="card"><span class="label">Storm rewards</span><p class="hint" style="margin-top:6px">${bl}</p></div>`:''}
   <div class="card"><span class="label">Log</span><div class="log">${log||'<div>\u2014</div>'}</div></div>
   <div class="card stack"><button class="ghost" type="button" data-copyrun="cur">Copy run</button><button class="ghost${armAbandon?' armed':''}" id="aband2" type="button">${armAbandon?'Tap again':'Abandon run'}</button></div>`;
@@ -344,7 +344,7 @@ $('hHelp').onclick=openGuide;
 const BOON_ICON={slot:'+',coins:'¢',upgrade:'↑',drag:'≋',grav:'↥',fuel:'▮',thermal:'≈',pass:'_',loop:'∞',coin:'●',land:'⌒'};
 function showBoons(){
   const r=R();if(!r||!r.boonOffer)return;
-  sheet.innerHTML=`<span class="label">The storm is behind you</span><h2>A gift from ${townOf(r.seed,Math.max(0,r.stage-1)).town}</h2>
+  sheet.innerHTML=`<span class="label">Storm cleared</span><h2>Storm reward</h2>
     <div class="boons">${r.boonOffer.map((o,i)=>`<button class="boon" type="button" data-i="${i}" style="--i:${i}"><span class="bow" aria-hidden="true"></span><span class="bi" aria-hidden="true">${o.mod?`<img alt="" src="${decalURL(o.mod,64)}">`:BOON_ICON[o.id]||'★'}</span><b>${BOONS[o.id].name}</b><small>${boonDesc(o)}</small></button>`).join('')}</div>`;
   veil.hidden=false;
   sheet.querySelectorAll('.boon').forEach(b=>b.onclick=()=>{
@@ -363,7 +363,7 @@ const PW=178,PH=164,CAP=34,TEAR=3;
 const zig=(n,y0,y1)=>Array.from({length:n+1},(_,i)=>`${PW*i/n}px ${i%2?y1:y0}px`);
 const CLIP_CAP=`polygon(${[...zig(2,0,0),...zig(10,CAP,CAP+TEAR).reverse()].join(',')})`;
 const CLIP_BODY=`polygon(${[...zig(10,CAP,CAP+TEAR),...zig(2,PH,PH).reverse()].join(',')})`;
-const FACE='<div class="pk-face"><div class="pk-brace"></div><div class="pk-mark">?</div><div class="pk-band">SCRAP</div><div class="pk-sheen"></div></div>';
+const FACE='<div class="pk-face"><div class="pk-brace"></div><div class="pk-mark">?</div><div class="pk-band">PARTS</div><div class="pk-sheen"></div></div>';
 const packLayers=()=>`<div class="pk-layer pk-cap" style="clip-path:${CLIP_CAP};-webkit-clip-path:${CLIP_CAP}">${FACE}</div><div class="pk-layer pk-body" style="clip-path:${CLIP_BODY};-webkit-clip-path:${CLIP_BODY}">${FACE}</div>`;
 let PK=null;
 const pkStage=$('pkStage'), pkTray=$('pkTray');
@@ -372,7 +372,7 @@ const anim=(el,kf,o)=>el.animate(kf,{fill:'both',...o,duration:ms(o.duration),de
 function showPacks(){
   const r=R();if(PK||!r||!r.packs||!r.packs.length)return;
   PK={got:[],busy:false,state:'pack'};
-  $('pkLabel').textContent=`Scrap for ${townOf(r.seed,r.stage).town}`;
+  $('pkLabel').textContent=`Packs · ${townOf(r.seed,r.stage).town}`;
   pkTray.innerHTML=r.packs.map(()=>'<i></i>').join('');
   $('pkDone').hidden=true;$('pkSkip').hidden=false;pkTray.hidden=false;$('packs').hidden=false;
   dealPack();
@@ -655,7 +655,7 @@ function hud(dt){
   if(!S.done&&F.pre<=0){const fr=K.fuelMax?S.fuel/K.fuelMax:0;audio.engine({prop:S.propOn?ctl.throttle:0,rocket:S.rocketOn?ctl.throttle:0,speed:Math.hypot(S.vx,S.vy),fuel:fr,alt:S.y})}F.coinT=Math.max(0,(F.coinT||0)-dt);
   elS.textContent=fmt(sc.total);elM.textContent='×'+num(sc.mult*sc.xm);
   const need=F.quota-F.already-sc.total;
-  elN.textContent=need>0?`${fmt(need)} to sell out`:'Sold out!';elN.className='need'+(need>0?'':' ok');
+  elN.textContent=need>0?`${fmt(need)} to target`:'Target reached';elN.className='need'+(need>0?'':' ok');
   elS.style.color=F.coinFlash>0?'#ffb020':'';F.coinFlash=Math.max(0,F.coinFlash-dt*3);
   elF.style.transform='scaleX('+(K.fuelMax?S.fuel/K.fuelMax:0)+')';
   F.toastT-=dt;
@@ -685,16 +685,16 @@ const lineMod=label=>Object.keys(MODS).find(id=>label.startsWith(MODS[id].name))
    Tapping the card skips straight to the end. */
 function showResults(out,S,f){
   const r=R(),sc=out.sc,town=townOf(r.seed,out.stage);
-  const title=S.crashed?'Crashed!':S.banked?'Landed early':S.landed?'Touchdown!':S.becalmed?'Becalmed':'Out of time';
+  const title=S.crashed?'Crashed':S.banked?'Landed early':S.landed?'Touchdown':S.becalmed?'Becalmed':'Out of time';
   const kind=S.crashed?'bad':S.landed?'good':'meh';
   const base=sc.lines.filter(l=>l.t==='b'), hype=sc.lines.filter(l=>l.t!=='b');
   const q=out.quota, p0=Math.min(1,out.prevScore/q), p1=Math.min(1,out.contractScore/q);
   let btn='',next='',result='';
   // one result line: sold out (with the bonus), or what is still needed; the gate cash rides along
-  if(out.cleared){btn=out.won?'Continue':'On to the next town';next=out.won?'won':'shop';
-    result=`<div id="tySold" class="soldout" hidden>Sold out! <small>+${out.reward+out.interest+out.pay} cash</small></div>`+(out.unlocks&&out.unlocks.length?`<p class="hint">Unlocked: <strong>${out.unlocks.join(', ')}</strong></p>`:'');}
-  else if(out.failed){btn='Tour summary';next='over';result=`<p class="tres warn">No flights left: the crowd goes home · +${out.pay} cash</p>`}
-  else{const left=FLIGHTS-out.flightNo;btn='Back to the barn';next='hangar';result=`<p class="tres">${fmt(q-out.contractScore)} more needed · ${plural(left,'flight')} left · +${out.pay} cash</p>`}
+  if(out.cleared){btn=out.won?'Continue':'Next contract';next=out.won?'won':'shop';
+    result=`<div id="tySold" class="soldout" hidden>Contract cleared! <small>+${out.reward+out.interest+out.pay} coins</small></div>`+(out.unlocks&&out.unlocks.length?`<p class="hint">Unlocked: <strong>${out.unlocks.join(', ')}</strong></p>`:'');}
+  else if(out.failed){btn='Run summary';next='over';result=`<p class="tres warn">No flights left · +${out.pay} coins</p>`}
+  else{const left=FLIGHTS-out.flightNo;btn='Continue';next='hangar';result=`<p class="tres">${fmt(q-out.contractScore)} to target · ${plural(left,'flight')} left · +${out.pay} coins</p>`}
   const news=headline({...f,cleared:!!out.cleared},{town:town.town,pilot:'Goat'},r.seed+out.stage*7+out.flightNo);
   sheet.className='sheet tallysheet';
   sheet.innerHTML=`<div class="stamp ${kind}">${title}</div>
@@ -753,14 +753,14 @@ function runStats(r){return `<dl class="stats"><dt>Total score</dt><dd>${fmt(r.t
 function showVictory(){
   const r=R(),m=save.meta;
   sheet.className='sheet endsheet win';
-  sheet.innerHTML=`<span class="label">${r.level?'Ceiling '+r.level+' season':'Season'} · ${townOf(r.seed,CONTRACTS-1).town}</span>
-    <h2>Season complete!</h2>
-    <p class="note">Eight towns, eight sold-out shows. The goat takes a bow.</p>
+  sheet.innerHTML=`<span class="label">${r.level?'Ceiling '+r.level:'Run'}</span>
+    <h2>Run complete!</h2>
+    <p class="note">All ${CONTRACTS} contracts cleared.</p>
     ${runStats(r)}
     ${r.unlocks.length?`<p class="note">Unlocked: <b>${r.unlocks.join(', ')}</b></p>`:''}
-    ${m.level>r.level?`<p class="note">Ceiling <b>${r.level+1}</b> unlocked: the next circuit is calling</p>`:''}
-    <button class="big win" type="button" id="endless">Encore tour</button>
-    <button class="big alt" type="button" id="retire">Take a bow</button><button class="ghost" type="button" data-copyrun="cur">Copy run</button>`;
+    ${m.level>r.level?`<p class="note">Ceiling <b>${r.level+1}</b> unlocked</p>`:''}
+    <button class="big win" type="button" id="endless">Endless mode</button>
+    <button class="big alt" type="button" id="retire">Retire</button><button class="ghost" type="button" data-copyrun="cur">Copy run</button>`;
   veil.hidden=false;sfx('fanfare');sfx('cheer',{intensity:1});confetti();
   $('endless').onclick=()=>{sheet.className='sheet';r.endless=true;r.phase='shop';r.shop=genShop(r,m);weatherOf(r,r.stage);grantPacks(r);persist();veil.hidden=true;show('hangar');setTab('build')};
   $('retire').onclick=()=>{sheet.className='sheet';endRun()};
@@ -769,12 +769,12 @@ function showRunOver(){
   const r=R();
   const n=r.stage;
   sheet.className='sheet endsheet lose';
-  sheet.innerHTML=`<span class="label">${r.level?'Ceiling '+r.level+' season':'Season'}</span>
-    <h2>${r.endless?'The encore ends':'Tour cancelled'}</h2>
-    <p class="note">${r.endless?'What a run. The crowd goes home happy.':`The crowd in ${townOf(r.seed,n).town} wanted more. Shows sold out: <b>${n} / ${CONTRACTS}</b>`}</p>
+  sheet.innerHTML=`<span class="label">${r.level?'Ceiling '+r.level:'Run'}</span>
+    <h2>${r.endless?'Endless run over':'Run over'}</h2>
+    <p class="note">Contracts cleared: <b>${n}${r.endless?'':' / '+CONTRACTS}</b></p>
     ${runStats(r)}
     ${r.unlocks.length?`<p class="note">Unlocked: <b>${r.unlocks.join(', ')}</b></p>`:''}
-    <button class="big" type="button" id="again">Next season</button><button class="ghost" type="button" data-copyrun="cur">Copy run</button>`;
+    <button class="big" type="button" id="again">New run</button><button class="ghost" type="button" data-copyrun="cur">Copy run</button>`;
   veil.hidden=false;sfx('sad');
   $('again').onclick=()=>{sheet.className='sheet';endRun()};
 }
