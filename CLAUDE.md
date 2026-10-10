@@ -2,6 +2,8 @@
 
 Roguelite flying-machine builder for phones. Build a craft on a 7×5 grid (Bad Piggies style), launch it, fly it with simple but honest physics, and hit escalating score quotas across 8 contracts per run (Slay the Spire / CloverPit structure). Plain JS + Vite, no framework. Installed and played as a PWA, deployed on Cloudflare Pages.
 
+Visual identity: **The Flying Circus**. A broke barnstorming troupe tours eight towns per season in a junk plane flown by a goat; every flight is a show and the score is the crowd. Read `docs/circus-style.md` before drawing or styling anything.
+
 The game was prototyped as a single-file Claude artifact under the working title **Skyward** and ported here. Old run codes from the prototype start with `SKYWARD ` instead of `ROGUEFLIGHT `.
 
 ## Commands
@@ -22,6 +24,13 @@ npm run preview   # serve dist/ (service worker only registers in production bui
 client/index.html        markup for all screens (title, hangar, flight, veil/sheet modal)
 client/src/main.js       entry: self-hosted fonts (@fontsource), style.css, ui.js, service-worker registration
 client/src/sim.js        PURE game logic, no DOM. Data tables, physics step, craft assembly, scoring, economy, run state
+client/src/art.js        Flying Circus part art (drawPart: wood, canvas, tin, brass) and the goat pilot (drawPilot with moods, drawParachute)
+client/src/world.js      flight backdrop: one biome per show, parallax, props, launch site with grandstand crowd, signposts, thermals, storms
+client/src/decals.js     sponsor decal icons for every mod (drawDecal, decalURL), rarity as material (paper, tin, enamel), levels as trim
+client/src/audio.js      procedural Web Audio: sfx library, live engine and wind, a small ragtime band with hype layers
+client/src/fiction.js    pure: town and show names per run seed, newspaper headlines for flights
+client/dev/*.html        preview pages for art, decals and audio (served by the dev server at /dev/...; not part of the build)
+docs/circus-style.md     the style guide: palette, outline and shape rules, type, materials, motion, sound, fiction mapping
 client/src/guide.js      "How to play" drawer: swipeable slides with small HTML/SVG illustrations (opened from the title and the ? chip in the hangar)
 client/src/ui.js         everything DOM/canvas: part art, hangar (build/shop/mods), flight loop + HUD + input, result screens
 client/src/style.css     all styles; dark blueprint theme, tokens on :root

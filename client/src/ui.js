@@ -305,7 +305,7 @@ function renderBuild(){
     <div class="blurb" id="blurb">${warns.length?`<span class="warn">${warns.join(' \u00b7 ')}</span>`:''}</div>
   </div>
   <div class="card">
-    <span class="label">Craft</span>
+    <span class="label">Spec sheet</span>
     <dl class="stats">${rows.map(([a,b,c])=>`<dt>${a}</dt><dd class="${c}">${b}</dd>`).join('')}</dl>
   </div>`;
   $('grid').onclick=e=>{if(skipClick){skipClick=false;return}const b=e.target.closest('.cell');if(b)placeAt(+b.dataset.c,+b.dataset.r)};
@@ -352,7 +352,7 @@ function placeAt(c,y){
 
 // L: the level shown (description and pips); up: shown as an upgrade offer
 const pips=L=>`<span class="lvp" aria-label="Level ${L} of ${MODMAX}">${Array.from({length:MODMAX},(_,i)=>`<i class="${i<L?'on':''}"></i>`).join('')}</span>`;
-function modCard(id,btn,L,up){const M=MODS[id];L=L||1;return `<div class="offer ${M.r}"><div class="glyph ${M.r}" aria-hidden="true">${M.name[0]}</div><div><span class="rar r-${M.r}">${up?'<b class="upg">Upgrade</b> · ':''}${RARITY[M.r].name} · ${M.tag}</span><h3>${M.name} ${pips(L)}</h3><p>${modDesc(id,L)}</p></div>${btn}</div>`}
+function modCard(id,btn,L,up){const M=MODS[id];L=L||1;return `<div class="offer ${M.r}">${DECAL?`<img class="decal" alt="" src="${DECAL(id,96,L)}">`:`<div class="glyph ${M.r}" aria-hidden="true">${M.name[0]}</div>`}<div><span class="rar r-${M.r}">${up?'<b class="upg">Upgrade</b> · ':''}${RARITY[M.r].name} · ${M.tag}</span><h3>${M.name} ${pips(L)}</h3><p>${modDesc(id,L)}</p></div>${btn}</div>`}
 function renderShop(){
   const r=R();
   if(!r.shop){r.shop=genShop(r,save.meta);persist()}
@@ -591,7 +591,7 @@ function frame(now){
     for(const e of S.events){
       if(e==='coin'){F.coinStreak=(F.coinT>0?(F.coinStreak||0)+1:0);F.coinT=1.2;sfx('coin',{pitch:1+Math.min(8,F.coinStreak)*.06});F.coinFlash=1;for(let j=0;j<8;j++){const a=j/8*6.283;F.parts.push({x:S.x,y:S.y,vx:Math.cos(a)*7+S.vx*.6,vy:Math.sin(a)*7+S.vy*.6,life:.7,r:.22,k:'gold'})}}
       else if(e==='bounce')dust(S.x,S.y-1,8);
-      else if(e==='loop')F.cheer=1,sfx('loop'),sfx('cheer',{intensity:.5}),toast('Loop',nth(S.loops,has('stunt')?mv('stunt'):.5));
+      else if(e==='loop')F.loopT=performance.now()/1000,F.cheer=1,sfx('loop'),sfx('cheer',{intensity:.5}),toast('Loop',nth(S.loops,has('stunt')?mv('stunt'):.5));
       else if(e==='pass')F.cheer=1,sfx('pass'),toast('Low pass',nth(S.passes,has('duster')?mv('duster'):.25));
       else if(e==='thermal')F.cheer=.6,sfx('thermal'),toast('Thermal',`+${num(has('thermal')?mv('thermal','w'):.1)} mult`);
       else if(e==='burst')sfx('pop'),toast('Balloons burst','');
@@ -626,6 +626,19 @@ function emit(dt){
 function dust(x,y,n,debris){for(let i=0;i<n;i++)F.parts.push({x,y,vx:(Math.random()-.5)*14,vy:Math.random()*9,life:1,r:debris?.25:.5,k:debris?'debris':'dust',g:1})}
 function updParts(dt){for(const p of F.parts){p.x+=p.vx*dt;p.y+=p.vy*dt;if(p.g)p.vy-=12*dt;p.life-=dt*(p.k==='fire'?2.2:p.k==='pop'||p.k==='gold'?1.6:.9);p.r+=dt*(p.k==='smoke'?1.2:p.k==='fire'?.8:0)}F.parts=F.parts.filter(p=>p.life>0);if(F.parts.length>500)F.parts.splice(0,F.parts.length-500)}
 
+// the goat's face is the feedback channel: it reads the flight before the numbers do
+function pilotMood(){
+  const S=F.S,v=Math.hypot(S.vx,S.vy),t=performance.now()/1000;
+  if(S.crashed)return 'crash';
+  if(F.pre>0)return 'focus';
+  if(S.done)return S.landed?'cheer':'sad';
+  if(F.loopT&&t-F.loopT<1.6&&S.loops>=2)return 'dizzy';
+  if((F.cheer||0)>.5)return 'cheer';
+  if(!S.touch&&((v<11&&S.vy<-4)||(S.y<14&&S.vy<-11)))return 'scared';
+  if(v>45)return 'grin';
+  if(ctl.pitch)return 'focus';
+  return 'idle';
+}
 // crash: every part becomes a tumbling piece of debris, and the pilot pops out on a parachute
 function breakApart(){
   const {S}=F,K=F.K,c=Math.cos(S.th),s=Math.sin(S.th);
@@ -692,8 +705,8 @@ function draw(now){
     if(F.pre>0){const k=1-F.pre/1.1,back=Math.pow(clamp(k*1.3,0,1),2)*1.4*sc;px-=Math.cos(S.th)*back;py+=Math.sin(S.th)*back}
     ctx.save();ctx.translate(px,py);ctx.scale(ds,ds);ctx.rotate(-S.th);
     if(F.stretch>0)ctx.scale(1+.18*F.stretch,1-.12*F.stretch);
-    const frac=K.fuelMax?S.fuel/K.fuelMax:0;
-    for(const p of K.parts){ctx.save();ctx.translate(p.lx,-p.ly);drawPart(ctx,p.type,now/1000,{on:p.type==='rocket'?S.rocketOn:S.propOn,frac});ctx.restore()}
+    const frac=K.fuelMax?S.fuel/K.fuelMax:0, mood=pilotMood();
+    for(const p of K.parts){ctx.save();ctx.translate(p.lx,-p.ly);drawPart(ctx,p.type,now/1000,{on:p.type==='rocket'?S.rocketOn:S.propOn,frac,lw:2.5/ds,mood});ctx.restore()}
     ctx.restore()
   }
   drawGrain(ctx,vw,vh);
@@ -712,7 +725,7 @@ function hud(dt){
   F.hype=clamp((sc.mult*sc.xm-1)/4,0,1);F.coinT=Math.max(0,(F.coinT||0)-dt);
   elS.textContent=fmt(sc.total);elM.textContent='×'+num(sc.mult*sc.xm);
   const need=F.quota-F.already-sc.total;
-  elN.textContent=need>0?`need ${fmt(need)} more`:'quota reached';elN.className='need'+(need>0?'':' ok');
+  elN.textContent=need>0?`${fmt(need)} to sell out`:'Sold out!';elN.className='need'+(need>0?'':' ok');
   elS.style.color=F.coinFlash>0?'#ffb020':'';F.coinFlash=Math.max(0,F.coinFlash-dt*3);
   elF.style.transform='scaleX('+(K.fuelMax?S.fuel/K.fuelMax:0)+')';
   F.toastT-=dt;
