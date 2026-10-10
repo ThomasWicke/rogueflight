@@ -50,7 +50,7 @@ const artAlt = () => `<div class="gr-alt">
 /* ---------- slides ---------- */
 const SLIDES = [
   { t: 'The tour', art: artRun, p: [
-    'Eight towns, three flights each. Every flight draws a crowd; reach the town\'s crowd target or the tour ends.',
+    'Eight towns, three flights each. Every flight scores distance × mult; reach the town\'s target or the tour ends.',
     'Storm clouds on the route mean bad weather, forecast from the start. Build for it early.'] },
   { t: 'Crates & dealer', art: artPacks, p: [
     'Every town starts with scrap crates: 4 in the first (tank, wing, engine + 1), then 2.',

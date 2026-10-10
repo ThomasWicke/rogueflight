@@ -78,12 +78,12 @@ function renderTitle(){
   }else{
     h+=`<div class="card"><span class="label">A new season</span>
       ${m.level>0?`<div style="margin-top:12px"><div class="row" style="margin-bottom:6px"><span class="label">Ceiling</span></div><div class="seg" id="lvl">${Array.from({length:m.level+1},(_,i)=>`<button type="button" data-l="${i}" aria-pressed="${i===pickLevel}">${i}</button>`).join('')}</div>
-        ${pickLevel?`<div class="crules"><span>+${pickLevel*25}% crowd targets</span>${ceilingRules(pickLevel).map(t=>`<span>${t}</span>`).join('')}</div>`:''}</div>`:''}
+        ${pickLevel?`<div class="crules"><span>+${pickLevel*25}% score targets</span>${ceilingRules(pickLevel).map(t=>`<span>${t}</span>`).join('')}</div>`:''}</div>`:''}
       <div style="margin-top:12px"><button class="big" id="start" type="button">Start the tour</button></div></div>`;
   }
   h+=`<div><button class="ghost howto${m.guideSeen?'':' new'}" id="howto" type="button">How to play</button></div>`;
   h+=`<div class="card"><span class="label">Scrapbook</span>
-    <dl class="stats"><dt>Tours</dt><dd>${m.runs}</dd><dt>Seasons won</dt><dd>${m.wins}</dd><dt>Most shows in a tour</dt><dd>${m.deepest||m.bestStage}</dd><dt>Biggest crowd</dt><dd>${fmt(m.bestFlight)}</dd>${m.level?`<dt>Highest Ceiling</dt><dd>${m.level}</dd>`:''}</dl>
+    <dl class="stats"><dt>Tours</dt><dd>${m.runs}</dd><dt>Seasons won</dt><dd>${m.wins}</dd><dt>Most shows in a tour</dt><dd>${m.deepest||m.bestStage}</dd><dt>Best score</dt><dd>${fmt(m.bestFlight)}</dd>${m.level?`<dt>Highest Ceiling</dt><dd>${m.level}</dd>`:''}</dl>
     <div class="row" style="margin-top:12px"><span class="label">Unlocks</span><span class="hint">shows in one tour</span></div>
     <ul class="unl">${UNLOCKS.map(u=>{const d=m.bestStage>=u.at;return `<li class="${d?'done':''}"><i>${d?'\u2713':u.at}</i><span>${u.text}</span></li>`}).join('')}</ul>${m.lastRun?'<div style="margin-top:12px"><button class="ghost" type="button" data-copyrun="last">Copy last run</button></div>':''}</div>`;
   $('titleBody').innerHTML=h;
@@ -169,7 +169,7 @@ function renderStrip(){
   const p=r.phase==='shop'?0:Math.min(1,r.score/q);
   $('cstrip').innerHTML=`<div class="prow"><span class="psub">${r.phase==='shop'?'Next · ':''}${sub}</span>${r.phase==='shop'?'':stubs}</div>
     <div class="ptown">${t.town}<small>${t.show==='Grand Finale'?'Grand Finale':t.show}</small></div>
-    <div class="cbar"><i style="transform:scaleX(${p})"></i><span>Crowd ${r.phase==='shop'?'target '+fmt(q):fmt(r.score)+' / '+fmt(q)}</span></div>${storm}${routeStrip(r)}`;
+    <div class="cbar"><i style="transform:scaleX(${p})"></i><span>Score ${r.phase==='shop'?'target '+fmt(q):fmt(r.score)+' / '+fmt(q)}</span></div>${storm}${routeStrip(r)}`;
 }
 function renderHangar(){
   const r=R();if(!r)return;
@@ -701,7 +701,7 @@ function showResults(out,S,f){
     <span class="label">${town.town} · flight ${out.flightNo} of ${FLIGHTS}</span>
     <div class="eqn"><span class="drum" id="tyBase">0</span><i>×</i><span id="tyM">1</span><i>=</i><b id="tyT">0</b></div>
     <div class="hype" id="tyHype">${hype.map((l,k)=>{const m=lineMod(l.label);return `<span class="hc ${l.t}" data-k="${k}">${m&&DECAL?`<img alt="" src="${DECAL(m,48,modLevels(r)[m]||1)}">`:''}${l.label}<b>${l.t==='x'?'×':'+'}${num(l.v)}</b></span>`}).join('')||'<span class="hc none">No stunts this time</span>'}</div>
-    <div class="cbar${out.cleared?' done':''}"><i id="rbar" style="transform:scaleX(${p0})"></i><span id="rbarT">Crowd ${fmt(out.prevScore)} / ${fmt(q)}</span></div>
+    <div class="cbar${out.cleared?' done':''}"><i id="rbar" style="transform:scaleX(${p0})"></i><span id="rbarT">Score ${fmt(out.prevScore)} / ${fmt(q)}</span></div>
     ${result}
     <div class="clip" id="tyNews" hidden><small>The ${town.town} Gazette</small>${news}</div>
     <button class="big" type="button" id="next">${btn}</button>`;
@@ -713,7 +713,7 @@ function showResults(out,S,f){
   const wait=ms=>new Promise(res=>setTimeout(res,rm||skip?0:ms));
   let skip=false, done=false;
   const finishNow=()=>{skip=true;sheet.querySelectorAll('.hc').forEach(c=>c.classList.add('in'));el('tyM').textContent=num(sc.mult*sc.xm);el('tyT').textContent=fmt(sc.total);el('tyBase').textContent=fmt(sc.base)+(base.length===1?' m':'');
-    el('rbar').style.transform=`scaleX(${p1})`;el('rbarT').textContent=`Crowd ${fmt(out.contractScore)} / ${fmt(q)}`;el('tyNews').hidden=false;if(out.cleared)el('tySold').hidden=false};
+    el('rbar').style.transform=`scaleX(${p1})`;el('rbarT').textContent=`Score ${fmt(out.contractScore)} / ${fmt(q)}`;el('tyNews').hidden=false;if(out.cleared)el('tySold').hidden=false};
   sheet.onclick=e=>{if(!e.target.closest('button')&&!done)finishNow()};
   (async()=>{
     sfx('stamp');buzz(15);
@@ -727,7 +727,7 @@ function showResults(out,S,f){
     el('tyM').textContent=num(sc.mult*sc.xm);
     await roll(el('tyT'),sc.total,450);
     await wait(200);
-    el('rbar').style.transform=`scaleX(${p1})`;el('rbarT').textContent=`Crowd ${fmt(out.contractScore)} / ${fmt(q)}`;
+    el('rbar').style.transform=`scaleX(${p1})`;el('rbarT').textContent=`Score ${fmt(out.contractScore)} / ${fmt(q)}`;
     if(out.cleared){await wait(700);el('tySold').hidden=false;sfx('fireworks');sfx('fanfare');buzz([20,60,20,60,40]);confetti()}
     await wait(400);el('tyNews').hidden=false;done=true;
   })();
@@ -748,7 +748,7 @@ function confetti(){
     c.animate([{transform:'translate(0,-20px) rotate(0)',opacity:1},{transform:`translate(${dx}px,${window.innerHeight*.9}px) rotate(${rot}deg)`,opacity:.9}],{duration:d,delay:Math.random()*300,easing:'cubic-bezier(.3,.6,.5,1)',fill:'forwards'})}
   setTimeout(()=>box.remove(),3200);
 }
-function runStats(r){return `<dl class="stats"><dt>Total crowd</dt><dd>${fmt(r.total)}</dd><dt>Biggest show</dt><dd>${fmt(r.best)}</dd><dt>Longest flight</dt><dd>${fmtD(r.bestDist||0)}</dd><dt>Flights</dt><dd>${r.log.length}</dd></dl>`}
+function runStats(r){return `<dl class="stats"><dt>Total score</dt><dd>${fmt(r.total)}</dd><dt>Biggest show</dt><dd>${fmt(r.best)}</dd><dt>Longest flight</dt><dd>${fmtD(r.bestDist||0)}</dd><dt>Flights</dt><dd>${r.log.length}</dd></dl>`}
 // end of a season: a won season is a sold-out poster with confetti; a lost one is the torn "tour cancelled" poster
 function showVictory(){
   const r=R(),m=save.meta;
