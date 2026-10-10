@@ -2,7 +2,7 @@
 
 Roguelite flying-machine builder for phones. Build a craft on a 7×5 grid (Bad Piggies style), launch it, fly it with simple but honest physics, and hit escalating score quotas across 8 contracts per run (Slay the Spire / CloverPit structure). Plain JS + Vite, no framework. Installed and played as a PWA, deployed on Cloudflare Pages.
 
-The game was prototyped as a single-file Claude artifact under the working title **Skyward** and ported here. The in-game wordmark still says SKYWARD (see "Open items").
+The game was prototyped as a single-file Claude artifact under the working title **Skyward** and ported here. Old run codes from the prototype start with `SKYWARD ` instead of `ROGUEFLIGHT `.
 
 ## Commands
 
@@ -68,7 +68,7 @@ Code style is dense (many one-line functions, short names: `S` flight state, `K`
 - **UI should be intuitive with minimal text.** The player explicitly asked to trim explainers. Prefer visuals (sockets, markers, chips, icons) and one-line mod descriptions.
 - **Fair randomness.** Bad luck is fine when it punishes a risk the player could see; it is unfair when hidden or unavoidable. Hence storms are revealed at run start. Ask "could the player have seen it and responded?" before adding random modifiers.
 - Mobile portrait, played one-handed in short sessions. Respect safe areas (`--reserve` = `env(safe-area-inset-top)`).
-- Balance feedback: the player pastes "Copy run" codes (Mods tab, end screens, logbook). The format is `SKYWARD {json}` with kit, mods, tune, inv, a compact cells string (`c22 p32 …` = type initial + column + row), and a log of `[contract, flight, score, distance, mult]`.
+- Balance feedback: the player pastes "Copy run" codes (Mods tab, end screens, logbook). The format is `ROGUEFLIGHT {json}` (prototype codes: `SKYWARD {json}`) with kit, mods, tune, inv, a compact cells string (`c22 p32 …` = type initial + column + row), and a log of `[contract, flight, score, distance, mult]`.
 
 ## Balance notes
 - The bot is a deliberately weak player and was never updated for the universal start or the throttle. A good human scores roughly 2× the bot late in a run (climb at about 35° under power, then glide hands-off).
@@ -76,7 +76,6 @@ Code style is dense (many one-line functions, short names: `S` flight state, `K`
 - Additive per-part mods (Wingman +0.3 per wing, Fuel Hauler +0.4 per tank) stack strongly with big builds.
 
 ## Open items / ideas
-- Rename the in-game branding to rogueflight: the `SKYWARD` wordmark in `index.html` (`.brand`), the `SKYWARD ` prefix of the Copy-run code, and any player-facing "Skyward" text. Technical ids already use rogueflight: package, localStorage key `rogueflight-1`, manifest, SW cache.
 - Remove the legacy kits from `KITS` once old saves don't matter (there are none on the new origin).
 - Update `tools/bot.js` for the universal start (shopping for an engine, smarter layouts, throttle use).
 - Consider a browser smoke test (Playwright) for the main flow: start → buy → build → launch → results.

@@ -20,9 +20,9 @@ button:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
 .blue{background-color:var(--bg);background-image:linear-gradient(rgba(127,211,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(127,211,255,.05) 1px,transparent 1px);background-size:24px 24px}
 
 .top{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:calc(var(--reserve) + 10px) 16px 8px}
-.brand{font-family:var(--stencil);font-weight:800;font-size:28px;letter-spacing:.04em;line-height:1;color:var(--ink)}
+.brand{font-family:var(--stencil);font-weight:800;font-size:clamp(22px,7.4vw,28px);letter-spacing:.04em;line-height:1;color:var(--ink);white-space:nowrap}
 .brand span{color:var(--signal)}
-.brand.hero{font-size:56px}
+.brand.hero{font-size:clamp(34px,12vw,56px)}
 .chips{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 .chip{font-family:var(--inst);font-size:12px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:5px 10px;white-space:nowrap;font-variant-numeric:tabular-nums}
 .chip b{color:var(--signal);font-weight:600}

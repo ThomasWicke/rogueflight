@@ -104,7 +104,7 @@ function show(id){for(const s of ['title','hangar','flight'])$(s).hidden=s!==id}
 const R=()=>save.run;
 let armAbandon=false;
 function runCode(r){if(!r)return '';const L=t=>t==='cockpit'?'c':t[0];
-  return 'SKYWARD '+JSON.stringify({kit:r.kit,lvl:r.level,cleared:r.stage,endless:!!r.endless,coins:r.coins,mods:r.mods,tune:r.tune,inv:r.inv,
+  return 'ROGUEFLIGHT '+JSON.stringify({kit:r.kit,lvl:r.level,cleared:r.stage,endless:!!r.endless,coins:r.coins,mods:r.mods,tune:r.tune,inv:r.inv,
     cells:r.cells.map(c=>L(c.type)+c.c+c.r).join(' '),log:r.log.map(l=>[l.stage+1,l.flight,l.score,l.d,l.x])})}
 function copyRun(r,btn){const txt=runCode(r);const ok=()=>{if(btn){btn.textContent='Copied';setTimeout(()=>{btn.textContent='Copy run'},1500)}};
   const fall=()=>{const d=document.createElement('div');d.className='copybox';d.innerHTML='<textarea readonly></textarea><button class="big" type="button">Close</button>';
