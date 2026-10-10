@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   newRun, stats, weatherFx, makeCraft, newFlight, step, popBalloons, summaryOf, scoreFlight, settleFlight,
-  quotaFor, CONTRACTS,
+  quotaFor, openPack, PACKS, FIRST_PACKS,
 } from '../client/src/sim.js';
 
 // 'c22 p32 w21 t23' -> cockpit at (2,2), prop at (3,2), wing at (2,1), tank at (2,3)
@@ -21,11 +21,15 @@ function fly(cells, { tune = {}, mods = [], wx = null, stage = 0, ctl = () => ({
   return { S, K };
 }
 
-test('every new run offers an engine in the opening shop', () => {
+test('the opening packs always hold a tank, a wing and an engine', () => {
   for (let i = 0; i < 500; i++) {
     const run = newRun(0, { bestStage: 0 });
-    assert.ok(run.shop.parts.some((o) => o.t === 'prop' || o.t === 'rocket'));
     assert.deepEqual(run.cells, [{ c: 2, r: 2, type: 'cockpit' }]);
+    assert.deepEqual(run.inv, {});
+    assert.equal(run.packs.length, FIRST_PACKS);
+    while (run.packs.length) openPack(run);
+    assert.ok(run.inv.tank >= 1 && run.inv.wing >= 1 && (run.inv.prop || run.inv.rocket));
+    assert.equal(Object.values(run.inv).reduce((a, b) => a + b, 0), FIRST_PACKS);
   }
 });
 
@@ -61,4 +65,5 @@ test('reaching the quota clears the contract and opens a new shop', () => {
   assert.ok(out.cleared);
   assert.equal(run.stage, 1);
   assert.equal(run.phase, 'shop');
+  assert.equal(run.packs.length, FIRST_PACKS + PACKS, 'unopened packs carry over, the next contract adds two');
 });

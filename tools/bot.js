@@ -6,10 +6,10 @@
 //          Throttle is picked per build (full or 60%), like a player who tried both.
 //   hands  pulls up for 0.6 s after launch, then flies hands-off at full throttle (a weak baseline).
 // The builder test-flies layout variants of its inventory in the contract's (forecast) weather and keeps the best,
-// so builds are sensible but not optimal. It shops before every flight, engine first.
+// so builds are sensible but not optimal. It opens its parts packs and shops before every flight.
 import {
   newRun, weatherOf, stats, weatherFx, makeCraft, newFlight, step, popBalloons, summaryOf, scoreFlight, settleFlight,
-  craftCounts, offerPrice, rerollCost, rerollShop, MAXMODS, COLS, ROWS, COCKPIT, quotaFor,
+  craftCounts, offerPrice, rerollCost, rerollShop, openPack, MAXMODS, COLS, ROWS, COCKPIT, quotaFor,
 } from '../client/src/sim.js';
 
 const args = process.argv.slice(2);
@@ -172,6 +172,7 @@ function buy(run, kind, o, p) {
   else run.mods.push(o.id);
 }
 function botShop(run, meta) {
+  while (run.packs && run.packs.length) openPack(run);
   for (let pass = 0; pass < 2; pass++) {
     const offers = [];
     for (const [kind, list] of [['part', run.shop.parts], ['tune', run.shop.tunes], ['mod', run.shop.mods]])

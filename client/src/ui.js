@@ -8,6 +8,7 @@ import {
   COINSEG, COINR, thermalSeg, coinAt, newFlight, segDist, flag, step,
   popBalloons, summaryOf, scoreFlight, wpick, PART_W, rollMods, rollTunes, genShop,
   rerollShop, priceOf, offerPrice, rerollCost, sellValue, newRun, craftCounts, settleFlight,
+  PACKS, FIRST_PACKS, rollPacks, grantPacks, openPack,
 } from './sim.js';
 
 /* ================= persistence ================= */
@@ -157,7 +158,7 @@ function openHangar(){
   if(r.phase==='shop'&&tab==='build')tab='shop';
   setTab(tab);
 }
-function setTab(t){tab=t;armSell=null;armAbandon=false;for(const [id,k] of [['tBuild','build'],['tShop','shop'],['tMods','mods']])$(id).setAttribute('aria-selected',k===t?'true':'false');renderHangar()}
+function setTab(t){tab=t;armSell=null;armAbandon=false;for(const [id,k] of [['tBuild','build'],['tShop','shop'],['tMods','mods']])$(id).setAttribute('aria-selected',k===t?'true':'false');renderHangar();const r=R();if(r&&r.packs&&r.packs.length&&r.phase!=='won'&&r.phase!=='over')showPacks()}
 $('tBuild').onclick=()=>setTab('build');$('tShop').onclick=()=>setTab('shop');$('tMods').onclick=()=>setTab('mods');
 function wxLine(id,s){return `<div class="wx"><b>${WEATHER[id].name}</b>${WEATHER[id].d(s)}</div>`}
 // storm forecast: every storm in the run is known from the start, so builds can plan around them
@@ -332,6 +333,100 @@ function renderMods(){
 $('launch').onclick=()=>{const r=R();if(!r)return;
   if(r.phase==='shop'){r.phase='contract';persist();setTab('build');return}
   if(r.phase==='contract')startFlight()};
+
+/* ================= parts packs ================= */
+// every contract starts with packs to open: shake, tear the top off, burst, the part pops out and flies to the tray
+const BIG={};
+function bigIcon(t){if(!BIG[t]){const c=document.createElement('canvas');c.width=c.height=240;const g=c.getContext('2d');g.translate(120,120);g.scale(210,210);drawPart(g,t,.33,{frac:1});BIG[t]=c.toDataURL()}return BIG[t]}
+const isEngine=t=>t==='prop'||t==='rocket';
+// the packet is two copies of one face: the cap above a jagged tear line and the body below it, so it looks whole until torn
+const PW=150,PH=214,CAP=30,TEAR=8;
+const zig=(n,y0,y1)=>Array.from({length:n+1},(_,i)=>`${PW*i/n}px ${i%2?y1:y0}px`);
+const CLIP_CAP=`polygon(${[...zig(18,0,5),...zig(10,CAP,CAP+TEAR).reverse()].join(',')})`;
+const CLIP_BODY=`polygon(${[...zig(10,CAP,CAP+TEAR),...zig(18,PH,PH-5).reverse()].join(',')})`;
+const FACE='<div class="pk-face"><div class="pk-mark">?</div><div class="pk-band">PARTS</div><div class="pk-sheen"></div></div>';
+const packLayers=()=>`<div class="pk-layer pk-cap" style="clip-path:${CLIP_CAP};-webkit-clip-path:${CLIP_CAP}">${FACE}</div><div class="pk-layer pk-body" style="clip-path:${CLIP_BODY};-webkit-clip-path:${CLIP_BODY}">${FACE}</div>`;
+let PK=null;
+const pkStage=$('pkStage'), pkTray=$('pkTray');
+const ms=t=>reduceMotion()?1:t;
+const anim=(el,kf,o)=>el.animate(kf,{fill:'both',...o,duration:ms(o.duration),delay:ms(o.delay||0)});
+function showPacks(){
+  const r=R();if(PK||!r||!r.packs||!r.packs.length)return;
+  PK={got:[],busy:false,state:'pack'};
+  $('pkLabel').textContent=`Contract ${r.stage+1}`;
+  pkTray.innerHTML=r.packs.map(()=>'<i></i>').join('');
+  $('pkDone').hidden=true;$('pkSkip').hidden=false;pkTray.hidden=false;$('packs').hidden=false;
+  dealPack();
+}
+function dealPack(){
+  const left=R().packs.length;
+  pkStage.className='pk-stage';
+  pkStage.innerHTML=`<div class="pk-rays"><i></i></div><div class="pk-glow"></div>
+    <div class="pk-pile">${Array.from({length:Math.min(2,left-1)},()=>`<div class="pk-back">${packLayers()}</div>`).join('')}<button class="pack" type="button" aria-label="Open pack">${packLayers()}</button></div>
+    <div class="pk-reveal" hidden><img alt=""><h3></h3><small></small></div>
+    <span class="pk-hint">TAP</span><div class="pk-flash"></div>`;
+  anim(pkStage.querySelector('.pk-pile'),[{transform:'translateY(-60px) scale(.8)',opacity:0},{transform:'none',opacity:1}],{duration:420,easing:'cubic-bezier(.2,1.5,.4,1)'});
+  PK.state='pack';
+}
+function sparks(gold){
+  const cols=gold?['#ffb020','#ffc23d','#fff1c2','#ff8a2a']:['#7fd3ff','#e9f1f7','#ffb020','#8fdcff'];
+  for(let i=0;i<26;i++){const s=document.createElement('i');s.className='pk-spark';s.style.background=cols[i%cols.length];if(i%3===0)s.style.borderRadius='50%';
+    pkStage.appendChild(s);const a=Math.random()*Math.PI*2,d=90+Math.random()*150,sz=.6+Math.random()*1.2;
+    s.animate([{transform:`translate(0,0) scale(${sz})`,opacity:1},{transform:`translate(${Math.cos(a)*d}px,${Math.sin(a)*d+40}px) scale(0) rotate(${Math.random()*540}deg)`,opacity:0}],
+      {duration:700+Math.random()*400,easing:'cubic-bezier(.1,.8,.3,1)',fill:'forwards'}).finished.then(()=>s.remove())}
+}
+async function tearPack(){
+  if(PK.busy)return;PK.busy=true;
+  const q=s=>pkStage.querySelector(s), pack=q('.pack');
+  pack.style.animation='none';q('.pk-hint').hidden=true;
+  if(!reduceMotion())await pack.animate([{transform:'none'},{transform:'rotate(-3deg) translateX(-3px)'},{transform:'rotate(3deg) translateX(3px)'},{transform:'rotate(-5deg) translateX(-4px)'},
+    {transform:'rotate(6deg) translateX(5px)'},{transform:'rotate(-8deg) translateX(-6px) scale(1.04)'},{transform:'rotate(8deg) translateX(6px) scale(1.06)'},{transform:'scale(1.08)'}],{duration:560,easing:'ease-in'}).finished;
+  const r=R(),t=openPack(r);persist();PK.got.push(t);
+  const gold=isEngine(t);pkStage.classList.toggle('gold',gold);
+  try{navigator.vibrate&&navigator.vibrate([20,40,30])}catch(_){}
+  anim(pack.querySelector('.pk-cap'),[{transform:'scale(1.08)',opacity:1},{transform:'translate(70px,-190px) rotate(42deg)',opacity:0}],{duration:650,easing:'cubic-bezier(.2,.7,.3,1)'});
+  anim(pack.querySelector('.pk-body'),[{transform:'scale(1.08)',opacity:1},{transform:'translateY(230px) rotate(-8deg)',opacity:0}],{duration:560,delay:130,easing:'cubic-bezier(.5,0,.8,.4)'});
+  pkStage.querySelectorAll('.pk-back').forEach((b,i)=>anim(b,[{opacity:1},{opacity:0,transform:`translate(${i?40:-40}px,30px) rotate(${i?14:-14}deg)`}],{duration:300}));
+  q('.pk-flash').animate([{opacity:0},{opacity:.9,offset:.15},{opacity:0}],{duration:ms(560)});
+  anim(q('.pk-rays'),[{opacity:0,transform:'scale(.3)'},{opacity:1,transform:'scale(1)'}],{duration:600,easing:'cubic-bezier(.2,1.2,.4,1)'});
+  anim(q('.pk-glow'),[{opacity:0,transform:'scale(.4)'},{opacity:1,transform:'scale(1)'}],{duration:500});
+  if(!reduceMotion())sparks(gold);
+  const rv=q('.pk-reveal'),img=rv.querySelector('img');
+  img.src=bigIcon(t);rv.querySelector('h3').textContent=PARTS[t].name;rv.querySelector('small').textContent='×'+r.inv[t];rv.hidden=false;
+  anim(rv.querySelector('h3'),[{opacity:0,transform:'translateY(14px)'},{opacity:1,transform:'none'}],{duration:300,delay:520});
+  anim(rv.querySelector('small'),[{opacity:0},{opacity:1}],{duration:300,delay:640});
+  await anim(img,[{transform:'translateY(70px) scale(.15) rotate(-30deg)',opacity:0},{transform:'translateY(-18px) scale(1.2) rotate(8deg)',opacity:1,offset:.6},{transform:'none',opacity:1}],
+    {duration:760,delay:120,easing:'ease-out'}).finished;
+  PK.state='reveal';PK.busy=false;
+}
+function fillSlot(i,t){const s=pkTray.children[i];if(!s)return;s.className='on'+(isEngine(t)?' gold':'');s.innerHTML=`<img alt="${PARTS[t].name}" src="${ICON[t]}">`;
+  s.animate([{transform:'scale(.4)'},{transform:'scale(1.25)'},{transform:'none'}],{duration:ms(320),easing:'ease-out'})}
+async function collect(){
+  if(PK.busy)return;PK.busy=true;
+  const i=PK.got.length-1,t=PK.got[i],img=pkStage.querySelector('.pk-reveal img'),slot=pkTray.children[i];
+  if(img&&slot){const a=img.getBoundingClientRect(),b=slot.getBoundingClientRect();
+    pkStage.querySelectorAll('.pk-reveal h3,.pk-reveal small,.pk-rays,.pk-glow').forEach(el=>anim(el,[{opacity:1},{opacity:0}],{duration:220}));
+    await anim(img,[{transform:'none'},{transform:`translate(${b.left+b.width/2-a.left-a.width/2}px,${b.top+b.height/2-a.top-a.height/2}px) scale(${44/a.width}) rotate(360deg)`}],{duration:460,easing:'cubic-bezier(.5,0,.3,1)'}).finished}
+  fillSlot(i,t);PK.busy=false;
+  if(R().packs.length)dealPack();else finishPacks();
+}
+// the haul: this batch grouped by part, popping in one after another
+function finishPacks(){
+  PK.state='done';$('pkSkip').hidden=true;$('pkDone').hidden=false;pkTray.hidden=true;
+  const n={};for(const t of PK.got)n[t]=(n[t]||0)+1;
+  pkStage.className='pk-stage';
+  pkStage.innerHTML=`<div class="pk-sum">${Object.entries(n).map(([t,k])=>`<div class="${isEngine(t)?'gold':''}"><img alt="" src="${bigIcon(t)}"><b>${PARTS[t].name}</b><small>+${k}</small></div>`).join('')}</div>`;
+  pkStage.querySelectorAll('.pk-sum>div').forEach((el,i)=>anim(el,[{opacity:0,transform:'scale(.5) translateY(20px)'},{opacity:1,transform:'scale(1.1)',offset:.7},{opacity:1,transform:'none'}],{duration:420,delay:80+i*110,easing:'ease-out'}));
+}
+function openAll(){
+  if(!PK||PK.busy||PK.state==='done')return;
+  const r=R();
+  while(r.packs.length)PK.got.push(openPack(r));
+  persist();finishPacks();
+}
+pkStage.onclick=()=>{if(!PK)return;if(PK.state==='pack')tearPack();else if(PK.state==='reveal')collect()};
+$('pkSkip').onclick=openAll;
+$('pkDone').onclick=()=>{$('packs').hidden=true;PK=null;renderHangar()};
 
 /* ================= flight ================= */
 const cv=$('cv'), ctx=cv.getContext('2d');
@@ -591,7 +686,7 @@ function showVictory(){
     <button class="big win" type="button" id="endless">Keep flying \u00b7 endless</button>
     <button class="big alt" type="button" id="retire">Retire</button><button class="ghost" type="button" data-copyrun="cur">Copy run</button>`;
   veil.hidden=false;
-  $('endless').onclick=()=>{r.endless=true;r.phase='shop';r.shop=genShop(r,m);weatherOf(r,r.stage);persist();veil.hidden=true;show('hangar');setTab('shop')};
+  $('endless').onclick=()=>{r.endless=true;r.phase='shop';r.shop=genShop(r,m);weatherOf(r,r.stage);grantPacks(r);persist();veil.hidden=true;show('hangar');setTab('shop')};
   $('retire').onclick=()=>endRun();
 }
 function showRunOver(){

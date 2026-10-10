@@ -8,12 +8,12 @@ const clamp=(v,a,b)=>v<a?a:v>b?b:v;
 /* ---------- parts ---------- */
 const PARTS={
   cockpit:{name:'Cockpit',mass:1.0,price:0,mount:'all four sides',blurb:'Holds the pilot and a small fuel reserve. It stays put and works like a frame.'},
-  wing:{name:'Wing',mass:0.4,price:3,mount:'left, right or bottom edge, to a frame, tank or the cockpit',blurb:'Lift grows with speed. Flies best with its lift just behind the center of mass. Useless in thin air.'},
-  prop:{name:'Propeller',mass:0.7,price:4,mount:'left edge only, to a frame, tank or the cockpit, with a free square in front',blurb:'Steady thrust while fuel lasts. Needs air. Keep it level with the center of mass or it pitches the nose.'},
-  rocket:{name:'Rocket',mass:0.9,price:5,mount:'top, bottom or nose edge, to a frame, tank or the cockpit, with a free square behind for the exhaust',blurb:'Hold Boost to fire. Burns 4 fuel per second and works in space. Off-center rockets flip the craft.'},
-  tank:{name:'Fuel tank',mass:0.6,price:3,mount:'all four sides, and passes connections on like a frame',blurb:'Adds fuel and weight, and works as structure. Use tanks to move the center of mass.'},
-  balloon:{name:'Balloon',mass:0.15,price:3,mount:'bottom edge only (the string), to a frame, tank or the cockpit',blurb:'Pulls upward where it is tied and weakens as the air thins. Bursts above 2 km.'},
-  frame:{name:'Frame',mass:0.45,price:2,mount:'all four sides, and passes connections on',blurb:'Light structure. Frames, tanks and the cockpit carry connections onward; everything else must bolt to one of them.'},
+  wing:{name:'Wing',mass:0.4,price:4,mount:'left, right or bottom edge, to a frame, tank or the cockpit',blurb:'Lift grows with speed. Flies best with its lift just behind the center of mass. Useless in thin air.'},
+  prop:{name:'Propeller',mass:0.7,price:5,mount:'left edge only, to a frame, tank or the cockpit, with a free square in front',blurb:'Steady thrust while fuel lasts. Needs air. Keep it level with the center of mass or it pitches the nose.'},
+  rocket:{name:'Rocket',mass:0.9,price:6,mount:'top, bottom or nose edge, to a frame, tank or the cockpit, with a free square behind for the exhaust',blurb:'Hold Boost to fire. Burns 4 fuel per second and works in space. Off-center rockets flip the craft.'},
+  tank:{name:'Fuel tank',mass:0.6,price:4,mount:'all four sides, and passes connections on like a frame',blurb:'Adds fuel and weight, and works as structure. Use tanks to move the center of mass.'},
+  balloon:{name:'Balloon',mass:0.15,price:4,mount:'bottom edge only (the string), to a frame, tank or the cockpit',blurb:'Pulls upward where it is tied and weakens as the air thins. Bursts above 2 km.'},
+  frame:{name:'Frame',mass:0.45,price:3,mount:'all four sides, and passes connections on',blurb:'Light structure. Frames, tanks and the cockpit carry connections onward; everything else must bolt to one of them.'},
 };
 const PALETTE=['wing','prop','rocket','tank','balloon','frame'];
 
@@ -85,8 +85,8 @@ function weatherFx(id,s){const f={wind:0,ceiling:0,rhoMul:1,gust:0,cargo:0,fuelM
   else if(id==='gusts')f.gust=4+.5*s;else if(id==='cargo')f.cargo=1+.25*s;else if(id==='ration')f.fuelMul=.6;else if(id==='short')f.launchMul=.45;
   return f}
 
-/* ---------- every run starts the same: a bare cockpit, a tank and a wing in inventory, 12 coins ---------- */
-const START={coins:12,inv:{tank:1,wing:1}};
+/* ---------- every run starts the same: a bare cockpit, 12 coins and the opening packs ---------- */
+const START={coins:12,inv:{}};
 const UNLOCKS=[
   {at:4,text:'Afterburner, Ram Scoop'},
   {at:6,text:'Solar Wings, Antigravity Coil'},
@@ -371,12 +371,20 @@ const rerollCost=run=>2+run.shop.rerolls;
 const sellValue=id=>Math.floor(RARITY[MODS[id].r].price/2);
 function newRun(level,meta){
   const run={level:level||0,stage:0,flight:0,score:0,total:0,best:0,bestDist:0,coins:START.coins,inv:{...START.inv},
-    cells:[{...COCKPIT,type:'cockpit'}],mods:[],tune:{},weather:{},shop:null,phase:'contract',log:[],endless:false,unlocks:[]};
+    cells:[{...COCKPIT,type:'cockpit'}],mods:[],tune:{},weather:{},shop:null,phase:'contract',log:[],endless:false,unlocks:[],packs:[]};
   run.shop=genShop(run,meta);
-  // the opening shop always offers an engine, since the run starts without one
-  if(!run.shop.parts.some(o=>o.t==='prop'||o.t==='rocket'))run.shop.parts[Math.floor(Math.random()*3)]={t:Math.random()<.5?'prop':'rocket'};
+  grantPacks(run);
   for(let i=0;i<CONTRACTS;i++)weatherOf(run,i);
   return run}
+// parts packs: one random part each, handed out at the start of every contract (2, or 4 for the first).
+// The opening four always hold a tank, a wing and an engine, so every run can fly; the fourth is random.
+const PACKS=2, FIRST_PACKS=4;
+function rollPacks(first){
+  const out=first?['tank','wing',wpick({prop:PART_W.prop,rocket:PART_W.rocket}),wpick(PART_W)]:Array.from({length:PACKS},()=>wpick(PART_W));
+  for(let i=out.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[out[i],out[j]]=[out[j],out[i]]}
+  return out}
+function grantPacks(run){(run.packs=run.packs||[]).push(...rollPacks(run.stage===0&&!run.endless))}
+function openPack(run){const t=run.packs&&run.packs.shift();if(t)run.inv[t]=(run.inv[t]||0)+1;return t}
 function craftCounts(cells){const l=connected(cells);const n=t=>l.filter(c=>c.type===t).length;return {parts:l.length,wings:n('wing'),tanks:n('tank')}}
 function settleFlight(run,meta,f){
   const has=k=>run.mods.includes(k);
@@ -399,7 +407,7 @@ function settleFlight(run,meta,f){
     run.unlocks.push(...out.unlocks);
     if(run.stage===CONTRACTS&&!run.endless){run.phase='won';meta.wins=(meta.wins||0)+1;
       if(run.level>=(meta.level||0)&&run.level<5){meta.level=run.level+1;out.newLevel=meta.level}out.won=true}
-    else{run.phase='shop';run.shop=genShop(run,meta);weatherOf(run,run.stage)}
+    else{run.phase='shop';run.shop=genShop(run,meta);weatherOf(run,run.stage);grantPacks(run)}
   }else if(run.flight>=FLIGHTS){run.phase='over';out.failed=true}
   return out}
 
@@ -412,4 +420,5 @@ export {
   COINSEG, COINR, thermalSeg, coinAt, newFlight, segDist, flag, step,
   popBalloons, summaryOf, scoreFlight, wpick, PART_W, rollMods, rollTunes, genShop,
   rerollShop, priceOf, offerPrice, rerollCost, sellValue, newRun, craftCounts, settleFlight,
+  PACKS, FIRST_PACKS, rollPacks, grantPacks, openPack,
 };
