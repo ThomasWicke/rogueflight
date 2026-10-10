@@ -104,5 +104,6 @@ Code style is dense (many one-line functions, short names: `S` flight state, `K`
 - Additive per-part mods (Wingman +0.3 per wing, Fuel Hauler +0.4 per tank) stack strongly with big builds.
 
 ## Open items / ideas
+- Circus rework follow-ups: season postcards to share (render the craft at its best moment), decals stuck on the plane itself, liveries unlocked by milestones, a decal album. Tune the procedural audio by ear on a phone.
 - Consider a browser smoke test (Playwright) for the main flow: start → buy → build → launch → results.
 - Deploy: Cloudflare Pages, build `npm run build`, output `dist`. `_headers` keeps `sw.js` and HTML uncached. Bump `CACHE` in `client/public/sw.js` if cached files ever need a hard reset.
