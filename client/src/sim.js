@@ -74,7 +74,7 @@ const MODS={
 
 /* ---------- weather on storm contracts ---------- */
 const WEATHER={
-  headwind:{name:'Headwind',d:s=>`${Math.round((5+2*s)*3.6)} km/h headwind`},
+  headwind:{name:'Headwind',d:s=>`${Math.round((2+.8*s)*3.6)} km/h headwind`},
   ceiling:{name:'Thunderheads',d:s=>`Ceiling at ${250+120*s} m`},
   thin:{name:'Thin air',d:()=>'Half-density air'},
   gusts:{name:'Gusts',d:()=>'Vertical gusts'},
@@ -83,8 +83,8 @@ const WEATHER={
   short:{name:'Short catapult',d:()=>'Catapult at 45%'},
 };
 function weatherFx(id,s){const f={wind:0,ceiling:0,rhoMul:1,gust:0,cargo:0,fuelMul:1,launchMul:1};
-  if(id==='headwind')f.wind=-(5+2*s);else if(id==='ceiling')f.ceiling=250+120*s;else if(id==='thin')f.rhoMul=.5;
-  else if(id==='gusts')f.gust=4+.5*s;else if(id==='cargo')f.cargo=1+.25*s;else if(id==='ration')f.fuelMul=.6;else if(id==='short')f.launchMul=.45;
+  if(id==='headwind')f.wind=-(2+.8*s);else if(id==='ceiling')f.ceiling=250+120*s;else if(id==='thin')f.rhoMul=.5;
+  else if(id==='gusts')f.gust=5+.6*s;else if(id==='cargo')f.cargo=1+.25*s;else if(id==='ration')f.fuelMul=.6;else if(id==='short')f.launchMul=.45;
   return f}
 
 /* ---------- every run starts the same: a bare cockpit, 12 coins and the opening packs ---------- */
@@ -232,9 +232,12 @@ function step(S,K,st,dt,ctl){
     // smooth column: strongest in the middle, fading at the edges and near the top, so it lifts rather than kicks
     if(d<12){const b=Math.cos(d/12*Math.PI/2)**2*clamp((th.top-S.y)/25,0,1);Fy+=m*th.str*b}
     if(d<8&&!S.thSeen.has(tk)){S.thSeen.add(tk);S.thermals++;S.events.push('thermal')}}
-  // gusts shake the craft but cannot be farmed: net energy they hand over is capped at ~60 m of height
-  if(st.gust){const gF=m*st.gust*Math.sin(S.x/61+1.3)*Math.cos(S.t*.9+S.x/97),wk=gF*S.vy*dt;
-    if(!(wk>0&&S.gustE>m*G0*60)){Fy+=gF;S.gustE+=wk}}
+  // gusts shove the craft up and down and rock its nose. The air sinks a little more than it rises, and the total upward
+  // push a flight can get is capped (S.gustE, as velocity it could add), so gusts cost height and make low flying and
+  // landings risky; they cannot be ridden or farmed, whichever way the craft is moving
+  if(st.gust){const gw=Math.sin(S.x/61+1.3)*Math.cos(S.t*.9+S.x/97)-.08,gF=m*st.gust*gw;
+    if(gF<=0)Fy+=gF;else if(S.gustE<17){Fy+=gF;S.gustE+=gF/m*dt}
+    Ta+=.12*m*st.gust*Math.sin(S.t*1.7+S.x/43)}
   if(st.ceiling&&S.y>st.ceiling){Fy-=m*(14+.4*(S.y-st.ceiling));flag(S,'storm','Downdraft!')}
   {const k=(VAC+VAC2*v)*(1-Math.exp(-Math.max(0,S.y)/8500))*st.drag;Fx-=m*k*S.vx;Fy-=m*k*S.vy}
   const gyro=1+st.gyro;
