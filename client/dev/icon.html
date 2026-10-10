@@ -1,0 +1,23 @@
+<!doctype html><meta charset="utf-8"><title>App icon</title>
+<style>body{margin:0;background:transparent}canvas{display:block}</style>
+<canvas id="c"></canvas>
+<script type="module">
+// Renders the home-screen icon: the goat pilot in cap and goggles over a brass loop, on barn red.
+// ?size=512&mode=round|square|mask  (round: rounded corners for 'any'; square: full bleed for iOS; mask: art in the safe zone)
+import { drawPilot } from '../src/art.js';
+const q=new URLSearchParams(location.search), S=+q.get('size')||512, mode=q.get('mode')||'round';
+const c=document.getElementById('c');c.width=c.height=S;const g=c.getContext('2d');g.scale(S/512,S/512);
+const INK='#22283a';
+if(mode==='round'){g.beginPath();g.roundRect(0,0,512,512,112);g.clip()}
+// barn red field with paper rays
+g.fillStyle='#d2402f';g.fillRect(0,0,512,512);
+g.save();g.translate(256,300);for(let i=0;i<16;i++){g.rotate(Math.PI/8);g.fillStyle=i%2?'rgba(243,231,206,.13)':'rgba(34,40,58,.06)';g.beginPath();g.moveTo(0,0);g.lineTo(-60,-520);g.lineTo(60,-520);g.closePath();g.fill()}g.restore();
+const k=mode==='mask'?.8:1;g.translate(256,256);g.scale(k,k);g.translate(-256,-256);
+// brass contrail loop behind the goat
+g.strokeStyle='#e9a93b';g.lineWidth=22;g.lineCap='round';g.setLineDash([2,40]);g.beginPath();g.ellipse(256,270,200,150,-.25,Math.PI*.75,Math.PI*2.55);g.stroke();g.setLineDash([]);
+// sky disc
+g.fillStyle='#7cc4dd';g.strokeStyle=INK;g.lineWidth=14;g.beginPath();g.arc(256,272,172,0,7);g.fill();g.stroke();
+g.fillStyle='#fbf5e8';for(const [x,y,r] of [[170,330,34],[205,342,28],[330,350,30],[360,338,24]]){g.beginPath();g.arc(x,y,r,0,7);g.fill()}
+// the goat
+g.save();g.translate(256,262);g.scale(300,300);drawPilot(g,'grin',1.2,{lw:.045,scarf:1.1});g.restore();
+</script>
