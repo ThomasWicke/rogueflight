@@ -14,6 +14,7 @@ import {
   BOONS, rollBoons, boonDesc, pickBoon, modSlots,
 } from './sim.js';
 import { drawWorld, drawGrain, biomeOf } from './world.js';
+import { audio } from './audio.js';
 import { townOf, showTitle, headline } from './fiction.js';
 import { initGuide, openGuide } from './guide.js';
 
@@ -109,7 +110,7 @@ for(const t of Object.keys(PARTS)){const c=document.createElement('canvas');c.wi
 
 const $=id=>document.getElementById(id);
 const veil=$('veil'), sheet=$('sheet'), bench=$('bench');
-function show(id){for(const s of ['title','hangar','flight'])$(s).hidden=s!==id;if(id!=='hangar'){const d=$('dealer');d.classList.remove('open');d.hidden=true;tab='build'}}
+function show(id){for(const s of ['title','hangar','flight'])$(s).hidden=s!==id;audio.music(id==='title'?'title':id==='hangar'?'hangar':'flight');if(id!=='hangar'){const d=$('dealer');d.classList.remove('open');d.hidden=true;tab='build'}}
 const R=()=>save.run;
 let armAbandon=false;
 function runCode(r){if(!r)return '';const L=t=>t==='cockpit'?'c':t[0];
@@ -373,12 +374,12 @@ function renderShop(){
   dbody.onclick=e=>{
     const b=e.target.closest('.buy[data-kind]');
     if(b){buy(b.dataset.kind,+b.dataset.i);return}
-    if(e.target.closest('#reroll')){if(rc>r.coins)return;r.coins-=rc;rerollShop(r,save.meta);persist();renderHangar()}
+    if(e.target.closest('#reroll')){if(rc>r.coins)return;sfx('reroll');r.coins-=rc;rerollShop(r,save.meta);persist();renderHangar()}
   };
 }
 function buy(kind,i){
   const r=R(),S=r.shop;const o=S[kind==='part'?'parts':kind==='tune'?'tunes':'mods'][i];if(!o)return;
-  if(applyPurchase(r,kind,o)){persist();renderHangar()}
+  if(applyPurchase(r,kind,o)){sfx('buy');buzz(12);persist();renderHangar()}else sfx('error')
 }
 function renderMods(){
   const r=R();
@@ -398,7 +399,7 @@ function renderMods(){
   <div class="card stack"><button class="ghost" type="button" data-copyrun="cur">Copy run</button><button class="ghost${armAbandon?' armed':''}" id="aband2" type="button">${armAbandon?'Tap again':'Abandon run'}</button></div>`;
   dbody.onclick=e=>{
     const b=e.target.closest('[data-sell]');
-    if(b){const id=b.dataset.sell;if(armSell!==id){armSell=id;renderMods();return}armSell=null;sellMod(r,id);persist();renderHangar();return}
+    if(b){const id=b.dataset.sell;if(armSell!==id){armSell=id;renderMods();return}armSell=null;sfx('sell');sellMod(r,id);persist();renderHangar();return}
     if(e.target.closest('#aband2')){if(!armAbandon){armAbandon=true;renderMods();return}endRun()}
   };
 }
@@ -467,10 +468,10 @@ function sparks(gold){
 async function tearPack(){
   if(PK.busy)return;PK.busy=true;
   const q=s=>pkStage.querySelector(s), pack=q('.pack');
-  pack.style.animation='none';q('.pk-hint').hidden=true;
+  pack.style.animation='none';q('.pk-hint').hidden=true;sfx('crateShake');
   if(!reduceMotion())await pack.animate([{transform:'none'},{transform:'rotate(-3deg) translateX(-3px)'},{transform:'rotate(3deg) translateX(3px)'},{transform:'rotate(-5deg) translateX(-4px)'},
     {transform:'rotate(6deg) translateX(5px)'},{transform:'rotate(-8deg) translateX(-6px) scale(1.04)'},{transform:'rotate(8deg) translateX(6px) scale(1.06)'},{transform:'scale(1.08)'}],{duration:560,easing:'ease-in'}).finished;
-  const r=R(),t=openPack(r);persist();PK.got.push(t);
+  const r=R(),t=openPack(r);persist();PK.got.push(t);sfx('crateOpen');setTimeout(()=>sfx('reveal'),ms(260));
   const gold=isEngine(t);pkStage.classList.toggle('gold',gold);
   try{navigator.vibrate&&navigator.vibrate([20,40,30])}catch(_){}
   anim(pack.querySelector('.pk-cap'),[{transform:'scale(1.08)',opacity:1},{transform:'translate(70px,-190px) rotate(42deg)',opacity:0}],{duration:650,easing:'cubic-bezier(.2,.7,.3,1)'});
@@ -589,7 +590,7 @@ function frame(now){
         for(const p of F.K.parts)if(p.type==='balloon')for(let j=0;j<10;j++)F.parts.push({x:S.x+p.lx*c-p.ly*s,y:S.y+p.lx*s+p.ly*c,vx:S.vx*.5+(Math.random()-.5)*16,vy:S.vy*.5+(Math.random()-.5)*16,life:.8,r:.18,k:'pop'});
         F.K=popBalloons(S,F.K,st)}}
     for(const e of S.events){
-      if(e==='coin'){F.coinStreak=(F.coinT>0?(F.coinStreak||0)+1:0);F.coinT=1.2;sfx('coin',{pitch:1+Math.min(8,F.coinStreak)*.06});F.coinFlash=1;for(let j=0;j<8;j++){const a=j/8*6.283;F.parts.push({x:S.x,y:S.y,vx:Math.cos(a)*7+S.vx*.6,vy:Math.sin(a)*7+S.vy*.6,life:.7,r:.22,k:'gold'})}}
+      if(e==='coin'){F.coinStreak=(F.coinT>0?(F.coinStreak||0)+1:0);F.coinT=1.2;sfx('coin',{pitch:Math.pow(2,Math.min(12,F.coinStreak)/12)});F.coinFlash=1;for(let j=0;j<8;j++){const a=j/8*6.283;F.parts.push({x:S.x,y:S.y,vx:Math.cos(a)*7+S.vx*.6,vy:Math.sin(a)*7+S.vy*.6,life:.7,r:.22,k:'gold'})}}
       else if(e==='bounce')dust(S.x,S.y-1,8);
       else if(e==='loop')F.loopT=performance.now()/1000,F.cheer=1,sfx('loop'),sfx('cheer',{intensity:.5}),toast('Loop',nth(S.loops,has('stunt')?mv('stunt'):.5));
       else if(e==='pass')F.cheer=1,sfx('pass'),toast('Low pass',nth(S.passes,has('duster')?mv('duster'):.25));
@@ -607,7 +608,7 @@ function frame(now){
     if(F.trail.length>160)F.trail.shift();
     emit(dt);
   }else if(!F.ended){
-    F.ended=true;F.endT=now;F.toasts.length=0;F.toastT=0;
+    F.ended=true;audio.stopEngine();F.endT=now;F.toasts.length=0;F.toastT=0;
     if(S.crashed){breakApart();sfx('crash');sfx('ooh');buzz([60,40,80]);toast('Crashed',has('crashtest')?`+${num(mv('crashtest'))} mult`:'');dust(S.x,S.y,30,true)}
     else if(S.landed)sfx('touchdown'),sfx('cheer',{intensity:.6}),buzz(25),toast('Touchdown',has('greaser')?`×${num(mv('greaser'))} score`:'+0.5 mult');
   }
@@ -722,7 +723,8 @@ function hud(dt){
   if(S.burst&&$('bPop').style.visibility!=='hidden')$('bPop').style.visibility='hidden';
   {const t=F.ts>1.15&&!S.done;elFF.hidden=!t;if(t)elFF.textContent='\u25b8\u25b8 '+(F.ts<9.95?F.ts.toFixed(1):Math.round(F.ts))+'\u00d7'}
   const sc=scoreFlight(summaryOf(S,K),F.ctx);
-  F.hype=clamp((sc.mult*sc.xm-1)/4,0,1);F.coinT=Math.max(0,(F.coinT||0)-dt);
+  F.hype=clamp((sc.mult*sc.xm-1)/4,0,1);audio.hype(F.hype);
+  if(!S.done&&F.pre<=0){const fr=K.fuelMax?S.fuel/K.fuelMax:0;audio.engine({prop:S.propOn?ctl.throttle:0,rocket:S.rocketOn?ctl.throttle:0,speed:Math.hypot(S.vx,S.vy),fuel:fr,alt:S.y})}F.coinT=Math.max(0,(F.coinT||0)-dt);
   elS.textContent=fmt(sc.total);elM.textContent='×'+num(sc.mult*sc.xm);
   const need=F.quota-F.already-sc.total;
   elN.textContent=need>0?`${fmt(need)} to sell out`:'Sold out!';elN.className='need'+(need>0?'':' ok');
@@ -735,9 +737,10 @@ function hud(dt){
 /* ================= results ================= */
 const reduceMotion=()=>window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
 // sound hook: the audio module plugs in here (audio.js); every call is optional so the game runs silent without it
-let AUDIO=null, DECAL=null, ART=null;
+let AUDIO=audio, DECAL=null, ART=null;
 const sfx=(n,o)=>{try{AUDIO&&AUDIO.sfx(n,o)}catch(_){}};
-const buzz=p=>{try{navigator.vibrate&&navigator.vibrate(p)}catch(_){}};
+// haptics only after the player has really touched the page (browsers refuse vibration before that)
+const buzz=p=>{try{const ua=navigator.userActivation;if(navigator.vibrate&&(!ua||ua.hasBeenActive))navigator.vibrate(p)}catch(_){}};
 function finish(){
   cancelAnimationFrame(raf);
   const r=R(),{S}=F,K=F.K;
@@ -850,6 +853,15 @@ function showRunOver(){
   veil.hidden=false;sfx('sad');
   $('again').onclick=()=>{sheet.className='sheet';endRun()};
 }
+
+/* ================= sound wiring ================= */
+const unlockAudio=()=>audio.unlock();
+document.addEventListener('pointerup',unlockAudio,{capture:true});document.addEventListener('click',unlockAudio,{capture:true});
+// a woody tap for plain buttons; buttons with their own sound (buy, launch, gifts) skip it
+document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled||b.matches('.buy,#launch,.boon,.pack,#bUp,#bDown,#bPop'))return;sfx('tap')},{capture:true});
+function syncSound(){const b=$('hSound');b.classList.toggle('off',audio.muted);b.setAttribute('aria-label',audio.muted?'Sound off':'Sound on');b.setAttribute('aria-pressed',String(!audio.muted))}
+$('hSound').onclick=()=>{audio.setMuted(!audio.muted);syncSound()};
+syncSound();
 
 /* ================= boot ================= */
 show('title');renderTitle();

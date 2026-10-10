@@ -488,3 +488,4 @@ button:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
 .endsheet.lose h2{color:var(--red)}
 .endsheet.lose::after{content:"";position:absolute;top:0;bottom:0;left:57%;width:3px;background:repeating-linear-gradient(180deg,var(--ink) 0 6px,transparent 6px 12px);opacity:.35;transform:rotate(2deg)}
 .offer img.decal{width:52px;height:52px;margin:-4px 0}
+.chip.help.off{color:var(--muted);text-decoration:line-through;text-decoration-thickness:2px}
