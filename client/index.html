@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>rogueflight</title>
+<meta name="description" content="Roguelite flying-machine builder: build, fly, hit the quota.">
+<meta name="theme-color" content="#0c1a2c">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="rogueflight">
+</head>
+<body>
+<!-- ============ TITLE ============ -->
+<section class="screen blue" id="title">
+  <div class="top"><div class="brand hero">SKY<span>WARD</span></div></div>
+  <div class="bench" id="titleBody"></div>
+</section>
+
+<!-- ============ HANGAR ============ -->
+<section class="screen blue" id="hangar" hidden>
+  <div class="top">
+    <div class="brand">SKY<span>WARD</span></div>
+    <div class="chips"><span class="chip" id="hKit">Glider Club</span><span class="chip">Coins <b id="hCoins">0</b></span></div>
+  </div>
+  <div class="cstrip" id="cstrip"></div>
+  <div class="tabs" role="tablist">
+    <button role="tab" id="tBuild" aria-selected="true" type="button">Build</button>
+    <button role="tab" id="tShop" aria-selected="false" type="button">Shop</button>
+    <button role="tab" id="tMods" aria-selected="false" type="button">Mods</button>
+  </div>
+  <div class="bench" id="bench"></div>
+  <div class="launchbar"><button class="big" id="launch" type="button">LAUNCH</button></div>
+</section>
+
+<!-- ============ FLIGHT ============ -->
+<section class="screen" id="flight" hidden>
+  <canvas id="cv" aria-label="Your flying machine in flight"></canvas>
+  <div class="hud">
+    <div class="hrow">
+      <div class="dist" id="fDist">0 m</div>
+      <div class="mini"><span id="fAlt">ALT 0 m</span><span id="fSpd">0 km/h</span><span id="fTs" class="ffw" hidden></span></div>
+    </div>
+    <div class="srow"><span>SCORE <b id="fScore">0</b> <span class="m" id="fMult">×1.0</span></span><span class="need" id="fNeed"></span></div>
+    <div class="fuelrow"><span>FUEL</span><div class="fuel"><i id="fFuel"></i></div><button id="land" type="button">Land now</button></div>
+    <div class="wxhud" id="fWx" hidden></div>
+  </div>
+  <div class="toast" id="toast"></div>
+  <div class="ctrl">
+    <div class="pad">
+      <button id="bUp" type="button" aria-label="Nose up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 15l7-7 7 7"/></svg>NOSE UP</button>
+      <button id="bDown" type="button" aria-label="Nose down"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l7 7 7-7"/></svg>NOSE DOWN</button>
+    </div>
+    <div class="rpad">
+      <button id="bPop" type="button" aria-label="Pop balloons"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 1 6 6c0 4-3.5 7-6 7s-6-3-6-7a6 6 0 0 1 6-6z"/><path d="M12 16v5M3 4l3 2M21 4l-3 2M2 11h2M20 11h2"/></svg>POP</button>
+      <div id="thr" role="slider" aria-label="Throttle" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100" tabindex="0"><i id="thrFill"></i><b id="thrKnob"></b><span id="thrVal">100%</span></div>
+    </div>
+  </div>
+</section>
+
+<div class="veil" id="veil" hidden><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>
