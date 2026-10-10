@@ -10,7 +10,8 @@ The game was prototyped as a single-file Claude artifact under the working title
 npm install
 npm run dev       # Vite dev server, host:true so a phone on the same Wi-Fi can open it
 npm test          # node:test checks of the simulation core (tests/sim.test.js)
-npm run bot -- 20 climb --seed=1   # balance harness: 20 scripted runs (policies: climb, hands; --verbose lists every flight)
+npm run bot -- 20 climb --seed=1   # balance harness: 20 scripted runs (policies: climb, hands; --verbose lists every flight;
+                                   #   --storm=<weather id>|none forces one storm onto contracts 3, 6, 8)
 npm run build     # -> dist/
 npm run preview   # serve dist/ (service worker only registers in production builds)
 ```
@@ -24,7 +25,7 @@ client/src/sim.js        PURE game logic, no DOM. Data tables, physics step, cra
 client/src/guide.js      "How to play" drawer: swipeable slides with small HTML/SVG illustrations (opened from the title and the ? chip in the hangar)
 client/src/ui.js         everything DOM/canvas: part art, hangar (build/shop/mods), flight loop + HUD + input, result screens
 client/src/style.css     all styles; dark blueprint theme, tokens on :root
-client/public/           manifest.webmanifest, sw.js, _headers (Cloudflare), icons/
+client/public/           favicon.svg (source of the app icon), manifest.webmanifest, sw.js, _headers (Cloudflare), icons/ (PNGs rendered from favicon.svg)
 tests/sim.test.js        headless sim checks (no browser)
 tools/bot.js             balance harness (scripted shopper, builder, pilot), prints contracts reached and per-contract score spread
 ```
@@ -76,6 +77,8 @@ Code style is dense (many one-line functions, short names: `S` flight state, `K`
 
 ## Balance notes
 - The bot starts from the universal start, opens its packs and shops before every flight, and picks its layout by test-flying variants of its inventory in the forecast weather. Pilots press buttons like a player (pitch −1/0/+1, re-decided every 0.2 s). `climb` waits for flying speed, climbs at about 35° under power, then glides hands-off, using full or 60% throttle (whichever tested better for the build). That is how a good human flies. `hands` is the old weak baseline. `--seed=N` makes runs repeatable, so compare balance changes with the same seed.
+- Storms compared with `--storm` (bot, 3×100 runs each; clear rate of contracts 3 / 6 / 8 among runs that reached them; no storm: 98% / 65% / 52%):
+  headwind 92 / 7 / 39 (by far the hardest: 54 km/h on contract 6 stops the bot's slow gliders), fuel rationing 87 / 42 / 31, thin air 87 / 57 / 52, short catapult 93 / 55 / 47, mail run 96 / 57 / 52, gusts 99 / 70 / 60 (slightly helps), thunderheads identical to no storm (the bot never climbs above the ceiling; it only bites players who climb high).
 - Flight permit (added after the baseline below) cost the bot about 0.2 contracts (5.61 → 5.39 over 5×100 seeded runs), mostly because it takes one of the two tuning slots in a shop and the bot rarely needs it. Seeded runs diverge as soon as one purchase differs, so compare balance changes over several seeds, not one.
 - Baseline with packs (30 runs, `--seed=7`, Ceiling 0): `climb` clears 5.8 contracts on average and wins 5 of 30; `hands` clears 5.2 and wins 1. Over 200 runs the pack economy came out even with the old one (5.68 vs 5.75 contracts for `climb`). Median flight scores fall behind the quota from contract 3 on, so runs are won by the occasional big flight (thermals, sound barrier, xmult mods).
 - One human data point: the player won all 8 contracts on their first serious run with a light, strong-prop glider (before quotas 6–8 were raised by about 20%). A balloon-heavy build later died to thin air on contract 6; that loss motivated revealing storms early.

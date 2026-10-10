@@ -1,7 +1,7 @@
 // Network-first service worker: always try the network so a fresh deploy shows up on the next launch,
 // and fall back to the cache so the game still opens offline once it has been loaded once.
 // Bump CACHE to drop everything cached by older versions.
-const CACHE = 'rogueflight-v1';
+const CACHE = 'rogueflight-v2';
 
 self.addEventListener('install', () => self.skipWaiting());
 

@@ -1,6 +1,6 @@
 {
-  "name": "rogueflight",
-  "short_name": "rogueflight",
+  "name": "RogueFlight",
+  "short_name": "RogueFlight",
   "description": "Roguelite flying-machine builder: build, fly, hit the quota.",
   "start_url": "/",
   "scope": "/",

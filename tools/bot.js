@@ -1,6 +1,7 @@
 // Balance harness: plays whole runs from the universal start with a scripted shopper, builder and pilot, then prints
 // how far runs get and the score spread per contract against its quota.
-//   node tools/bot.js [runs=20] [policy=climb|hands] [--seed=N] [--verbose]
+//   node tools/bot.js [runs=20] [policy=climb|hands] [--seed=N] [--storm=<weather id>|none] [--verbose]
+// --storm puts the same weather on every storm contract (3, 6, 8), or none at all, to compare storms.
 // Pilots press the same buttons a player has: pitch is -1/0/+1, re-decided at most every 0.2 s, plus one throttle.
 //   climb  waits for flying speed, climbs at ~35° under power, then glides hands-off (a decent human).
 //          Throttle is picked per build (full or 60%), like a player who tried both.
@@ -9,7 +10,7 @@
 // so builds are sensible but not optimal. It opens its parts packs and shops before every flight.
 import {
   newRun, weatherOf, stats, weatherFx, makeCraft, newFlight, step, popBalloons, summaryOf, scoreFlight, settleFlight,
-  craftCounts, offerPrice, rerollCost, rerollShop, openPack, MAXMODS, COLS, ROWS, COCKPIT, quotaFor,
+  craftCounts, offerPrice, rerollCost, rerollShop, openPack, MAXMODS, COLS, ROWS, COCKPIT, quotaFor, isStorm, CONTRACTS, WEATHER,
 } from '../client/src/sim.js';
 
 const args = process.argv.slice(2);
@@ -18,6 +19,8 @@ const opt = (k) => { const a = args.find((x) => x.startsWith('--' + k)); return 
 const RUNS = +pos[0] || 20;
 const PN = pos[1] || 'climb';
 const VERBOSE = !!opt('verbose');
+const STORM = opt('storm');
+if (STORM && STORM !== 'none' && !WEATHER[STORM]) throw new Error('unknown storm ' + STORM + ' (use: none, ' + Object.keys(WEATHER).join(', ') + ')');
 // sim.js rolls shops and weather with Math.random; a seed makes two balance runs comparable
 if (opt('seed') != null) {
   let s = +opt('seed') >>> 0;
@@ -200,13 +203,14 @@ const t0 = Date.now();
 for (let n = 0; n < RUNS; n++) {
   const meta = { bestStage: 8 };
   const run = newRun(0, meta);
+  if (STORM && STORM !== 'none') for (let i = 0; i < CONTRACTS; i++) if (isStorm(i)) run.weather[i] = STORM;
   lastFlightFrac = 0;
   let craft = null, sig = '';
   let guard = 0;
   while (run.phase !== 'over' && run.phase !== 'won' && guard++ < 60) {
     if (run.phase === 'shop') run.phase = 'contract';
     botShop(run, meta);
-    const wx = weatherOf(run, run.stage), st = stats(run.tune, run.mods, weatherFx(wx, run.stage));
+    const wx = STORM === 'none' ? null : weatherOf(run, run.stage), st = stats(run.tune, run.mods, weatherFx(wx, run.stage));
     // rebuild only when something that changes the flight has changed
     const now = JSON.stringify([run.inv, run.tune, run.mods, wx]);
     if (now !== sig) { craft = build(run, st, craft); sig = now; }
@@ -225,5 +229,7 @@ for (let n = 0; n < RUNS; n++) {
 console.log('policy', PN, 'avg cleared', (reach.reduce((a, b) => a + b, 0) / reach.length).toFixed(2), 'dist', JSON.stringify(reach.reduce((m, x) => ((m[x] = (m[x] || 0) + 1), m), {})), `(${((Date.now() - t0) / 1000).toFixed(1)} s)`);
 for (const k in stageScores) {
   const a = stageScores[k].sort((x, y) => x - y);
-  console.log('contract', +k + 1, 'quota', quotaFor(+k, 0), 'flights', a.length, 'median', a[Math.floor(a.length / 2)], 'p80', a[Math.floor(a.length * 0.8)], 'max', a[a.length - 1]);
+  // of the runs that got to this contract, how many cleared it
+  const got = reach.filter((x) => x >= +k).length, won = reach.filter((x) => x > +k).length;
+  console.log('contract', +k + 1, 'quota', quotaFor(+k, 0), 'cleared', `${won}/${got}`, 'flights', a.length, 'median', a[Math.floor(a.length / 2)], 'p80', a[Math.floor(a.length * 0.8)], 'max', a[a.length - 1]);
 }
