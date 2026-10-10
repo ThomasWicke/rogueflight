@@ -10,7 +10,7 @@ The game was prototyped as a single-file Claude artifact under the working title
 npm install
 npm run dev       # Vite dev server, host:true so a phone on the same Wi-Fi can open it
 npm test          # node:test checks of the simulation core (tests/sim.test.js)
-npm run bot -- 20 hands   # balance harness: plays 20 scripted runs (policies: hands, climb)
+npm run bot -- 20 climb --seed=1   # balance harness: 20 scripted runs (policies: climb, hands; --verbose lists every flight)
 npm run build     # -> dist/
 npm run preview   # serve dist/ (service worker only registers in production builds)
 ```
@@ -25,7 +25,7 @@ client/src/ui.js         everything DOM/canvas: part art, hangar (build/shop/mod
 client/src/style.css     all styles; dark blueprint theme, tokens on :root
 client/public/           manifest.webmanifest, sw.js, _headers (Cloudflare), icons/
 tests/sim.test.js        headless sim checks (no browser)
-tools/bot.js             balance harness (scripted shopper + pilot), prints contracts reached and per-contract score spread
+tools/bot.js             balance harness (scripted shopper, builder, pilot), prints contracts reached and per-contract score spread
 ```
 
 `sim.js` must stay DOM-free: tests and the bot import it directly in node. `ui.js` imports every sim export by name.
@@ -48,7 +48,7 @@ Code style is dense (many one-line functions, short names: `S` flight state, `K`
 - The bench overlay shows bolts and open sockets, the centre-of-mass marker, the centre-of-lift arrow, and dashed thrust lines (red when more than `GIMBAL`=0.4 m off the centre of mass).
 - Editor input: tap places the selected part or removes the same part. Press and hold (280 ms) to pick a part up; drop it on an empty cell to move it or onto a part to swap.
 
-### Flight physics (`step`, called at about 1/240 s substeps)
+### Flight physics (`step`, called in substeps of at most 12 ms and 0.6 m of travel; the tests use 1/240 s)
 - Commanded-lift model: an autopilot asks the wings for lift (`Lcmd`), capped by wing area × air density × v² and by balance (`balanceOf`: centre of lift vs centre of mass). A trim assist with limited authority keeps the nose stable. The player's pitch input adds or removes commanded lift. Tumbling loses lift.
 - Throttle 0–100% (one slider for props and rockets together) scales thrust and fuel burn. Engines idle with no fuel or at 0% throttle; a slow, idle craft that is not descending ends the flight ("becalmed").
 - Quadratic drag. Air density is exp(−y/8500). Extra vacuum drag terms appear at altitude, and speed is capped at the speed of light.
@@ -71,12 +71,12 @@ Code style is dense (many one-line functions, short names: `S` flight state, `K`
 - Balance feedback: the player pastes "Copy run" codes (Mods tab, end screens, logbook). The format is `ROGUEFLIGHT {json}` (prototype codes: `SKYWARD {json}`) with kit, mods, tune, inv, a compact cells string (`c22 p32 …` = type initial + column + row), and a log of `[contract, flight, score, distance, mult]`.
 
 ## Balance notes
-- The bot is a deliberately weak player and was never updated for the universal start or the throttle. A good human scores roughly 2× the bot late in a run (climb at about 35° under power, then glide hands-off).
+- The bot starts from the universal start, shops before every flight (engine first), and picks its layout by test-flying variants of its inventory in the forecast weather. Pilots press buttons like a player (pitch −1/0/+1, re-decided every 0.2 s). `climb` waits for flying speed, climbs at about 35° under power, then glides hands-off, using full or 60% throttle (whichever tested better for the build). That is how a good human flies. `hands` is the old weak baseline. `--seed=N` makes runs repeatable, so compare balance changes with the same seed.
+- Baseline (30 runs, `--seed=7`, Ceiling 0): `climb` clears 6.2 contracts on average and wins 7 of 30; `hands` clears 5.5 and wins 3. Median flight scores fall behind the quota from contract 3 on, so runs are won by the occasional big flight (thermals, sound barrier, xmult mods).
 - One human data point: the player won all 8 contracts on their first serious run with a light, strong-prop glider (before quotas 6–8 were raised by about 20%). A balloon-heavy build later died to thin air on contract 6; that loss motivated revealing storms early.
 - Additive per-part mods (Wingman +0.3 per wing, Fuel Hauler +0.4 per tank) stack strongly with big builds.
 
 ## Open items / ideas
 - Remove the legacy kits from `KITS` once old saves don't matter (there are none on the new origin).
-- Update `tools/bot.js` for the universal start (shopping for an engine, smarter layouts, throttle use).
 - Consider a browser smoke test (Playwright) for the main flow: start → buy → build → launch → results.
 - Deploy: Cloudflare Pages, build `npm run build`, output `dist`. `_headers` keeps `sw.js` and HTML uncached. Bump `CACHE` in `client/public/sw.js` if cached files ever need a hard reset.
