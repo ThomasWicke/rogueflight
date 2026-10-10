@@ -13,6 +13,7 @@ import {
   MAX_CEILING, CEILING_RULES, ceilingRules, REDLINE, CLOUD9,
   BOONS, rollBoons, boonDesc, pickBoon, modSlots,
 } from './sim.js';
+import { drawWorld, drawGrain, biomeOf } from './world.js';
 import { townOf, showTitle, headline } from './fiction.js';
 import { initGuide, openGuide } from './guide.js';
 
@@ -509,7 +510,7 @@ $('land').onclick=()=>{if(F&&!F.S.done){F.S.done=true;F.S.banked=true}};
 
 function startFlight(){
   const r=R(),w=curWx(),st=curStats(),K=makeCraft(r.cells,st);
-  F={st,K,S:newFlight(K,st),ts:1,flyCoins:[],idle:0,wx:w,cam:{x:0,y:20,sc:20},trail:[],parts:[],toasts:[],toastT:0,boom:-1,ended:false,coinFlash:0,endT:0,
+  F={st,K,S:newFlight(K,st),ts:1,flyCoins:[],pre:reduceMotion()?.3:1.1,stretch:0,debris:null,chute:null,idle:0,wx:w,cam:{x:0,y:20,sc:20},trail:[],parts:[],toasts:[],toastT:0,boom:-1,ended:false,coinFlash:0,endT:0,
     ctx:{mods:r.mods.slice(),lv:modLevels(r),flightIdx:r.flight,cleared:r.stage,coins:r.coins,...craftCounts(r.cells)},quota:quotaFor(r.stage,r.level),already:r.score,bestDist:r.bestDist||0};
   ctl.pitch=0;ctl.boost=false;
   show('flight');setThr(1);$('thr').style.visibility=(K.counts.rocket||K.counts.prop)?'visible':'hidden';$('bPop').style.visibility=K.counts.balloon?'visible':'hidden';
@@ -517,6 +518,7 @@ function startFlight(){
   const fw=$('fWx');fw.hidden=!w;if(w)fw.textContent='Storm · '+WEATHER[w].name;
   resize();F.cam.sc=vh/40;
   try{navigator.wakeLock&&navigator.wakeLock.request('screen').catch(()=>{})}catch(_){}
+  sfx('creak',{amount:1});
   last=performance.now();cancelAnimationFrame(raf);raf=requestAnimationFrame(frame);
 }
 const lerp=(a,b,t)=>a+(b-a)*t;
@@ -527,6 +529,11 @@ function frame(now){
   const {S,st}=F, lv=F.ctx.lv, has=k=>!!lv[k], mv=(k,key)=>modVal(lv,k,key);
   // what the n-th repeat of a trick adds, after the diminishing returns in scoreFlight
   const nth=(n,per)=>`+${num((repeats(n)-repeats(n-1))*per)} mult`;
+  // the wind-up: the plane sits pulled back on the ramp, then the catapult fires
+  if(F.pre>0){F.pre-=dt;if(F.pre<=0){F.stretch=1;F.cheer=1;sfx('launch');sfx('cheer',{intensity:.7});buzz(30)}
+    updParts(dt);draw(now);hud(0);raf=requestAnimationFrame(frame);return}
+  F.stretch=Math.max(0,F.stretch-dt*5);
+  if(F.debris)updDebris(dt);
   if(!S.done){
     // fast-forward only while hands-off; touching a control drops back to real time at once
     F.idle=ctl.pitch?0:F.idle+dt;
@@ -542,14 +549,14 @@ function frame(now){
         for(const p of F.K.parts)if(p.type==='balloon')for(let j=0;j<10;j++)F.parts.push({x:S.x+p.lx*c-p.ly*s,y:S.y+p.lx*s+p.ly*c,vx:S.vx*.5+(Math.random()-.5)*16,vy:S.vy*.5+(Math.random()-.5)*16,life:.8,r:.18,k:'pop'});
         F.K=popBalloons(S,F.K,st)}}
     for(const e of S.events){
-      if(e==='coin'){F.coinFlash=1;for(let j=0;j<8;j++){const a=j/8*6.283;F.parts.push({x:S.x,y:S.y,vx:Math.cos(a)*7+S.vx*.6,vy:Math.sin(a)*7+S.vy*.6,life:.7,r:.22,k:'gold'})}}
+      if(e==='coin'){F.coinStreak=(F.coinT>0?(F.coinStreak||0)+1:0);F.coinT=1.2;sfx('coin',{pitch:1+Math.min(8,F.coinStreak)*.06});F.coinFlash=1;for(let j=0;j<8;j++){const a=j/8*6.283;F.parts.push({x:S.x,y:S.y,vx:Math.cos(a)*7+S.vx*.6,vy:Math.sin(a)*7+S.vy*.6,life:.7,r:.22,k:'gold'})}}
       else if(e==='bounce')dust(S.x,S.y-1,8);
-      else if(e==='loop')toast('Loop',nth(S.loops,has('stunt')?mv('stunt'):.5));
-      else if(e==='pass')toast('Low pass',nth(S.passes,has('duster')?mv('duster'):.25));
-      else if(e==='thermal')toast('Thermal',`+${num(has('thermal')?mv('thermal','w'):.1)} mult`);
-      else if(e==='burst')toast('Balloons burst','');
-      else if(e==='Redline'){F.boom=0;toast('Redline',has('sonic')?`×${num(mv('sonic'))} score`:'+1 mult')}
-      else if(e==='Cloud nine')toast('Cloud nine',has('escape')?`×${num(mv('escape'))} score`:'+2 mult');
+      else if(e==='loop')F.cheer=1,sfx('loop'),sfx('cheer',{intensity:.5}),toast('Loop',nth(S.loops,has('stunt')?mv('stunt'):.5));
+      else if(e==='pass')F.cheer=1,sfx('pass'),toast('Low pass',nth(S.passes,has('duster')?mv('duster'):.25));
+      else if(e==='thermal')F.cheer=.6,sfx('thermal'),toast('Thermal',`+${num(has('thermal')?mv('thermal','w'):.1)} mult`);
+      else if(e==='burst')sfx('pop'),toast('Balloons burst','');
+      else if(e==='Redline'){F.boom=0;F.cheer=1;sfx('redline');sfx('cheer',{intensity:.9});buzz(40);toast('Redline',has('sonic')?`×${num(mv('sonic'))} score`:'+1 mult')}
+      else if(e==='Cloud nine')F.cheer=1,sfx('cheer',{intensity:.9}),toast('Cloud nine',has('escape')?`×${num(mv('escape'))} score`:'+2 mult');
       else if(e==='Downdraft!')toast('Downdraft','The storm pushes you down');
       else toast(e,'');
     }
@@ -561,11 +568,11 @@ function frame(now){
     emit(dt);
   }else if(!F.ended){
     F.ended=true;F.endT=now;F.toasts.length=0;F.toastT=0;
-    if(S.crashed){toast('Crashed',has('crashtest')?`+${num(mv('crashtest'))} mult`:'');dust(S.x,S.y,30,true)}
-    else if(S.landed)toast('Touchdown',has('greaser')?`×${num(mv('greaser'))} score`:'+0.5 mult');
+    if(S.crashed){breakApart();sfx('crash');sfx('ooh');buzz([60,40,80]);toast('Crashed',has('crashtest')?`+${num(mv('crashtest'))} mult`:'');dust(S.x,S.y,30,true)}
+    else if(S.landed)sfx('touchdown'),sfx('cheer',{intensity:.6}),buzz(25),toast('Touchdown',has('greaser')?`×${num(mv('greaser'))} score`:'+0.5 mult');
   }
   updParts(dt);draw(now);hud(dt);
-  if(F.ended&&now-F.endT>1300){finish();return}
+  if(F.ended&&now-F.endT>(S.crashed?2600:1300)){finish();return}
   raf=requestAnimationFrame(frame);
 }
 function emit(dt){
@@ -579,59 +586,43 @@ function emit(dt){
 function dust(x,y,n,debris){for(let i=0;i<n;i++)F.parts.push({x,y,vx:(Math.random()-.5)*14,vy:Math.random()*9,life:1,r:debris?.25:.5,k:debris?'debris':'dust',g:1})}
 function updParts(dt){for(const p of F.parts){p.x+=p.vx*dt;p.y+=p.vy*dt;if(p.g)p.vy-=12*dt;p.life-=dt*(p.k==='fire'?2.2:p.k==='pop'||p.k==='gold'?1.6:.9);p.r+=dt*(p.k==='smoke'?1.2:p.k==='fire'?.8:0)}F.parts=F.parts.filter(p=>p.life>0);if(F.parts.length>500)F.parts.splice(0,F.parts.length-500)}
 
+// crash: every part becomes a tumbling piece of debris, and the pilot pops out on a parachute
+function breakApart(){
+  const {S}=F,K=F.K,c=Math.cos(S.th),s=Math.sin(S.th);
+  F.debris=K.parts.map(p=>({type:p.type,x:S.x+p.lx*c-p.ly*s,y:S.y+p.lx*s+p.ly*c+.3,vx:S.vx*.35+(Math.random()-.5)*9+p.lx*3,vy:4+Math.random()*7,th:S.th,w:(Math.random()-.5)*14}));
+  F.chute={x:S.x,y:S.y+1,vx:S.vx*.15+1.5,vy:11,t:0};
+}
+function updDebris(dt){
+  for(const d of F.debris){d.vy-=14*dt;d.x+=d.vx*dt;d.y+=d.vy*dt;d.th+=d.w*dt;
+    if(d.y<.5){d.y=.5;if(d.vy<-2){d.vy=-d.vy*.35;d.w*=.6}else d.vy=0;d.vx*=Math.pow(.15,dt);d.w*=Math.pow(.2,dt)}}
+  const p=F.chute;if(p){p.t+=dt;p.vy=Math.max(p.vy-14*dt,-2.2);p.vx*=Math.pow(.6,dt);p.x+=p.vx*dt;p.y=Math.max(.6,p.y+p.vy*dt)}
+}
+function drawDebris(X,Y,sc,now){
+  const ds=Math.max(sc,14);
+  for(const d of F.debris){ctx.save();ctx.translate(X(d.x),Y(d.y));ctx.scale(ds,ds);ctx.rotate(-d.th);drawPart(ctx,d.type,now/1000,{frac:0,lw:2.5/ds,mood:'crash'});ctx.restore()}
+  const p=F.chute;if(!p)return;
+  const sway=Math.sin(p.t*2.2)*.25;ctx.save();ctx.translate(X(p.x),Y(p.y));ctx.scale(ds*1.4,ds*1.4);ctx.rotate(sway);
+  if(ART&&ART.drawParachute)ART.drawParachute(ctx,now/1000,{lw:2.5/(ds*1.4),open:clamp(p.t*3,0,1)});
+  else{ctx.lineWidth=2.5/(ds*1.4);ctx.strokeStyle='#22283a';ctx.fillStyle='#d2402f';ctx.beginPath();ctx.arc(0,-1.6,1.1*clamp(p.t*3,.2,1),Math.PI,0);ctx.closePath();ctx.fill();ctx.stroke();
+    ctx.beginPath();ctx.moveTo(-1,-1.6);ctx.lineTo(0,0);ctx.lineTo(1,-1.6);ctx.stroke();ctx.fillStyle='#fbf5e8';ctx.beginPath();ctx.arc(0,.1,.32,0,7);ctx.fill();ctx.stroke()}
+  ctx.restore();
+}
 function draw(now){
   const {S,st}=F,K=F.K, cam=F.cam;
   const v=Math.hypot(S.vx,S.vy);
-  const viewH=Math.max(36,S.y*1.25+18,v*1.3);
-  cam.sc=Math.exp(lerp(Math.log(cam.sc),Math.log(vh/viewH),.08));
+  const pre=F.pre>0;
+  const viewH=pre?60:Math.max(36,S.y*1.25+18,v*1.3);
+  cam.sc=Math.exp(lerp(Math.log(cam.sc),Math.log(vh/viewH),pre?.25:.08));
   const sc=cam.sc;
-  cam.x=S.x+.16*vw/sc;
+  const tx=pre?-12:S.x+.16*vw/sc;
+  cam.x=F.camSet?lerp(cam.x,tx,pre?1:Math.min(1,.06+S.t*.5)):tx;F.camSet=1;
   cam.y=Math.max(S.y+RES*.5/sc,.35*vh/sc);
   const X=wx=>vw/2+(wx-cam.x)*sc, Y=wy=>vh/2-(wy-cam.y)*sc;
   ctx.setTransform(dpr,0,0,dpr,0,0);
-  const alt=cam.y, a1=clamp(alt/12000,0,1), a2=clamp((alt-12000)/60000,0,1);
-  let top=mixHex(mixHex('#4fa4e6','#1d4f9c',a1),'#03050f',a2), bot=mixHex(mixHex('#cfeaf8','#6fa3d8',a1),'#0a1230',a2);
-  if(F.wx){const k=F.wx==='thin'?.25:.35;top=mixHex(top,'#5a6878',k);bot=mixHex(bot,'#a9b4bf',k)}
-  const sky=ctx.createLinearGradient(0,0,0,vh);sky.addColorStop(0,top);sky.addColorStop(1,bot);ctx.fillStyle=sky;ctx.fillRect(0,0,vw,vh);
-  const starA=clamp((alt-15000)/40000,0,1);
-  if(starA>0){ctx.fillStyle='rgba(255,255,255,'+starA+')';for(let i=0;i<140;i++){const sx=(hs(i*1.7)*vw*1.3-cam.x*sc*.0005)%vw,sy=hs(i*3.3)*vh;ctx.fillRect((sx+vw)%vw,sy,hs(i)*1.6+.5,hs(i)*1.6+.5)}}
-  if(!F.wx){const sunX=vw*.78,sunY=RES+vh*.16;
-    const sg=ctx.createRadialGradient(sunX,sunY,4,sunX,sunY,90);sg.addColorStop(0,'rgba(255,244,200,.9)');sg.addColorStop(.25,'rgba(255,230,160,.35)');sg.addColorStop(1,'rgba(255,230,160,0)');
-    ctx.fillStyle=sg;ctx.fillRect(sunX-90,sunY-90,180,180);ctx.fillStyle='#fff6d8';ctx.beginPath();ctx.arc(sunX,sunY,16,0,7);ctx.fill()}
   const left=cam.x-vw/2/sc, right=cam.x+vw/2/sc;
-  if((right-left)/400<200){ctx.fillStyle='rgba(255,255,255,.75)';
-    for(let k=Math.floor(left/400)-1;k<=Math.ceil(right/400)+1;k++){const h=hs(k*2.3);if(h>.6)continue;const cx=k*400+hs(k*4.4)*300,cy=150+hs(k*6.6)*900,w=30+hs(k*8.8)*40;
-      const px=X(cx),py=Y(cy),pw=w*sc;if(pw<3||py<-pw||py>vh+pw)continue;
-      ctx.beginPath();ctx.ellipse(px,py,pw*.5,pw*.18,0,0,7);ctx.ellipse(px-pw*.2,py-pw*.08,pw*.25,pw*.16,0,0,7);ctx.ellipse(px+pw*.15,py-pw*.1,pw*.22,pw*.15,0,0,7);ctx.fill()}}
-  // thunderheads
-  if(st.ceiling){const cy=Y(st.ceiling);if(cy>0){
-    const g=ctx.createLinearGradient(0,cy-140,0,cy+20);g.addColorStop(0,'rgba(40,46,58,.92)');g.addColorStop(1,'rgba(70,78,92,.0)');
-    ctx.fillStyle=g;ctx.fillRect(0,0,vw,cy+20);ctx.fillStyle='rgba(50,56,68,.9)';ctx.beginPath();ctx.moveTo(0,0);
-    for(let x=0;x<=vw+30;x+=30){const u=x+cam.x*sc*.3;ctx.lineTo(x,cy-8-Math.abs(Math.sin(u*.021))*18)}ctx.lineTo(vw,0);ctx.closePath();ctx.fill();
-    if(S.flags.storm&&Math.random()<.04){ctx.fillStyle='rgba(255,255,240,.35)';ctx.fillRect(0,0,vw,vh)}}}
-  const gy=Y(0);
-  if(gy<vh+200){
-    for(const [col,base,freq,par] of [['#8fb7a4',70,.006,.05],['#6f9e7d',40,.011,.09]]){
-      ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(0,gy);
-      for(let x=0;x<=vw+20;x+=20){const u=x+cam.x*sc*par;ctx.lineTo(x,gy-base-Math.sin(u*freq)*base*.5-Math.sin(u*freq*2.7+1)*base*.25)}
-      ctx.lineTo(vw,gy);ctx.closePath();ctx.fill()}
-    ctx.fillStyle='#5f8f4a';ctx.fillRect(0,gy,vw,Math.max(0,vh-gy));
-    ctx.fillStyle='#4c7a3a';ctx.fillRect(0,gy,vw,Math.min(6,Math.max(2,.4*sc)));
-    const cx0=X(-500),cx1=X(0),cTop=Y(20);
-    if(cx1>0){ctx.fillStyle='#8a6a48';ctx.fillRect(cx0,cTop,cx1-cx0,gy-cTop);ctx.fillStyle='#5f8f4a';ctx.fillRect(cx0,cTop,cx1-cx0,Math.max(2,.4*sc));
-      ctx.save();ctx.translate(X(-4),Y(20));ctx.scale(sc,sc);ctx.fillStyle='#7a5228';ctx.fillRect(-2,-1.2,4,1.2);ctx.strokeStyle='#5a3a18';ctx.lineWidth=.3;ctx.beginPath();ctx.moveTo(-1.5,-1.2);ctx.lineTo(1.2,-3);ctx.stroke();ctx.restore()}
-    const steps=[10,50,100,500,1000,5000,1e4,5e4,1e5,5e5,1e6,5e6,1e7,5e7,1e8,5e8,1e9,5e9,1e10,1e11,1e12,1e13];
-    const sp=steps.find(s=>s*sc>=90)||steps[steps.length-1];
-    ctx.font='600 11px "Chakra Petch", ui-monospace, monospace';ctx.textAlign='center';
-    for(let k=Math.max(1,Math.floor(left/sp));k<=Math.ceil(right/sp);k++){const px=X(k*sp);ctx.fillStyle='rgba(12,26,44,.55)';ctx.fillRect(px-1,gy-12,2,12);ctx.fillStyle='rgba(233,241,247,.9)';ctx.fillText(fmtD(k*sp),px,gy+16)}
-    if(F.bestDist>0){const px=X(F.bestDist);if(px>-20&&px<vw+20){ctx.strokeStyle='#ffb020';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(px,gy);ctx.lineTo(px,gy-38);ctx.stroke();ctx.fillStyle='#ffb020';ctx.beginPath();ctx.moveTo(px,gy-38);ctx.lineTo(px+16,gy-32);ctx.lineTo(px,gy-26);ctx.fill();ctx.fillStyle='#1b1206';ctx.fillText('BEST',px+2,gy-44)}}
-  }
-  if((right-left)/120<300){
-    for(let k=Math.floor(left/120)-1;k<=Math.ceil(right/120)+1;k++){const t=thermalSeg(k,st);if(!t)continue;const px=X(t.cx),w=22*sc;if(px<-w||px>vw+w)continue;
-      const ty=Y(t.top);const gr=ctx.createLinearGradient(0,gy,0,ty);gr.addColorStop(0,'rgba(255,240,210,.32)');gr.addColorStop(1,'rgba(255,240,210,0)');
-      ctx.fillStyle=gr;ctx.fillRect(px-w/2,ty,w,gy-ty);
-      ctx.strokeStyle='rgba(255,255,255,.35)';ctx.lineWidth=1.5;const ph=(now/600)%1;
-      for(let i=0;i<4;i++){const yy=lerp(gy,ty,((i/4+ph)%1));ctx.beginPath();ctx.moveTo(px-w*.2,yy+6);ctx.lineTo(px,yy);ctx.lineTo(px+w*.2,yy+6);ctx.stroke()}}}
+  // the crowd cheers for tricks and records and gets livelier as the flight's hype builds
+  F.cheer=Math.max(0,(F.cheer||0)-1/60*1.5);
+  drawWorld(ctx,{vw,vh,sc,X,Y,camX:cam.x,camY:cam.y,left,right,now,RES,stage:R()?R().stage:0,wx:F.wx,st,best:F.bestDist,hype:F.hype||0,cheer:F.cheer});
   const mag=st.magnetR>1;
   if(mag&&!S.done){const R0=COINR*st.magnetR*sc;ctx.save();ctx.strokeStyle='rgba(255,196,60,.45)';ctx.lineWidth=1.5;ctx.setLineDash([5,6]);ctx.lineDashOffset=-now/40;
     ctx.beginPath();ctx.arc(X(S.x),Y(S.y),R0,0,7);ctx.stroke();ctx.restore()}
@@ -644,28 +635,28 @@ function draw(now){
   // collected coins fly from where they were into the craft (the magnet's pull, made visible)
   for(const c of F.flyCoins){const k=Math.min(1,c.t/.28),e=k*k,px=X(c.x+(S.x-c.x)*e),py=Y(c.y+(S.y-c.y)*e),r=Math.max(3,.8*sc)*(1-.5*k);
     ctx.fillStyle='#ffb020';ctx.beginPath();ctx.arc(px,py,r,0,7);ctx.fill();ctx.strokeStyle='#b87300';ctx.lineWidth=Math.max(1,r*.18);ctx.stroke()}
-  // wind streaks
-  if(st.wind||st.gust){ctx.strokeStyle='rgba(255,255,255,.35)';ctx.lineWidth=1.5;
-    for(let i=0;i<24;i++){const spd=st.wind?260+hs(i)*160:0, vy=st.gust?Math.sin(now/700+i)*120:0;
-      const x=((hs(i*7.1)*(vw+120)-now/1000*spd)%(vw+120)+vw+120)%(vw+120)-60, y=((hs(i*3.7)*vh+now/1000*vy)%vh+vh)%vh;
-      ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+(st.wind?28:0),y+(st.gust?-Math.sign(vy)*14:0));ctx.stroke()}}
   if(F.trail.length>1){ctx.lineCap='round';for(let i=1;i<F.trail.length;i++){const a=F.trail[i-1],b=F.trail[i];ctx.strokeStyle='rgba(255,255,255,'+(.5*i/F.trail.length)+')';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(X(a.x),Y(a.y));ctx.lineTo(X(b.x),Y(b.y));ctx.stroke()}}
   for(const p of F.parts){const px=X(p.x),py=Y(p.y),r=Math.max(1,p.r*sc);
     ctx.fillStyle=p.k==='fire'?`rgba(255,${Math.round(140+100*p.life)},60,${p.life})`:p.k==='debris'?`rgba(90,70,50,${p.life})`:p.k==='pop'?`rgba(255,90,78,${p.life})`:p.k==='gold'?`rgba(255,196,60,${p.life})`:`rgba(240,240,240,${p.life*.5})`;
     ctx.beginPath();ctx.arc(px,py,r,0,7);ctx.fill()}
   const cx=X(S.x),cy=Y(S.y);
   if(F.boom>=0){F.boom+=1/60;const R2=20+F.boom*260;ctx.strokeStyle=`rgba(255,255,255,${Math.max(0,1-F.boom*1.6)})`;ctx.lineWidth=3;ctx.beginPath();ctx.arc(cx,cy,R2,0,7);ctx.stroke();if(F.boom>.7)F.boom=-1}
+  if(F.debris)drawDebris(X,Y,sc,now);
   if(!S.crashed){
     // zoomed far out the craft keeps a minimum on-screen size, with a soft halo so it stays easy to find
     let ext=.7;for(const p of K.parts)ext=Math.max(ext,Math.hypot(p.lx,p.ly)+.7);
     const ds=Math.max(sc,16/ext);
     if(ds>sc*1.05){const R=ext*ds*1.9,a=clamp(ds/sc/4,0,1)*.32,hg=ctx.createRadialGradient(cx,cy,0,cx,cy,R);
       hg.addColorStop(0,`rgba(255,255,255,${a})`);hg.addColorStop(1,'rgba(255,255,255,0)');ctx.fillStyle=hg;ctx.beginPath();ctx.arc(cx,cy,R,0,7);ctx.fill()}
-    ctx.save();ctx.translate(cx,cy);ctx.scale(ds,ds);ctx.rotate(-S.th);
+    let px=cx,py=cy;
+    if(F.pre>0){const k=1-F.pre/1.1,back=Math.pow(clamp(k*1.3,0,1),2)*1.4*sc;px-=Math.cos(S.th)*back;py+=Math.sin(S.th)*back}
+    ctx.save();ctx.translate(px,py);ctx.scale(ds,ds);ctx.rotate(-S.th);
+    if(F.stretch>0)ctx.scale(1+.18*F.stretch,1-.12*F.stretch);
     const frac=K.fuelMax?S.fuel/K.fuelMax:0;
     for(const p of K.parts){ctx.save();ctx.translate(p.lx,-p.ly);drawPart(ctx,p.type,now/1000,{on:p.type==='rocket'?S.rocketOn:S.propOn,frac});ctx.restore()}
     ctx.restore()
   }
+  drawGrain(ctx,vw,vh);
 }
 const elD=$('fDist'),elA=$('fAlt'),elV=$('fSpd'),elF=$('fFuel'),elT=$('toast'),elS=$('fScore'),elM=$('fMult'),elN=$('fNeed'),elFF=$('fTs'),elTm=$('fTime');
 function hud(dt){
@@ -678,6 +669,7 @@ function hud(dt){
   if(S.burst&&$('bPop').style.visibility!=='hidden')$('bPop').style.visibility='hidden';
   {const t=F.ts>1.15&&!S.done;elFF.hidden=!t;if(t)elFF.textContent='\u25b8\u25b8 '+(F.ts<9.95?F.ts.toFixed(1):Math.round(F.ts))+'\u00d7'}
   const sc=scoreFlight(summaryOf(S,K),F.ctx);
+  F.hype=clamp((sc.mult*sc.xm-1)/4,0,1);F.coinT=Math.max(0,(F.coinT||0)-dt);
   elS.textContent=fmt(sc.total);elM.textContent='×'+num(sc.mult*sc.xm);
   const need=F.quota-F.already-sc.total;
   elN.textContent=need>0?`need ${fmt(need)} more`:'quota reached';elN.className='need'+(need>0?'':' ok');
@@ -689,52 +681,91 @@ function hud(dt){
 
 /* ================= results ================= */
 const reduceMotion=()=>window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+// sound hook: the audio module plugs in here (audio.js); every call is optional so the game runs silent without it
+let AUDIO=null, DECAL=null, ART=null;
+const sfx=(n,o)=>{try{AUDIO&&AUDIO.sfx(n,o)}catch(_){}};
+const buzz=p=>{try{navigator.vibrate&&navigator.vibrate(p)}catch(_){}};
 function finish(){
   cancelAnimationFrame(raf);
   const r=R(),{S}=F,K=F.K;
   const f=summaryOf(S,K);
   const out=settleFlight(r,save.meta,f);
   persist();
-  showResults(out,S);
+  showResults(out,S,f);
   F=null;
 }
-function showResults(out,S){
-  const r=R(),sc=out.sc;
-  const title=S.crashed?'Crashed':S.banked?'Landed early':S.landed?'Touchdown':S.becalmed?'Becalmed':'Out of time';
-  let i=0;const row=(cls,label,val)=>`<div class="tl ${cls}" style="--i:${i++}"><span>${label}</span><b>${val}</b></div>`;
-  let h='';
-  for(const l of sc.lines.filter(l=>l.t==='b'))h+=row('base',l.label,l.dist?fmtD(l.v):'+'+fmt(l.v));
-  h+=row('m sep','Mult','×1');
-  for(const l of sc.lines.filter(l=>l.t==='m'))h+=row('m',l.label,'+'+num(l.v));
-  for(const l of sc.lines.filter(l=>l.t==='x'))h+=row('x',l.label,'×'+num(l.v));
+// which mod a score line came from, so the tally can show its decal
+const lineMod=label=>Object.keys(MODS).find(id=>label.startsWith(MODS[id].name));
+/* The score tally, staged like a show's encore: a stamp slams down, the seat counter rolls, every hype source pops in
+   one after another (pitch rising), the multiply slams, the crowd bar fills, and a newspaper prints its headline.
+   Tapping the card skips straight to the end. */
+function showResults(out,S,f){
+  const r=R(),sc=out.sc,town=townOf(r.seed,out.stage);
+  const title=S.crashed?'Crashed!':S.banked?'Landed early':S.landed?'Touchdown!':S.becalmed?'Becalmed':'Out of time';
+  const kind=S.crashed?'bad':S.landed?'good':'meh';
+  const base=sc.lines.filter(l=>l.t==='b'), hype=sc.lines.filter(l=>l.t!=='b');
   const q=out.quota, p0=Math.min(1,out.prevScore/q), p1=Math.min(1,out.contractScore/q);
   let outcome='',btn='',next='';
   if(out.cleared){
-    outcome=`<p class="note"><b>Contract cleared</b> \u00b7 +${out.reward+out.interest} coins</p>`+(out.unlocks&&out.unlocks.length?`<p class="note">Unlocked: <b>${out.unlocks.join(', ')}</b></p>`:'');
-    btn=out.won?'Continue':'Open shop';next=out.won?'won':'shop';
-  }else if(out.failed){outcome=`<p class="note warn">Out of flights</p>`;btn='Run summary';next='over'}
-  else{const left=FLIGHTS-out.flightNo;outcome=`<p class="hint">${fmt(q-out.contractScore)} to go \u00b7 ${plural(left,'flight')} left</p>`;btn='Continue';next='hangar'}
-  sheet.innerHTML=`<span class="label">Contract ${out.stage+1} · flight ${out.flightNo} of ${FLIGHTS}</span>
-    <h2>${title}</h2>
-    <div class="tally">${h}</div>
-    <div class="total"><span class="eq">${fmt(sc.base)} × ${num(sc.mult)}${sc.xm>1?' × '+num(sc.xm):''}</span><span class="sc" id="scCount">${reduceMotion()?fmt(sc.total):'0'}</span></div>
-    <div class="cbar${out.cleared?' done':''}"><i id="rbar" style="transform:scaleX(${p0})"></i><span id="rbarT">${fmt(out.prevScore)} / ${fmt(q)}</span></div>
-    <p class="hint">+${out.pay} coins</p>
+    outcome=`<p class="note"><b>Show sold out</b> · +${out.reward+out.interest} cash${out.unlocks&&out.unlocks.length?` · unlocked <b>${out.unlocks.join(', ')}</b>`:''}</p>`;
+    btn=out.won?'Continue':'On to the next town';next=out.won?'won':'shop';
+  }else if(out.failed){outcome=`<p class="note warn">No flights left: the crowd goes home</p>`;btn='Tour summary';next='over'}
+  else{const left=FLIGHTS-out.flightNo;outcome=`<p class="hint">${fmt(q-out.contractScore)} more crowd needed · ${plural(left,'flight')} left</p>`;btn='Back to the barn';next='hangar'}
+  const news=headline({...f,cleared:!!out.cleared},{town:town.town,pilot:'Goat'},r.seed+out.stage*7+out.flightNo);
+  sheet.className='sheet tallysheet';
+  sheet.innerHTML=`<div class="stamp ${kind}">${title}</div>
+    <span class="label">${town.town} · flight ${out.flightNo} of ${FLIGHTS}</span>
+    <div class="seats"><div class="drum" id="tyBase">0</div><small>${base.map(l=>l.dist?'seats from '+fmtD(l.v):'+'+fmt(l.v)+' '+l.label.toLowerCase()).join(' · ')}</small></div>
+    <div class="hype" id="tyHype">${hype.map((l,k)=>{const m=lineMod(l.label);return `<span class="hc ${l.t}" data-k="${k}">${m&&DECAL?`<img alt="" src="${DECAL(m,48,modLevels(r)[m]||1)}">`:''}${l.label}<b>${l.t==='x'?'×':'+'}${num(l.v)}</b></span>`}).join('')||'<span class="hc none">No stunts this time</span>'}</div>
+    <div class="eqn"><span id="tyB">${fmt(sc.base)}</span><i>×</i><span id="tyM">1</span><i>=</i><b id="tyT">0</b></div>
+    <div class="cbar${out.cleared?' done':''}"><i id="rbar" style="transform:scaleX(${p0})"></i><span id="rbarT">Crowd ${fmt(out.prevScore)} / ${fmt(q)}</span></div>
+    <div id="tySold" class="sold" hidden>Sold out!</div>
     ${outcome}
+    <div class="clip" id="tyNews" hidden><small>The ${town.town} Gazette</small>${news}</div>
+    <p class="hint">+${out.pay} cash at the gate</p>
     <button class="big" type="button" id="next">${btn}</button>`;
-  veil.hidden=false;
-  const delay=reduceMotion()?0:i*85+150;
-  setTimeout(()=>{
-    const el=$('scCount'),bar=$('rbar'),bt=$('rbarT');if(!el)return;
-    if(bar){bar.style.transform=`scaleX(${p1})`;bt.textContent=`${fmt(out.contractScore)} / ${fmt(q)}`}
-    if(reduceMotion()){el.textContent=fmt(sc.total);return}
-    const t0=performance.now();const tick=t=>{const k=Math.min(1,(t-t0)/650);el.textContent=fmt(sc.total*(1-Math.pow(1-k,3)));if(k<1&&document.body.contains(el))requestAnimationFrame(tick)};requestAnimationFrame(tick);
-  },delay);
+  veil.hidden=false;veil.classList.add('tally');
+  const el=id=>$(id), rm=reduceMotion();
+  // roll a number up over d ms, ticking digits like a mechanical counter
+  const roll=(node,to,d,fmtf=fmt)=>new Promise(res=>{if(rm||skip){node.textContent=fmtf(to);return res()}const t0=performance.now();
+    const tick=t=>{const k=Math.min(1,(t-t0)/d);node.textContent=fmtf(to*(1-Math.pow(1-k,3)));if(k<1&&!skip)requestAnimationFrame(tick);else{node.textContent=fmtf(to);res()}};requestAnimationFrame(tick)});
+  const wait=ms=>new Promise(res=>setTimeout(res,rm||skip?0:ms));
+  let skip=false, done=false;
+  const finishNow=()=>{skip=true;sheet.querySelectorAll('.hc').forEach(c=>c.classList.add('in'));el('tyM').textContent=num(sc.mult*sc.xm);el('tyT').textContent=fmt(sc.total);el('tyBase').textContent=fmt(sc.base);
+    el('rbar').style.transform=`scaleX(${p1})`;el('rbarT').textContent=`Crowd ${fmt(out.contractScore)} / ${fmt(q)}`;el('tyNews').hidden=false;if(out.cleared)el('tySold').hidden=false};
+  sheet.onclick=e=>{if(!e.target.closest('button')&&!done)finishNow()};
+  (async()=>{
+    sfx('stamp');buzz(15);
+    await wait(350);
+    await roll(el('tyBase'),sc.base,650);
+    let m=1,x=1;
+    const chips=[...sheet.querySelectorAll('.hc[data-k]')];
+    for(let k=0;k<chips.length;k++){if(skip)break;const l=hype[k];
+      if(l.t==='x')x*=l.v;else m+=l.v;chips[k].classList.add('in');el('tyM').textContent=num(m*x);sfx('multStep',{step:k});buzz(6);await wait(230)}
+    if(!skip){await wait(150);sfx('slam');buzz([30,40,30]);sheet.classList.add('kick');setTimeout(()=>sheet.classList.remove('kick'),300)}
+    el('tyM').textContent=num(sc.mult*sc.xm);
+    await roll(el('tyT'),sc.total,450);
+    await wait(200);
+    el('rbar').style.transform=`scaleX(${p1})`;el('rbarT').textContent=`Crowd ${fmt(out.contractScore)} / ${fmt(q)}`;
+    if(out.cleared){await wait(700);el('tySold').hidden=false;sfx('fireworks');sfx('fanfare');buzz([20,60,20,60,40]);confetti()}
+    await wait(400);el('tyNews').hidden=false;done=true;
+  })();
   $('next').onclick=()=>{
+    veil.classList.remove('tally');sheet.className='sheet';sheet.onclick=null;
     if(next==='won'){showVictory();return}
     if(next==='over'){showRunOver();return}
     veil.hidden=true;show('hangar');tab=next==='shop'?'shop':'build';setTab(tab);
   };
+}
+// paper confetti over the sheet for a sold-out show
+function confetti(){
+  if(reduceMotion())return;
+  const box=document.createElement('div');box.className='confetti';document.body.appendChild(box);
+  const cols=['#d2402f','#e9a93b','#3b9aa6','#fbf5e8','#4fa35b','#7a4fa0'];
+  for(let i=0;i<60;i++){const c=document.createElement('i');c.style.background=cols[i%cols.length];c.style.left=Math.random()*100+'%';
+    const dx=(Math.random()-.5)*160,rot=Math.random()*720-360,d=1400+Math.random()*1200;box.appendChild(c);
+    c.animate([{transform:'translate(0,-20px) rotate(0)',opacity:1},{transform:`translate(${dx}px,${window.innerHeight*.9}px) rotate(${rot}deg)`,opacity:.9}],{duration:d,delay:Math.random()*300,easing:'cubic-bezier(.3,.6,.5,1)',fill:'forwards'})}
+  setTimeout(()=>box.remove(),3200);
 }
 function runStats(r){return `<dl class="stats"><dt>Total score</dt><dd>${fmt(r.total)}</dd><dt>Best flight</dt><dd>${fmt(r.best)}</dd><dt>Longest flight</dt><dd>${fmtD(r.bestDist||0)}</dd><dt>Flights</dt><dd>${r.log.length}</dd></dl>`}
 function showVictory(){
