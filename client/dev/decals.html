@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Decal preview</title>
+<style>
+  :root { --ink:#22283a; --paper:#f3e7ce; --paper2:#e6d4ae; --night:#0c1a2c; --red:#d2402f; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 13px/1.3 Nunito, system-ui, sans-serif; background: var(--paper2); color: var(--ink); }
+  header { padding: 14px 16px 6px; }
+  h1 { margin: 0 0 4px; font-size: 20px; }
+  h2 { margin: 0 0 10px; font-size: 15px; }
+  .status { font-weight: 700; }
+  .status.bad { color: var(--red); }
+  .sec { padding: 14px 16px 18px; }
+  .paper { background: var(--paper); }
+  .night { background: var(--night); color: var(--paper); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 10px; }
+  .cell { border: 1px dashed rgba(127,127,127,.45); border-radius: 6px; padding: 8px; display: grid; grid-template-columns: 1fr auto; gap: 6px 10px; }
+  .name { font-weight: 800; font-size: 14px; }
+  .meta { opacity: .7; font-size: 11px; }
+  .sizes, .levels { display: flex; align-items: flex-end; gap: 10px; }
+  .levels { grid-column: 1 / -1; }
+  .strip { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 10px; }
+  img { display: block; }
+  .lab { font-size: 10px; opacity: .6; text-align: center; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Sponsor decals</h1>
+  <div class="status" id="status"></div>
+  <div class="meta">Every mod at 24, 40 and 96 px, levels 1-3 at 64 px. Query: <code>?sec=strip|paper|night</code> to show one section, <code>?ids=a,b</code> to filter.</div>
+</header>
+<div id="root"></div>
+<script type="module">
+import { drawDecal, decalURL, DECAL_IDS } from '../src/decals.js';
+import { MODS, RARITY } from '../src/sim.js';
+
+const q = new URLSearchParams(location.search);
+const only = q.get('sec');
+const filter = q.get('ids') ? q.get('ids').split(',') : null;
+const ids = Object.keys(MODS).filter(id => !filter || filter.includes(id));
+
+// coverage check: every MODS id needs its own icon
+const missing = Object.keys(MODS).filter(id => !DECAL_IDS.includes(id));
+const extra = DECAL_IDS.filter(id => !MODS[id]);
+const st = document.getElementById('status');
+st.textContent = missing.length ? `Missing icons: ${missing.join(', ')}` : `All ${Object.keys(MODS).length} mods have an icon.` + (extra.length ? ` Extra (not in MODS): ${extra.join(', ')}` : '');
+st.className = 'status' + (missing.length ? ' bad' : '');
+console.assert(!missing.length, 'decals missing for', missing);
+
+const root = document.getElementById('root');
+const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
+const img = (id, size, lv) => { const i = el('img'); i.src = decalURL(id, size, lv); i.width = i.height = size; i.alt = id; i.title = `${id} ${size}px Lv ${lv}`; return i; };
+// also exercise drawDecal directly on a canvas
+const cv = (id, size, lv) => { const d = Math.min(2, devicePixelRatio || 1), c = el('canvas'); c.width = c.height = size * d; c.style.width = c.style.height = size + 'px'; const g = c.getContext('2d'); g.scale(d, d); drawDecal(g, id, size / 2, size / 2, size, lv); return c; };
+
+function strip(sec) {
+  const s = el('section', 'sec ' + sec);
+  s.append(el('h2', null, `Strip (${sec}): 24 px, 40 px, 40 px Lv 3, unknown id fallback`));
+  for (const [size, lv] of [[24, 1], [40, 1], [40, 3]]) {
+    const row = el('div', 'strip'); for (const id of ids) row.append(img(id, size, lv));
+    if (size === 40 && lv === 1) row.append(img('no-such-mod', 40, 1));
+    s.append(row);
+  }
+  root.append(s);
+}
+function grid(sec) {
+  const s = el('section', 'sec ' + sec), g = el('div', 'grid');
+  s.append(el('h2', null, sec === 'paper' ? 'On paper' : 'On night'));
+  for (const id of ids) {
+    const M = MODS[id], c = el('div', 'cell');
+    const info = el('div'); info.append(el('div', 'name', M.name), el('div', 'meta', `${id} · ${RARITY[M.r].name} · ${M.tag}`));
+    const sizes = el('div', 'sizes'); sizes.append(img(id, 24, 1), img(id, 40, 1), cv(id, 96, 1));
+    const levels = el('div', 'levels'); for (const lv of [1, 2, 3]) { const w = el('div'); w.append(img(id, 64, lv), el('div', 'lab', 'Lv ' + lv)); levels.append(w); }
+    c.append(info, sizes, levels); g.append(c);
+  }
+  s.append(g); root.append(s);
+}
+// ?sec=big: the filtered ids drawn large, for checking details
+if (only === 'big') {
+  const size = +(q.get('size') || 220);
+  for (const sec of ['paper', 'night']) {
+    const s = el('section', 'sec ' + sec), row = el('div', 'strip');
+    for (const id of ids) row.append(cv(id, size, +(q.get('lv') || 1)));
+    s.append(row); root.append(s);
+  }
+}
+if (!only || only === 'strip') { strip('paper'); strip('night'); }
+if (!only || only === 'paper') grid('paper');
+if (!only || only === 'night') grid('night');
+document.body.dataset.ready = '1';
+</script>
+</body>
+</html>

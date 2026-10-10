@@ -16,6 +16,7 @@ import {
 import { drawWorld, drawGrain, biomeOf } from './world.js';
 import { audio } from './audio.js';
 import { drawPart, drawPilot, drawParachute } from './art.js';
+import { decalURL } from './decals.js';
 import { townOf, showTitle, headline } from './fiction.js';
 import { initGuide, openGuide } from './guide.js';
 
@@ -346,7 +347,7 @@ const BOON_ICON={slot:'+',coins:'¢',upgrade:'↑',drag:'≋',grav:'↥',fuel:'�
 function showBoons(){
   const r=R();if(!r||!r.boonOffer)return;
   sheet.innerHTML=`<span class="label">The storm is behind you</span><h2>A gift from ${townOf(r.seed,Math.max(0,r.stage-1)).town}</h2>
-    <div class="boons">${r.boonOffer.map((o,i)=>`<button class="boon" type="button" data-i="${i}" style="--i:${i}"><span class="bow" aria-hidden="true"></span><span class="bi" aria-hidden="true">${BOON_ICON[o.id]||'★'}</span><b>${BOONS[o.id].name}</b><small>${boonDesc(o)}</small></button>`).join('')}</div>`;
+    <div class="boons">${r.boonOffer.map((o,i)=>`<button class="boon" type="button" data-i="${i}" style="--i:${i}"><span class="bow" aria-hidden="true"></span><span class="bi" aria-hidden="true">${o.mod?`<img alt="" src="${decalURL(o.mod,64)}">`:BOON_ICON[o.id]||'★'}</span><b>${BOONS[o.id].name}</b><small>${boonDesc(o)}</small></button>`).join('')}</div>`;
   veil.hidden=false;
   sheet.querySelectorAll('.boon').forEach(b=>b.onclick=()=>{
     if(!pickBoon(r,+b.dataset.i))return;persist();sfx('gift');buzz(20);
@@ -667,7 +668,7 @@ function hud(dt){
 /* ================= results ================= */
 const reduceMotion=()=>window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
 // sound hook: the audio module plugs in here (audio.js); every call is optional so the game runs silent without it
-let AUDIO=audio, DECAL=null, ART={drawParachute};
+let AUDIO=audio, DECAL=decalURL, ART={drawParachute};
 const sfx=(n,o)=>{try{AUDIO&&AUDIO.sfx(n,o)}catch(_){}};
 // haptics only after the player has really touched the page (browsers refuse vibration before that)
 const buzz=p=>{try{const ua=navigator.userActivation;if(navigator.vibrate&&(!ua||ua.hasBeenActive))navigator.vibrate(p)}catch(_){}};
@@ -691,24 +692,22 @@ function showResults(out,S,f){
   const kind=S.crashed?'bad':S.landed?'good':'meh';
   const base=sc.lines.filter(l=>l.t==='b'), hype=sc.lines.filter(l=>l.t!=='b');
   const q=out.quota, p0=Math.min(1,out.prevScore/q), p1=Math.min(1,out.contractScore/q);
-  let outcome='',btn='',next='';
-  if(out.cleared){
-    outcome=`<p class="note"><b>Show sold out</b> · +${out.reward+out.interest} cash${out.unlocks&&out.unlocks.length?` · unlocked <b>${out.unlocks.join(', ')}</b>`:''}</p>`;
-    btn=out.won?'Continue':'On to the next town';next=out.won?'won':'shop';
-  }else if(out.failed){outcome=`<p class="note warn">No flights left: the crowd goes home</p>`;btn='Tour summary';next='over'}
-  else{const left=FLIGHTS-out.flightNo;outcome=`<p class="hint">${fmt(q-out.contractScore)} more crowd needed · ${plural(left,'flight')} left</p>`;btn='Back to the barn';next='hangar'}
+  let btn='',next='',result='';
+  // one result line: sold out (with the bonus), or what is still needed; the gate cash rides along
+  if(out.cleared){btn=out.won?'Continue':'On to the next town';next=out.won?'won':'shop';
+    result=`<div id="tySold" class="sold" hidden>Sold out! <small>+${out.reward+out.interest+out.pay} cash</small></div>`+(out.unlocks&&out.unlocks.length?`<p class="hint">Unlocked: <strong>${out.unlocks.join(', ')}</strong></p>`:'');}
+  else if(out.failed){btn='Tour summary';next='over';result=`<p class="tres warn">No flights left: the crowd goes home · +${out.pay} cash</p>`}
+  else{const left=FLIGHTS-out.flightNo;btn='Back to the barn';next='hangar';result=`<p class="tres">${fmt(q-out.contractScore)} more needed · ${plural(left,'flight')} left · +${out.pay} cash</p>`}
   const news=headline({...f,cleared:!!out.cleared},{town:town.town,pilot:'Goat'},r.seed+out.stage*7+out.flightNo);
   sheet.className='sheet tallysheet';
   sheet.innerHTML=`<div class="stamp ${kind}">${title}</div>
     <span class="label">${town.town} · flight ${out.flightNo} of ${FLIGHTS}</span>
-    <div class="seats"><div class="drum" id="tyBase">0</div><small>${base.map(l=>l.dist?'seats from '+fmtD(l.v):'+'+fmt(l.v)+' '+l.label.toLowerCase()).join(' · ')}</small></div>
+    <div class="eqn"><span class="drum" id="tyBase">0</span><i>×</i><span id="tyM">1</span><i>=</i><b id="tyT">0</b></div>
+    <small class="eqsub">${base.map(l=>l.dist?'seats from '+fmtD(l.v):'+'+fmt(l.v)+' '+l.label.toLowerCase()).join(' · ')} · hype · crowd</small>
     <div class="hype" id="tyHype">${hype.map((l,k)=>{const m=lineMod(l.label);return `<span class="hc ${l.t}" data-k="${k}">${m&&DECAL?`<img alt="" src="${DECAL(m,48,modLevels(r)[m]||1)}">`:''}${l.label}<b>${l.t==='x'?'×':'+'}${num(l.v)}</b></span>`}).join('')||'<span class="hc none">No stunts this time</span>'}</div>
-    <div class="eqn"><span id="tyB">${fmt(sc.base)}</span><i>×</i><span id="tyM">1</span><i>=</i><b id="tyT">0</b></div>
     <div class="cbar${out.cleared?' done':''}"><i id="rbar" style="transform:scaleX(${p0})"></i><span id="rbarT">Crowd ${fmt(out.prevScore)} / ${fmt(q)}</span></div>
-    <div id="tySold" class="sold" hidden>Sold out!</div>
-    ${outcome}
+    ${result}
     <div class="clip" id="tyNews" hidden><small>The ${town.town} Gazette</small>${news}</div>
-    <p class="hint">+${out.pay} cash at the gate</p>
     <button class="big" type="button" id="next">${btn}</button>`;
   veil.hidden=false;veil.classList.add('tally');
   const el=id=>$(id), rm=reduceMotion();
@@ -792,6 +791,9 @@ document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||
 function syncSound(){const b=$('hSound');b.classList.toggle('off',audio.muted);b.setAttribute('aria-label',audio.muted?'Sound off':'Sound on');b.setAttribute('aria-pressed',String(!audio.muted))}
 $('hSound').onclick=()=>{audio.setMuted(!audio.muted);syncSound()};
 syncSound();
+
+// dev only: inspect the running flight from the console (stripped from production builds)
+if(import.meta.env.DEV)window.__rf={F:()=>F,R,frame:n=>frame(n)};
 
 /* ================= boot ================= */
 show('title');renderTitle();

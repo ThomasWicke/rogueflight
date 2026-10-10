@@ -454,7 +454,6 @@ button:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
 .confetti{position:fixed;inset:0;pointer-events:none;z-index:30;overflow:hidden}
 .confetti i{position:absolute;top:0;width:8px;height:12px;border:1px solid rgba(34,40,58,.6)}
 @media (prefers-reduced-motion: reduce){.stamp,.sold,.clip,.hc.in{animation:none;opacity:1;transform:none}.stamp{transform:rotate(-8deg)}}
-.tallysheet>.label{padding-right:150px}
 
 /* ---------- title ---------- */
 .titlebench{padding-top:calc(var(--reserve) + 18px)}
@@ -491,3 +490,21 @@ button:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
 .endsheet.lose::after{content:"";position:absolute;top:0;bottom:0;left:57%;width:3px;background:repeating-linear-gradient(180deg,var(--ink) 0 6px,transparent 6px 12px);opacity:.35;transform:rotate(2deg)}
 .offer img.decal{width:52px;height:52px;margin:-4px 0}
 .chip.help.off{color:var(--muted);text-decoration:line-through;text-decoration-thickness:2px}
+.boon .bi img{width:40px;height:40px}
+/* tally, tightened: stamp on the top edge, the equation as the hero, one result line */
+.tallysheet{gap:9px;padding-top:34px}
+.tallysheet .stamp{top:-20px;left:50%;right:auto;transform:translateX(-50%) rotate(-6deg);animation:stamp2 .38s cubic-bezier(.2,1.6,.4,1) both;white-space:nowrap}
+@keyframes stamp2{0%{transform:translateX(-50%) rotate(-6deg) scale(2.4);opacity:0}60%{transform:translateX(-50%) rotate(-6deg) scale(.92);opacity:1}100%{transform:translateX(-50%) rotate(-6deg) scale(1)}}
+.tallysheet>.label{text-align:center}
+.eqn{margin-top:2px;flex-wrap:wrap;row-gap:4px}
+.eqn .drum{font-size:30px;min-width:0;padding:4px 10px 1px}
+.eqsub{text-align:center;font-size:11.5px;color:var(--muted);margin-top:-4px}
+.tres{margin:0;text-align:center;font-size:13.5px;color:var(--muted)}
+.tres.warn{color:var(--red)}
+.sold{font-size:24px;padding:2px 14px}
+.sold small{font-family:var(--body);font-weight:900;font-size:14px;margin-left:6px}
+.clip{font-size:15px;padding:6px 10px 8px}
+@media (prefers-reduced-motion: reduce){.tallysheet .stamp{animation:none;transform:translateX(-50%) rotate(-6deg)}}
+/* keep the show poster to the column width on wide screens */
+.poster{width:calc(100% - 32px);max-width:520px;margin:2px auto 10px}
+.htop{max-width:560px;width:100%;margin:0 auto}

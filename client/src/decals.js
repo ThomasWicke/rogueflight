@@ -111,20 +111,21 @@ function planeTop(g, D, x, y, s, a, col, col2) {
 const MOTIF = {
   // Engine
   overclock(g, D) {
-    // a two-blade prop spinning clockwise, speed arcs trailing both tips, a red-hot spinner
-    const tips = [rad(-38), rad(142)];
+    // a two-blade prop in its own blur disc, speed arcs trailing both tips, a red-hot spinner
+    const tips = [rad(-32), rad(148)];
+    fillP(g, p => O(p, 0, 0, 27), 'rgba(255,255,255,.45)');
     for (const a of tips) {
-      ln(g, D, p => p.arc(0, 0, 30, a - rad(70), a - rad(14)), 1);
-      if (!D.small) ln(g, D, p => p.arc(0, 0, 24, a - rad(56), a - rad(26)), .8);
+      ln(g, D, p => p.arc(0, 0, 27.5, a - rad(80), a - rad(12)), 1);
+      if (!D.small) ln(g, D, p => p.arc(0, 0, 21.5, a - rad(62), a - rad(24)), .75);
     }
     for (const a of tips) {
       g.save(); g.rotate(a);
-      solid(g, D, p => { p.moveTo(5, -3.4); p.bezierCurveTo(12, -4.4, 17, -10, 24, -9.6); p.bezierCurveTo(29.5, -9.2, 31.5, -4.4, 30, .2); p.bezierCurveTo(28.6, 3.6, 24, 4.4, 18, 4); p.bezierCurveTo(12, 3.6, 9, 3.4, 5, 3.4); p.closePath(); }, C.wood, C.wood2, 3);
-      if (!D.small) hiLn(g, D, p => { p.moveTo(13, -4.6); p.quadraticCurveTo(19, -6.6, 25, -5.4); });
+      solid(g, D, p => { p.moveTo(5, -3.4); p.bezierCurveTo(11, -4.6, 15, -10, 21, -9.8); p.bezierCurveTo(26.5, -9.6, 28.5, -4.6, 27.2, -.2); p.bezierCurveTo(26, 3.6, 21.5, 4.6, 16.5, 4.2); p.bezierCurveTo(11, 3.8, 8.5, 3.4, 5, 3.4); p.closePath(); }, C.wood, C.wood2, 3);
+      if (!D.small) hiLn(g, D, p => { p.moveTo(12, -4.8); p.quadraticCurveTo(17, -7.4, 22.5, -6.4); });
       g.restore();
     }
-    if (!D.small) solid(g, D, p => star(p, 0, 0, 9, 14, 10, rad(12)), C.brass, C.brass2, 2.2);
-    solid(g, D, p => O(p, 0, 0, 9.4), C.red, C.red2, 3.2);
+    if (!D.small) solid(g, D, p => star(p, 0, 0, 9, 13.5, 9.8, rad(12)), C.brass, C.brass2, 2.2);
+    solid(g, D, p => O(p, 0, 0, 9.2), C.red, C.red2, 3.2);
     hi(g, p => O(p, -3, -3, 2.6), .65);
   },
   afterburner(g, D) {
@@ -133,10 +134,11 @@ const MOTIF = {
     fillP(g, p => curve(p, [-9, -9, -12, 3, -7, 15, 0, 30, 7, 15, 12, 3, 9, -9]), C.brass);
     fillP(g, p => curve(p, [-4.5, -9, -6, 1, 0, 16, 6, 1, 4.5, -9]), C.canvas);
     for (const [y, rx] of D.small ? [[6, 10]] : [[4, 11.5], [16, 7.5]]) ln(g, D, p => p.ellipse(0, y, rx, 2.4, 0, 0, PI), .75, C.red2);
-    solid(g, D, p => { p.moveTo(-6.5, -29); p.lineTo(6.5, -29); p.bezierCurveTo(7.5, -19, 10, -13, 15.5, -8); p.lineTo(-15.5, -8); p.bezierCurveTo(-10, -13, -7.5, -19, -6.5, -29); p.closePath(); }, C.tin, C.tin2, 3);
-    if (!D.small) ln(g, D, p => { p.moveTo(-8.8, -18); p.quadraticCurveTo(0, -16.6, 8.8, -18); }, .6);
-    hiLn(g, D, p => { p.moveTo(-4.2, -25); p.bezierCurveTo(-4.8, -19, -6.5, -14, -10, -10.5); });
-    solid(g, D, p => RR(p, -9, -35, 18, 7, 2), C.brass, C.brass2, 2.2);
+    solid(g, D, p => { p.moveTo(-4.5, -26); p.lineTo(4.5, -26); p.bezierCurveTo(5, -16, 9, -11, 16, -8); p.lineTo(-16, -8); p.bezierCurveTo(-9, -11, -5, -16, -4.5, -26); p.closePath(); }, C.tin, C.tin2, 3);
+    if (!D.small) ln(g, D, p => { p.moveTo(-6.4, -16); p.quadraticCurveTo(0, -15, 6.4, -16); }, .6);
+    hiLn(g, D, p => { p.moveTo(-3, -22); p.bezierCurveTo(-3.6, -17, -6, -13, -10, -10.5); });
+    solid(g, D, p => RR(p, -10.5, -37, 21, 12, 4), C.tin, C.tin2, 2.6);
+    if (!D.small) ln(g, D, p => { p.moveTo(-10.5, -31); p.lineTo(10.5, -31); }, .6);
     solid(g, D, p => E(p, 0, -8, 15.5, 3.6), C.night);
   },
   solar(g, D) {
@@ -172,7 +174,7 @@ const MOTIF = {
     // a funnel catching the rushing air and dripping it out as fuel
     for (const f of [
       p => { p.moveTo(31, -22); p.quadraticCurveTo(18, -24, 9, -13); },
-      p => { p.moveTo(25, -35); p.quadraticCurveTo(8, -32, 0, -14); },
+      p => { p.moveTo(24, -32); p.quadraticCurveTo(8, -30, 0, -14); },
       p => { p.moveTo(-28, -30); p.quadraticCurveTo(-16, -28, -10, -14); },
     ]) tube(g, D, f, 3, C.canvas);
     solid(g, D, p => { p.moveTo(-22, -12); p.lineTo(-3.5, 11); p.lineTo(-3, 21); p.lineTo(3, 21); p.lineTo(3.5, 11); p.lineTo(22, -12); p.closePath(); }, C.tin, C.tin2, 3.2);
@@ -227,7 +229,7 @@ const MOTIF = {
     fillP(g, p => E(p, 8, 20.5, 10, 2.2), 'rgba(34,40,58,.3)');
     ln(g, D, p => { p.moveTo(-29, 21); p.lineTo(29, 21); }, 1);
     ln(g, D, p => { p.moveTo(-21, 16); p.lineTo(-25, 11.5); p.moveTo(-9, 16); p.lineTo(-5, 11.5); }, .8);
-    const ball = p => O(p, 8, -8, 15.5);
+    const ball = p => O(p, 8, -8, 16.5);
     solid(g, D, ball, C.red, C.red2, 3.6);
     g.save(); g.beginPath(); ball(g); g.clip();
     fillP(g, p => { p.moveTo(4, -24); p.bezierCurveTo(13, -18, 15, 2, 6, 8); p.lineTo(12, 8); p.bezierCurveTo(21, 2, 19, -18, 10, -24); p.closePath(); }, C.canvas);
@@ -319,11 +321,11 @@ const MOTIF = {
     hi(g, p => O(p, 2, 0, 1.8), .7);
   },
   duster(g, D) {
-    for (const x of [-22, -11, 0, 11, 22]) {
+    for (const x of D.small ? [-18, 0, 18] : [-22, -11, 0, 11, 22]) {
       ln(g, D, p => { p.moveTo(x, 31); p.quadraticCurveTo(x + 1, 24, x + 2, 17); }, .7, C.grass2);
       solid(g, D, p => E(p, x + 2.4, 13.5, 2.8, 5.6, rad(12)), C.brass, null);
     }
-    for (const [x, y, r] of [[-27, 3, 3.6], [-20, 6.5, 4.4], [-12, 9, 3.4]]) solid(g, D, p => O(p, x, y, r), C.canvas, null);
+    for (const [x, y, r] of D.small ? [[-22, 5, 4.6]] : [[-27, 3, 3.6], [-20, 6.5, 4.4], [-12, 9, 3.4]]) solid(g, D, p => O(p, x, y, r), C.canvas, null);
     g.save(); g.translate(1, -10); g.rotate(rad(-4));
     solid(g, D, p => P(p, [-23, -1, -27, -12, -20.5, -12, -15, -3]), C.red, C.red2, 2);
     solid(g, D, p => RR(p, -6, 3, 17, 4, 2), C.canvas, null);
@@ -341,12 +343,13 @@ const MOTIF = {
     if (!D.small) hiLn(g, D, p => { p.moveTo(12, -6); p.bezierCurveTo(12, -16, 0, -19, -6, -15); });
   },
   collector(g, D) {
-    coin(g, D, -4, 3, 20, rad(8));
-    if (!D.small) solid(g, D, p => star(p, -4, 3, 5, 7.5, 3.4, rad(-90)), C.brass2, null);
-    solid(g, D, p => sparkle(p, 19, -19, 9.5), C.canvas, null);
-    solid(g, D, p => sparkle(p, 26, -5, 4.5), C.canvas, null);
+    coin(g, D, 5, 4, 20, rad(8));
+    if (!D.small) solid(g, D, p => star(p, 5, 4, 5, 7.5, 3.4, rad(-90)), C.brass2, null);
+    solid(g, D, p => sparkle(p, -19, -19, 9.5), C.canvas, null);
+    solid(g, D, p => sparkle(p, -26, -4, 4.5), C.canvas, null);
   },
   opening(g, D) {
+    g.scale(.9, .9); D = sc(D, .9);
     if (!D.small) for (const [x, y] of [[-7, 26], [7, 26]]) fillP(g, p => E(p, x, y, 3, 1.2), 'rgba(34,40,58,.25)');
     solid(g, D, p => star(p, 0, 15, 5, 7.5, 3.4), C.brass, C.brass2, 2);
     const drape = s => p => { p.moveTo(-28 * s, -20); p.lineTo(-4 * s, -20); p.bezierCurveTo(-5 * s, -6, -12 * s, 3, -17 * s, 6); p.bezierCurveTo(-13 * s, 13, -12 * s, 22, -9 * s, 29); p.lineTo(-29 * s, 29); p.closePath(); };
@@ -404,15 +407,16 @@ const MOTIF = {
   },
   escape(g, D) {
     // a rope ladder dangling from cloud nine
-    g.save(); g.translate(8, -6); g.rotate(rad(-11));
-    ln(g, D, p => { p.moveTo(-5.5, 0); p.lineTo(-5.5, 35); p.moveTo(5.5, 0); p.lineTo(5.5, 35); }, 1);
-    for (const y of D.small ? [14, 28] : [12, 21, 30]) {
-      if (D.small) ln(g, D, p => { p.moveTo(-5.5, y); p.lineTo(5.5, y); }, 1);
-      else tube(g, D, p => { p.moveTo(-7, y); p.lineTo(7, y); }, 2.4, C.wood, 'butt');
+    g.save(); g.translate(11, -5); g.rotate(rad(-17));
+    const rails = p => { p.moveTo(-6, 0); p.lineTo(-6, 36); p.moveTo(6, 0); p.lineTo(6, 36); };
+    if (D.small) ln(g, D, rails, 1); else tube(g, D, rails, 1.8, C.wood2);
+    for (const y of D.small ? [14, 28] : [10, 19, 28]) {
+      if (D.small) ln(g, D, p => { p.moveTo(-6, y); p.lineTo(6, y); }, 1);
+      else tube(g, D, p => { p.moveTo(-6, y); p.lineTo(6, y); }, 2.4, C.wood, 'butt');
     }
     g.restore();
-    blob(g, D, p => { O(p, -16, -10, 11); O(p, 0, -17, 14); O(p, 16, -9, 11.5); RR(p, -26, -12, 52, 12, 6); }, C.canvas, C.paper2, 3.4);
-    hi(g, p => E(p, -4, -24, 4.4, 2.2, rad(-20)), .9);
+    blob(g, D, p => { O(p, -13, -12, 10.5); O(p, 1, -19, 12.5); O(p, 15, -12, 10); O(p, 24, -5, 7); O(p, -23, -5, 7.5); RR(p, -29, -11, 58, 11, 5.5); }, C.canvas, C.paper2, 3.4);
+    hi(g, p => E(p, -4, -26, 4.4, 2.2, rad(-20)), .9);
   },
   greaser(g, D) {
     // a pump oil can with a long spout and a drip
@@ -451,8 +455,8 @@ const MOTIF = {
     g.restore();
   },
   compound(g, D) {
-    const h = D.small ? 7.5 : 5.6, rx = 8.2, ry = 3.3, base = 26;
-    const stacks = D.small ? [[-17.5, 1], [0, 2], [17.5, 3]] : [[-17.5, 2], [0, 3.6], [17.5, 5.2]];
+    const h = D.small ? 8.5 : 5.6, rx = D.small ? 9 : 8.2, ry = D.small ? 3.8 : 3.3, base = D.small ? 24 : 26;
+    const stacks = D.small ? [[-19, 1], [0, 2], [19, 3]] : [[-17.5, 2], [0, 3.6], [17.5, 5.2]];
     for (const [x, n0] of stacks) {
       const n = Math.round(D.small ? n0 : n0 * 1.0);
       for (let i = 0; i < n; i++) {
@@ -462,6 +466,7 @@ const MOTIF = {
       }
       hi(g, p => E(p, x - 3.5, base - n * h - .6, 2.2, 1, 0), .7);
     }
+    if (D.small) return;
     tube(g, D, p => { p.moveTo(-26, -10); p.quadraticCurveTo(-8, -12, 8, -24); }, 2.6, C.canvas);
     solid(g, D, p => P(p, [13, -28, 2.5, -26.5, 8.5, -18]), C.canvas, null);
   },
@@ -609,7 +614,7 @@ export function drawDecal(ctx, id, x, y, size, level = 1, opts = {}) {
   const s = size / 100 * fit;
   ctx.save();
   ctx.translate(x, y); ctx.scale(s, s); ctx.rotate(m.tilt);
-  ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.setLineDash([]);
+  ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.setLineDash([]); ctx.shadowBlur = 0; ctx.shadowColor = 'transparent';
   const D = { L, k: .5 * L + 2.2, small, base: ctx.getTransform() };
   if (opts.shadow !== false) {
     const [dx, dy] = lvec(ctx, D, 1.8, 2.6);
@@ -621,7 +626,7 @@ export function drawDecal(ctx, id, x, y, size, level = 1, opts = {}) {
     ctx.beginPath(); m.path(ctx); ctx.lineWidth = 2 * (b + L); ctx.strokeStyle = INK; ctx.stroke(); ctx.lineWidth = 2 * b; ctx.strokeStyle = C.brass; ctx.stroke();
   }
   drawMaterial(ctx, D, m);
-  ctx.save(); ctx.translate(0, m.my); ctx.rotate((rnd() - .5) * rad(5)); const ms = m.ms * (small ? 1.08 : 1); ctx.scale(ms, ms);
+  ctx.save(); ctx.translate(0, m.my); ctx.rotate((rnd() - .5) * rad(5)); const ms = m.ms * (small ? 1.12 : 1); ctx.scale(ms, ms);
   motif(ctx, sc(D, ms));
   ctx.restore();
   if (lv >= 3) {

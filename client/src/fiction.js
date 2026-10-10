@@ -39,8 +39,9 @@ function headline(f,ctx,seed){
   if(f.coins>=8)pool.push(`${P} scoops ${f.coins} coins from thin air`);
   if(f.thermals>=3)pool.push(`${P} rides ${T} thermals like a hawk`);
   if(f.dist>=5000)pool.push(`${P} last seen heading for the next county`,`${big(Math.round(f.dist))} meters! ${T} cannot believe its eyes`);
-  if(f.cleared)pool.push(`Sold out! ${T} cheers its flying goat`,`Record crowd packs ${T} grandstand`);
+  // the sell-out already gets its own banner, so the paper prefers any other story
   if(f.landed&&!pool.length)pool.push(`Smooth landing delights ${T}`,`${P} lands on a dime, crowd on its feet`);
+  if(f.cleared&&!pool.length)pool.push(`Record crowd packs ${T} grandstand`,`${T} cheers its flying goat`);
   if(!pool.length)pool.push(`Modest flight at ${T}, cows unimpressed`,`${T} shrugs: "Seen further"`);
   return pick(r,pool);
 }
