@@ -1,6 +1,6 @@
 // Balance harness: plays whole runs from the universal start with a scripted shopper, builder and pilot, then prints
 // how far runs get and the score spread per contract against its quota.
-//   node tools/bot.js [runs=20] [policy=climb|hands] [--seed=N] [--storm=<weather id>|none] [--verbose]
+//   node tools/bot.js [runs=20] [policy=climb|hands] [--seed=N] [--ceiling=N] [--storm=<weather id>|none] [--verbose]
 // --storm puts the same weather on every storm contract (3, 6, 8), or none at all, to compare storms.
 // Pilots press the same buttons a player has: pitch is -1/0/+1, re-decided at most every 0.2 s, plus one throttle.
 //   climb  waits for flying speed, climbs at ~35° under power, then glides hands-off (a decent human).
@@ -10,7 +10,7 @@
 // so builds are sensible but not optimal. It opens its parts packs and shops before every flight.
 import {
   newRun, weatherOf, stats, weatherFx, makeCraft, newFlight, step, popBalloons, summaryOf, scoreFlight, settleFlight,
-  craftCounts, offerPrice, rerollCost, rerollShop, openPack, MAXMODS, COLS, ROWS, COCKPIT, quotaFor, isStorm, CONTRACTS, WEATHER,
+  craftCounts, offerPrice, rerollCost, rerollShop, openPack, applyPurchase, canBuy, modLevels, flightStats, MAXMODS, COLS, ROWS, COCKPIT, quotaFor, isStorm, CONTRACTS, WEATHER,
 } from '../client/src/sim.js';
 
 const args = process.argv.slice(2);
@@ -20,6 +20,7 @@ const RUNS = +pos[0] || 20;
 const PN = pos[1] || 'climb';
 const VERBOSE = !!opt('verbose');
 const STORM = opt('storm');
+const CEIL = +opt('ceiling') || 0;
 if (STORM && STORM !== 'none' && !WEATHER[STORM]) throw new Error('unknown storm ' + STORM + ' (use: none, ' + Object.keys(WEATHER).join(', ') + ')');
 // sim.js rolls shops and weather with Math.random; a seed makes two balance runs comparable
 if (opt('seed') != null) {
@@ -127,7 +128,7 @@ function evaluate(cells, run, st) {
   for (const thr of POL.throttles) {
     const { S, K: K2 } = fly(K, st, POL.make(thr)());
     const f = summaryOf(S, K2);
-    const sc = scoreFlight(f, { mods: run.mods, flightIdx: 1, cleared: run.stage, coins: run.coins, ...craftCounts(cells) });
+    const sc = scoreFlight(f, { lv: modLevels(run), flightIdx: 1, cleared: run.stage, coins: run.coins, ...craftCounts(cells) });
     if (sc.total > best.score) best = { score: sc.total, thr };
   }
   return best;
@@ -166,15 +167,10 @@ function offerValue(run, kind, o) {
     return { wing: inv('wing') < 3 ? 6 : 0, tank: inv('tank') < 3 ? 5 : 0, frame: inv('frame') < 2 ? 4 : 0, prop: inv('prop') < 2 ? 4 : 0, rocket: 0, balloon: 0 }[o.t];
   }
   if (kind === 'tune') return { prop: inv('prop') ? 9 : 0, rocket: inv('rocket') && !inv('prop') ? 8 : 0, fuel: 8, light: 6, wing: 5, launch: 3, time: lastFlightFrac > 0.85 ? 7 : 0, balloon: 0 }[o.k];
-  if (run.mods.length >= MAXMODS) return 0;
-  if (o.id === 'minimal') return run.cells.length <= 6 ? 8 : 0;
-  return MOD_VALUE[o.id] || 0;
-}
-function buy(run, kind, o, p) {
-  run.coins -= p; o.sold = true;
-  if (kind === 'part') run.inv[o.t] = (run.inv[o.t] || 0) + 1;
-  else if (kind === 'tune') run.tune[o.k] = (run.tune[o.k] || 0) + 1;
-  else run.mods.push(o.id);
+  if (!canBuy(run, kind, o)) return 0;
+  const base = o.id === 'minimal' ? (run.cells.length <= 6 ? 8 : 0) : MOD_VALUE[o.id] || 0;
+  // an upgrade of a mod already in use is worth a bit less than a fresh one
+  return modLevels(run)[o.id] ? base * 0.8 : base;
 }
 function botShop(run, meta) {
   while (run.packs && run.packs.length) openPack(run);
@@ -191,7 +187,7 @@ function botShop(run, meta) {
         if (v > 0 && p <= run.coins && (!pick || v > pick.v)) pick = { ...x, v, p };
       }
       if (!pick) break;
-      buy(run, pick.kind, pick.o, pick.p);
+      applyPurchase(run, pick.kind, pick.o);
     }
     if (pass === 0 && run.coins >= rerollCost(run) + 8) { run.coins -= rerollCost(run); rerollShop(run, meta); } else break;
   }
@@ -202,7 +198,7 @@ const reach = [], stageScores = {};
 const t0 = Date.now();
 for (let n = 0; n < RUNS; n++) {
   const meta = { bestStage: 8 };
-  const run = newRun(0, meta);
+  const run = newRun(CEIL, meta);
   if (STORM && STORM !== 'none') for (let i = 0; i < CONTRACTS; i++) if (isStorm(i)) run.weather[i] = STORM;
   lastFlightFrac = 0;
   let craft = null, sig = '';
@@ -210,7 +206,8 @@ for (let n = 0; n < RUNS; n++) {
   while (run.phase !== 'over' && run.phase !== 'won' && guard++ < 60) {
     if (run.phase === 'shop') run.phase = 'contract';
     botShop(run, meta);
-    const wx = STORM === 'none' ? null : weatherOf(run, run.stage), st = stats(run.tune, run.mods, weatherFx(wx, run.stage));
+    if (STORM === 'none') run.weather[run.stage] = undefined;
+    const wx = STORM === 'none' ? null : weatherOf(run, run.stage), st = STORM === 'none' ? stats(run.tune, modLevels(run), weatherFx(null, 0)) : flightStats(run);
     // rebuild only when something that changes the flight has changed
     const now = JSON.stringify([run.inv, run.tune, run.mods, wx]);
     if (now !== sig) { craft = build(run, st, craft); sig = now; }
@@ -231,5 +228,5 @@ for (const k in stageScores) {
   const a = stageScores[k].sort((x, y) => x - y);
   // of the runs that got to this contract, how many cleared it
   const got = reach.filter((x) => x >= +k).length, won = reach.filter((x) => x > +k).length;
-  console.log('contract', +k + 1, 'quota', quotaFor(+k, 0), 'cleared', `${won}/${got}`, 'flights', a.length, 'median', a[Math.floor(a.length / 2)], 'p80', a[Math.floor(a.length * 0.8)], 'max', a[a.length - 1]);
+  console.log('contract', +k + 1, 'quota', quotaFor(+k, CEIL), 'cleared', `${won}/${got}`, 'flights', a.length, 'median', a[Math.floor(a.length / 2)], 'p80', a[Math.floor(a.length * 0.8)], 'max', a[a.length - 1]);
 }

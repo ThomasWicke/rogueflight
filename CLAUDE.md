@@ -11,7 +11,7 @@ npm install
 npm run dev       # Vite dev server, host:true so a phone on the same Wi-Fi can open it
 npm test          # node:test checks of the simulation core (tests/sim.test.js)
 npm run bot -- 20 climb --seed=1   # balance harness: 20 scripted runs (policies: climb, hands; --verbose lists every flight;
-                                   #   --storm=<weather id>|none forces one storm onto contracts 3, 6, 8)
+                                   #   --storm=<weather id>|none forces one storm onto contracts 3, 6, 8; --ceiling=N)
 npm run build     # -> dist/
 npm run preview   # serve dist/ (service worker only registers in production builds)
 ```
@@ -27,6 +27,7 @@ client/src/ui.js         everything DOM/canvas: part art, hangar (build/shop/mod
 client/src/style.css     all styles; dark blueprint theme, tokens on :root
 client/public/           favicon.svg (source of the app icon), manifest.webmanifest, sw.js, _headers (Cloudflare), icons/ (PNGs rendered from favicon.svg)
 tests/sim.test.js        headless sim checks (no browser)
+functions/api/run.js     Pages Function storing finished runs in D1 (schema.sql)
 tools/bot.js             balance harness (scripted shopper, builder, pilot), prints contracts reached and per-contract score spread
 ```
 
@@ -40,8 +41,10 @@ Code style is dense (many one-line functions, short names: `S` flight state, `K`
 - `newRun(ceilingLevel, meta)`: every run starts the same (`START`): cockpit alone on the bench, empty inventory, 12 coins, shop open, and 4 parts packs.
 - Parts packs (`grantPacks`, `openPack`): one random part each (`PART_W` weights), saved in `run.packs` until opened. Contract 1 gives 4 (always a tank, a wing, a propeller or rocket, plus one random, shuffled); every later contract gives 2 when it starts (on clearing the previous one, and when endless begins). The hangar opens the pack screen whenever packs are waiting: tap to shake and tear, the part bursts out (gold rays for engines) and flies to the tray; "Open all" skips.
 - 8 contracts × 3 flights. A contract's score is the sum of its flights. `QUOTA=[500,1100,2000,4000,7500,16000,30000,54000]`, ×(1+0.25·ceiling). Endless mode after a win multiplies the quota by 2.5 per extra contract.
+- Ceilings 0–10 (`MAX_CEILING`; winning at ceiling N unlocks N+1). Every level adds +25% quota; even levels also add a rule (`CEILING_RULES`, cumulative): 2 shop prices +1, 4 contract 5 is a storm too, 6 one parts pack per contract after the first, 8 storms hit harder (`severity` +2), 10 a 4-minute flight clock. Bot at Ceiling 0→10 clears 4.8, 4.2, 3.3, 2.9, 2.3, 2.2, 2.0, 1.8, 1.5, 1.3, 1.2 contracts.
 - Storm contracts are 3, 6 and 8 (`isStorm`). Their weather is rolled at run start (`weatherOf`) and shown from the start as forecast chips. Weathers: headwind, thunderheads (altitude ceiling with downdraft), thin air (density ×0.5), gusts, mail run (cargo mass), fuel rationing, short catapult.
-- Shop: always open. 3 parts (wing 4, propeller 5, rocket 6, tank 4, balloon 4, frame 3 coins), 2 tunings and 3 mods. New stock only arrives after a contract is cleared (`phase:'shop'` = between contracts, which shows START CONTRACT). Reroll costs 2 + the number of rerolls. Up to 5 mods; selling refunds half.
+- Shop: always open. 3 parts (wing 4, propeller 5, rocket 6, tank 4, balloon 4, frame 3 coins), 2 tunings and 3 mods. New stock arrives after a contract is cleared (`phase:'shop'` = between contracts, which shows START CONTRACT). A reroll (2 + rerolls so far) is a whole new shop, sold slots included. Purchases go through `applyPurchase` (UI and bot).
+- Mods (up to 5) level up to `MODMAX`=3: an owned mod can come back in the shop as an upgrade (weight ×0.7, price + 2 per owned level, no new slot). Each mod has `v` (and `w`) values per level; Lv 1 is weaker than the old flat value, Lv 3 a bit stronger. `modLevels(run)` gives `{id: level}` (`run.modLv`; older saves count as Lv 1), `modVal` the value, `modDesc` the text. Selling refunds half the price + 2 per level above 1.
 - Economy: 3 coins per flight plus coins picked up in flight (Sponsor mod +3). Clearing a contract pays 6 + 2 per unused flight, +4 for a storm contract; Piggy Bank adds interest.
 - Unlocks by contracts cleared in one run (`UNLOCKS`): contract 4 unlocks Afterburner and Ram Scoop, 6 unlocks Solar Wings and Antigravity Coil, 8 unlocks 4 rare score mods and Ceiling 1.
 
@@ -55,7 +58,9 @@ Code style is dense (many one-line functions, short names: `S` flight state, `K`
 - Commanded-lift model: an autopilot asks the wings for lift (`Lcmd`), capped by wing area × air density × v² and by balance (`balanceOf`: centre of lift vs centre of mass). A trim assist with limited authority keeps the nose stable. The player's pitch input adds or removes commanded lift. Tumbling loses lift.
 - Throttle 0–100% (one slider for props and rockets together) scales thrust and fuel burn. Engines idle with no fuel or at 0% throttle; a slow, idle craft that is not descending ends the flight ("becalmed").
 - Quadratic drag. Air density is exp(−y/8500). Extra vacuum drag terms appear at altitude, and speed is capped at the speed of light.
-- Balloons lift ∝ density and burst at 2 km (6 km with Weather Envelope) or when the POP button is pressed.
+- Balloons lift ∝ density and burst at 2 km (Weather Envelope: 4/6/8 km by level) or when the POP button is pressed.
+- A flight ends as "becalmed" when an idle craft hovers (under 6 m/s, vertical speed under 1 m/s) for 5 s, or makes no forward progress for 6 s while neither climbing nor sinking. Climbing is not stalling, so balloons rise until they burst (bounded by burst altitude and the clock).
+- Thermals push with 6 m/s² × Thermal Rider (1.2/1.4/1.6) × gravity factor, so they never out-lift gravity (even with Antigravity): no hovering or endless climbs in a thermal.
 - Thermals are smooth columns (cos² profile). Gusts are time-varying vertical forces that sink slightly more than they lift, plus a small nose-rocking torque. The total upward push per flight is capped (`S.gustE`, about 17 m/s of velocity), whichever way the craft moves, so gusts cost height and cannot be ridden or pumped. (An earlier cap only counted upward pushes while climbing, so gliders could float on gusts.)
 - A flight ends after `st.flightTime`: `FLIGHT_TIME` (300 s of sim time, "Out of time") plus 60 s per Flight permit tuning, capped at 3 permits (8 min). The cap matters: the clock is what bounds fuel-free thrust (Solar Wings, Ram Scoop), so never let it grow without limit. The HUD shows the time left under the speed, amber from 60 s, red and pulsing from 20 s.
 - Crash if a touchdown impact exceeds 15 m/s, or exceeds 5 m/s nose-down past 45°. Rubber Hull bounces instead.
@@ -64,8 +69,9 @@ Code style is dense (many one-line functions, short names: `S` flight state, `K`
 
 ### Scoring (`scoreFlight`)
 `score = (distance + flat) × (1 + Σ additive mult) × Π xmult`.
-- Additive: clean touchdown +0.5, low pass +0.25, loop +0.5, thermal +0.1, coin +0.05 each, sound barrier +1, space +2.
-- Mods modify these values. Xmult mods: Greaser, Opening Act, Third Time Lucky, Frugal, Minimalist, Logbook, Compound Interest, Sonic Boom, Escape Plan.
+- Additive: clean touchdown +0.5, low pass +0.25, loop +0.5, thermal +0.1, coin +0.05 each, Redline +1 (500 km/h, `REDLINE`), Cloud nine +2 (5 km, `CLOUD9`). These two replaced the sound barrier and 100 km space, which no craft could reach (best rocket builds top out near 2 km and 600–800 km/h).
+- Repeated loops and low passes pay less each time (`repeats`: the n-th is worth 1/(1+0.5(n−1))), so 40 loops count as about 6.6.
+- Mods modify these values. Xmult mods: Greaser, Opening Act, Third Time Lucky, Frugal, Minimalist, Logbook, Compound Interest, Overdrive (formerly Sonic Boom), Escape Plan.
 
 ## Design principles (from the player's feedback)
 - The player loves roguelites (Slay the Spire, CloverPit), physics games (Bad Piggies, Learn to Fly) and systems. An earlier idle-style version with infinite upgrades "went nuclear" (speed of light, trillions of coins) and was rebuilt as a roguelite: runs are scored and limited, and runaway "criticality" should be rare and spectacular, not the default.
@@ -73,10 +79,12 @@ Code style is dense (many one-line functions, short names: `S` flight state, `K`
 - **UI should be intuitive with minimal text.** The player explicitly asked to trim explainers. Prefer visuals (sockets, markers, chips, icons) and one-line mod descriptions.
 - **Fair randomness.** Bad luck is fine when it punishes a risk the player could see; it is unfair when hidden or unavoidable. Hence storms are revealed at run start. Ask "could the player have seen it and responded?" before adding random modifiers.
 - Mobile portrait, played one-handed in short sessions. Respect safe areas (`--reserve` = `env(safe-area-inset-top)`).
-- Balance feedback: the player pastes "Copy run" codes (Mods tab, end screens, logbook). The format is `ROGUEFLIGHT {json}` (prototype codes: `SKYWARD {json}`) with kit, mods, tune, inv, a compact cells string (`c22 p32 …` = type initial + column + row), and a log of `[contract, flight, score, distance, mult]`.
+- Telemetry: production builds POST every finished or abandoned run to `/api/run` (`functions/api/run.js`, a Pages Function) which stores it in D1 (binding `DB`, schema in `schema.sql`; see README for setup). Anonymous: a random per-browser id plus the run code. Without the binding the endpoint accepts and drops runs.
+- Balance feedback: the player pastes "Copy run" codes (Mods tab, end screens, logbook). The format is `ROGUEFLIGHT {json}` (prototype codes: `SKYWARD {json}`) with mods (`id:level` above Lv 1), tune, inv, a compact cells string (`c22 p32 …` = type initial + column + row), and a log of `[contract, flight, score, distance, mult]`.
 
 ## Balance notes
 - The bot starts from the universal start, opens its packs and shops before every flight, and picks its layout by test-flying variants of its inventory in the forecast weather. Pilots press buttons like a player (pitch −1/0/+1, re-decided every 0.2 s). `climb` waits for flying speed, climbs at about 35° under power, then glides hands-off, using full or 60% throttle (whichever tested better for the build). That is how a good human flies. `hands` is the old weak baseline. `--seed=N` makes runs repeatable, so compare balance changes with the same seed.
+- Current baseline (mod levels, full reroll, new goals; 5×100 runs, Ceiling 0): `climb` clears 4.75 contracts on average (5.53 before those changes). The numbers below were measured before them; compare trends, not absolutes.
 - Storms compared with `--storm` (bot, 3×100 runs each; clear rate of contracts 3 / 6 / 8 among runs that reached them; no storm: 98% / 65% / 52%, 5.81 contracts on average):
   fuel rationing 87 / 42 / 31 (5.19), thin air 87 / 57 / 52 (5.37), headwind 98 / 41 / 30 (5.51), gusts 98 / 40 / 35 (5.51), short catapult 93 / 55 / 47 (5.57), mail run 96 / 57 / 52 (5.72), thunderheads identical to no storm (the bot never climbs above the ceiling; it only bites players who climb high).
   Headwind was softened from 5+2·s to 2+0.8·s m/s (54 → 22 km/h on contract 6; it had dropped the bot to 7% there) and gusts were made a real threat (amplitude 5+0.6·s, downward bias, capped lift); before, gusts slightly helped.

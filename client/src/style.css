@@ -340,3 +340,11 @@ button:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
 .legend i.gr-bolt{background:var(--signal)}
 .legend i.gr-loose{border:1.5px solid var(--red);border-radius:3px;opacity:.7}
 .legend i.gr-free{border:1.5px dashed var(--good);border-radius:3px}
+/* mod levels, ceiling rules */
+.lvp{display:inline-flex;gap:3px;vertical-align:2px;margin-left:4px}
+.lvp i{width:7px;height:7px;border-radius:2px;border:1.5px solid var(--signal);transform:rotate(45deg)}
+.lvp i.on{background:var(--signal)}
+.rar .upg{color:var(--good);font-weight:700}
+.crules{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.crules span{font-family:var(--inst);font-size:11.5px;color:#ffd2cc;background:rgba(255,90,78,.1);border:1px solid rgba(255,90,78,.35);border-radius:999px;padding:3px 9px}
+#lvl{display:flex;flex-wrap:nowrap}#lvl button{flex:1;padding:6px 0;min-width:0}

@@ -9,6 +9,8 @@ import {
   popBalloons, summaryOf, scoreFlight, wpick, PART_W, rollMods, rollTunes, genShop,
   rerollShop, priceOf, offerPrice, rerollCost, sellValue, newRun, craftCounts, settleFlight,
   PACKS, FIRST_PACKS, rollPacks, grantPacks, openPack,
+  MODMAX, modLevels, modVal, modDesc, modPrice, canBuy, applyPurchase, sellMod, flightStats, repeats, severity,
+  MAX_CEILING, CEILING_RULES, ceilingRules, REDLINE, CLOUD9,
 } from './sim.js';
 import { initGuide, openGuide } from './guide.js';
 
@@ -108,14 +110,23 @@ function show(id){for(const s of ['title','hangar','flight'])$(s).hidden=s!==id}
 const R=()=>save.run;
 let armAbandon=false;
 function runCode(r){if(!r)return '';const L=t=>t==='cockpit'?'c':t[0];
-  return 'ROGUEFLIGHT '+JSON.stringify({lvl:r.level,cleared:r.stage,endless:!!r.endless,coins:r.coins,mods:r.mods,tune:r.tune,inv:r.inv,
+  return 'ROGUEFLIGHT '+JSON.stringify({lvl:r.level,cleared:r.stage,endless:!!r.endless,coins:r.coins,mods:r.mods.map(id=>{const L=modLevels(r)[id];return L>1?id+':'+L:id}),tune:r.tune,inv:r.inv,
     cells:r.cells.map(c=>L(c.type)+c.c+c.r).join(' '),log:r.log.map(l=>[l.stage+1,l.flight,l.score,l.d,l.x])})}
 function copyRun(r,btn){const txt=runCode(r);const ok=()=>{if(btn){btn.textContent='Copied';setTimeout(()=>{btn.textContent='Copy run'},1500)}};
   const fall=()=>{const d=document.createElement('div');d.className='copybox';d.innerHTML='<textarea readonly></textarea><button class="big" type="button">Close</button>';
     d.querySelector('textarea').value=txt;d.querySelector('button').onclick=()=>d.remove();document.body.appendChild(d);const t=d.querySelector('textarea');t.focus();t.select()};
   try{navigator.clipboard.writeText(txt).then(ok,fall)}catch(_){fall()}}
 document.addEventListener('click',e=>{const b=e.target.closest('[data-copyrun]');if(!b)return;copyRun(b.dataset.copyrun==='last'?save.meta.lastRun:R(),b)});
-function endRun(){if(save.run)save.meta.lastRun={...JSON.parse(JSON.stringify(save.run)),shop:null};save.meta.runs=(save.meta.runs||0)+1;save.run=null;persist();veil.hidden=true;armAbandon=false;show('title');renderTitle()}
+// telemetry: every finished or abandoned run goes to /api/run (a Pages Function storing it in D1) for balancing.
+// Anonymous: a random id per browser and the run code, nothing else. Production builds only.
+function clientId(){try{let id=localStorage.getItem('rogueflight-client');if(!id){id=Math.random().toString(36).slice(2)+Date.now().toString(36);localStorage.setItem('rogueflight-client',id)}return id}catch(_){return ''}}
+function reportRun(r){
+  if(!import.meta.env.PROD||!r||!r.log.length)return;
+  try{const data={...JSON.parse(runCode(r).slice('ROGUEFLIGHT '.length)),weather:r.weather};
+    const body=JSON.stringify({client:clientId(),version:__BUILD__,level:r.level,cleared:r.stage,endless:!!r.endless,won:r.stage>=CONTRACTS,data});
+    if(!(navigator.sendBeacon&&navigator.sendBeacon('/api/run',body)))fetch('/api/run',{method:'POST',body,keepalive:true}).catch(()=>{})}catch(_){}
+}
+function endRun(){reportRun(save.run);if(save.run)save.meta.lastRun={...JSON.parse(JSON.stringify(save.run)),shop:null};save.meta.runs=(save.meta.runs||0)+1;save.run=null;persist();veil.hidden=true;armAbandon=false;show('title');renderTitle()}
 
 /* ================= title ================= */
 let pickLevel=save.meta.level||0;
@@ -130,7 +141,8 @@ function renderTitle(){
       <button class="ghost${armAbandon?' armed':''}" id="aband" type="button">${armAbandon?'Tap again':'Abandon run'}</button></div>`;
   }else{
     h+=`<div class="card"><span class="label">New run</span>
-      ${m.level>0?`<div style="margin-top:12px"><div class="row" style="margin-bottom:6px"><span class="label">Ceiling</span><span class="hint">+25% quota per level</span></div><div class="seg" id="lvl">${Array.from({length:m.level+1},(_,i)=>`<button type="button" data-l="${i}" aria-pressed="${i===pickLevel}">${i}</button>`).join('')}</div></div>`:''}
+      ${m.level>0?`<div style="margin-top:12px"><div class="row" style="margin-bottom:6px"><span class="label">Ceiling</span></div><div class="seg" id="lvl">${Array.from({length:m.level+1},(_,i)=>`<button type="button" data-l="${i}" aria-pressed="${i===pickLevel}">${i}</button>`).join('')}</div>
+        ${pickLevel?`<div class="crules"><span>+${pickLevel*25}% quota</span>${ceilingRules(pickLevel).map(t=>`<span>${t}</span>`).join('')}</div>`:''}</div>`:''}
       <div style="margin-top:12px"><button class="big" id="start" type="button">Start run</button></div></div>`;
   }
   h+=`<div><button class="ghost howto${m.guideSeen?'':' new'}" id="howto" type="button">How to play</button></div>`;
@@ -153,7 +165,7 @@ function renderTitle(){
 let tab='build', sel='wing', armClear=false, clearTimer=0, armSell=null;
 const owned=t=>R().inv[t]||0, usedN=t=>R().cells.filter(x=>x.type===t).length, left=t=>Math.max(0,owned(t)-usedN(t));
 const curWx=()=>weatherOf(R(),R().stage);
-const curStats=()=>{const r=R();return stats(r.tune,r.mods,weatherFx(curWx(),r.stage))};
+const curStats=()=>flightStats(R());
 function openHangar(){
   const r=R();if(!r){show('title');renderTitle();return}
   show('hangar');
@@ -166,17 +178,17 @@ function setTab(t){tab=t;armSell=null;armAbandon=false;for(const [id,k] of [['tB
 $('tBuild').onclick=()=>setTab('build');$('tShop').onclick=()=>setTab('shop');$('tMods').onclick=()=>setTab('mods');
 function wxLine(id,s){return `<div class="wx"><b>${WEATHER[id].name}</b>${WEATHER[id].d(s)}</div>`}
 // storm forecast: every storm in the run is known from the start, so builds can plan around them
-function forecast(r){const out=[];for(let i=r.stage+1;i<CONTRACTS;i++){const w=weatherOf(r,i);if(w)out.push(`<span title="${WEATHER[w].d(i)}"><b>${i+1}</b>${WEATHER[w].name}</span>`)}
+function forecast(r){const out=[];for(let i=r.stage+1;i<CONTRACTS;i++){const w=weatherOf(r,i);if(w)out.push(`<span title="${WEATHER[w].d(severity(r,i))}"><b>${i+1}</b>${WEATHER[w].name}</span>`)}
   return out.length?`<div class="fcast">${out.join('')}</div>`:''}
 function renderStrip(){
   const r=R(),q=quotaFor(r.stage,r.level),w=curWx();
   const title=`Contract ${r.stage+1}${r.endless?' · endless':' of '+CONTRACTS}`;
   if(r.phase==='shop'){
-    $('cstrip').innerHTML=`<div class="row"><span class="label">Next: ${title}</span><span class="fpips"><b style="color:var(--ink)">${fmt(q)}</b></span></div>${w?wxLine(w,r.stage):''}${forecast(r)}`;
+    $('cstrip').innerHTML=`<div class="row"><span class="label">Next: ${title}</span><span class="fpips"><b style="color:var(--ink)">${fmt(q)}</b></span></div>${w?wxLine(w,severity(r,r.stage)):''}${forecast(r)}`;
   }else{
     const p=Math.min(1,r.score/q);
     $('cstrip').innerHTML=`<div class="row"><span class="label">${title}</span><span class="fpips" aria-label="${FLIGHTS-r.flight} flights left">${Array.from({length:FLIGHTS},(_,i)=>`<i class="${i<r.flight?'used':''}"></i>`).join('')}</span></div>
-      <div class="cbar"><i style="transform:scaleX(${p})"></i><span>${fmt(r.score)} / ${fmt(q)}</span></div>${w?wxLine(w,r.stage):''}${forecast(r)}`;
+      <div class="cbar"><i style="transform:scaleX(${p})"></i><span>${fmt(r.score)} / ${fmt(q)}</span></div>${w?wxLine(w,severity(r,r.stage)):''}${forecast(r)}`;
   }
 }
 function renderHangar(){
@@ -287,14 +299,17 @@ function placeAt(c,y){
   persist();renderBuild();
 }
 
-function modCard(id,btn){const M=MODS[id];return `<div class="offer ${M.r}"><div class="glyph ${M.r}" aria-hidden="true">${M.name[0]}</div><div><span class="rar r-${M.r}">${RARITY[M.r].name} · ${M.tag}</span><h3>${M.name}</h3><p>${M.d}</p></div>${btn}</div>`}
+// L: the level shown (description and pips); up: shown as an upgrade offer
+const pips=L=>`<span class="lvp" aria-label="Level ${L} of ${MODMAX}">${Array.from({length:MODMAX},(_,i)=>`<i class="${i<L?'on':''}"></i>`).join('')}</span>`;
+function modCard(id,btn,L,up){const M=MODS[id];L=L||1;return `<div class="offer ${M.r}"><div class="glyph ${M.r}" aria-hidden="true">${M.name[0]}</div><div><span class="rar r-${M.r}">${up?'<b class="upg">Upgrade</b> · ':''}${RARITY[M.r].name} · ${M.tag}</span><h3>${M.name} ${pips(L)}</h3><p>${modDesc(id,L)}</p></div>${btn}</div>`}
 function renderShop(){
   const r=R();
   if(!r.shop){r.shop=genShop(r,save.meta);persist()}
-  const S=r.shop, full=r.mods.length>=MAXMODS;
-  const btn=(kind,i,o,block)=>{if(o.sold)return `<button class="buy" type="button" disabled>\u2713</button>`;const p=offerPrice(r,kind,o);
-    return `<button class="buy" type="button" data-kind="${kind}" data-i="${i}" ${p>r.coins||block?'disabled':''}><i class="cn"></i>${p}</button>`};
-  const mods=S.mods.length?S.mods.map((o,i)=>`<div class="${o.sold?'sold':''}">${modCard(o.id,btn('mod',i,o,full))}</div>`).join(''):'<p class="hint">\u2014</p>';
+  const S=r.shop, full=r.mods.length>=MAXMODS, lv=modLevels(r);
+  const btn=(kind,i,o)=>{if(o.sold)return `<button class="buy" type="button" disabled>\u2713</button>`;const p=offerPrice(r,kind,o);
+    return `<button class="buy" type="button" data-kind="${kind}" data-i="${i}" ${p>r.coins||!canBuy(r,kind,o)?'disabled':''}><i class="cn"></i>${p}</button>`};
+  // an owned mod on offer is an upgrade: show the level it would reach (a sold one already shows its new level)
+  const mods=S.mods.length?S.mods.map((o,i)=>{const L=lv[o.id]||0,up=!!L&&!o.sold;return `<div class="${o.sold?'sold':''}">${modCard(o.id,btn('mod',i,o),o.sold?Math.max(1,L):L+1,up)}</div>`}).join(''):'<p class="hint">\u2014</p>';
   const tunes=S.tunes.map((o,i)=>{const T=TUNES[o.k],L=r.tune[o.k]||0;return `<div class="offer${o.sold?' sold':''}"><div class="glyph C" aria-hidden="true">+</div><div><h3>${T.name}</h3><p>${T.d} \u00b7 Lv ${L+1}${T.max?'/'+T.max:''}</p></div>${btn('tune',i,o)}</div>`}).join('');
   const parts=S.parts.map((o,i)=>`<div class="offer${o.sold?' sold':''}"><img alt="" src="${ICON[o.t]}"><div><h3>${PARTS[o.t].name}</h3><p>${owned(o.t)} owned</p></div>${btn('part',i,o)}</div>`).join('');
   const rc=rerollCost(r);
@@ -310,19 +325,17 @@ function renderShop(){
   };
 }
 function buy(kind,i){
-  const r=R(),S=r.shop;const o=S[kind==='part'?'parts':kind==='tune'?'tunes':'mods'][i];if(!o||o.sold)return;
-  const p=offerPrice(r,kind,o);if(p>r.coins)return;if(kind==='mod'&&r.mods.length>=MAXMODS)return;
-  r.coins-=p;o.sold=true;
-  if(kind==='part')r.inv[o.t]=(r.inv[o.t]||0)+1;else if(kind==='tune')r.tune[o.k]=(r.tune[o.k]||0)+1;else r.mods.push(o.id);
-  persist();renderHangar();
+  const r=R(),S=r.shop;const o=S[kind==='part'?'parts':kind==='tune'?'tunes':'mods'][i];if(!o)return;
+  if(applyPurchase(r,kind,o)){persist();renderHangar()}
 }
 function renderMods(){
   const r=R();
-  const slots=Array.from({length:MAXMODS},(_,i)=>{const id=r.mods[i];if(!id)return `<div class="slot">Empty</div>`;const v=sellValue(id);
-    return modCard(id,`<button class="buy sell${armSell===id?' armed':''}" type="button" data-sell="${id}">${armSell===id?'Sell?':'Sell +'+v}</button>`)}).join('');
+  const lv=modLevels(r);
+  const slots=Array.from({length:MAXMODS},(_,i)=>{const id=r.mods[i];if(!id)return `<div class="slot">Empty</div>`;const v=sellValue(id,lv[id]);
+    return modCard(id,`<button class="buy sell${armSell===id?' armed':''}" type="button" data-sell="${id}">${armSell===id?'Sell?':'Sell +'+v}</button>`,lv[id])}).join('');
   const tl=Object.entries(r.tune).filter(([,L])=>L>0).map(([k,L])=>`${TUNES[k].name} ×${L}`).join(' · ');
   const byStage={};for(const l of r.log)(byStage[l.stage]=byStage[l.stage]||[]).push(l.score);
-  const log=Object.keys(byStage).map(s=>{s=+s;const done=s<r.stage;return `<div><span>Contract ${s+1}${isStorm(s)?' \u00b7 storm':''}</span><b>${byStage[s].map(fmt).join(' · ')}${done?' ✓':''}</b></div>`}).join('');
+  const log=Object.keys(byStage).map(s=>{s=+s;const done=s<r.stage;return `<div><span>Contract ${s+1}${isStorm(s,r.level)?' \u00b7 storm':''}</span><b>${byStage[s].map(fmt).join(' · ')}${done?' ✓':''}</b></div>`}).join('');
   bench.innerHTML=`
   <div class="card"><div class="row"><span class="label">Mods</span><span class="hint">${r.mods.length}/${MAXMODS}</span></div><div class="offers">${slots}</div></div>
   <div class="card"><span class="label">Tuning</span><p class="hint" style="margin-top:6px">${tl||'\u2014'}</p></div>
@@ -330,7 +343,7 @@ function renderMods(){
   <div class="card stack"><button class="ghost" type="button" data-copyrun="cur">Copy run</button><button class="ghost${armAbandon?' armed':''}" id="aband2" type="button">${armAbandon?'Tap again':'Abandon run'}</button></div>`;
   bench.onclick=e=>{
     const b=e.target.closest('[data-sell]');
-    if(b){const id=b.dataset.sell;if(armSell!==id){armSell=id;renderMods();return}armSell=null;r.mods.splice(r.mods.indexOf(id),1);r.coins+=sellValue(id);persist();renderHangar();return}
+    if(b){const id=b.dataset.sell;if(armSell!==id){armSell=id;renderMods();return}armSell=null;sellMod(r,id);persist();renderHangar();return}
     if(e.target.closest('#aband2')){if(!armAbandon){armAbandon=true;renderMods();return}endRun()}
   };
 }
@@ -468,8 +481,8 @@ $('land').onclick=()=>{if(F&&!F.S.done){F.S.done=true;F.S.banked=true}};
 
 function startFlight(){
   const r=R(),w=curWx(),st=curStats(),K=makeCraft(r.cells,st);
-  F={st,K,S:newFlight(K,st),ts:1,idle:0,wx:w,cam:{x:0,y:20,sc:20},trail:[],parts:[],toasts:[],toastT:0,boom:-1,ended:false,coinFlash:0,endT:0,
-    ctx:{mods:r.mods.slice(),flightIdx:r.flight,cleared:r.stage,coins:r.coins,...craftCounts(r.cells)},quota:quotaFor(r.stage,r.level),already:r.score,bestDist:r.bestDist||0};
+  F={st,K,S:newFlight(K,st),ts:1,flyCoins:[],idle:0,wx:w,cam:{x:0,y:20,sc:20},trail:[],parts:[],toasts:[],toastT:0,boom:-1,ended:false,coinFlash:0,endT:0,
+    ctx:{mods:r.mods.slice(),lv:modLevels(r),flightIdx:r.flight,cleared:r.stage,coins:r.coins,...craftCounts(r.cells)},quota:quotaFor(r.stage,r.level),already:r.score,bestDist:r.bestDist||0};
   ctl.pitch=0;ctl.boost=false;
   show('flight');setThr(1);$('thr').style.visibility=(K.counts.rocket||K.counts.prop)?'visible':'hidden';$('bPop').style.visibility=K.counts.balloon?'visible':'hidden';
   $('toast').innerHTML='';$('toast').style.opacity=0;
@@ -483,7 +496,9 @@ function mixHex(a,b,t){const p=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));co
 function toast(title,sub){F.toasts.push({title,sub});if(F.toasts.length>4)F.toasts.shift()}
 function frame(now){
   const dt=Math.min(.05,(now-last)/1000);last=now;
-  const {S,st}=F, has=k=>F.ctx.mods.includes(k);
+  const {S,st}=F, lv=F.ctx.lv, has=k=>!!lv[k], mv=(k,key)=>modVal(lv,k,key);
+  // what the n-th repeat of a trick adds, after the diminishing returns in scoreFlight
+  const nth=(n,per)=>`+${num((repeats(n)-repeats(n-1))*per)} mult`;
   if(!S.done){
     // fast-forward only while hands-off; touching a control drops back to real time at once
     F.idle=ctl.pitch?0:F.idle+dt;
@@ -501,23 +516,25 @@ function frame(now){
     for(const e of S.events){
       if(e==='coin'){F.coinFlash=1;for(let j=0;j<8;j++){const a=j/8*6.283;F.parts.push({x:S.x,y:S.y,vx:Math.cos(a)*7+S.vx*.6,vy:Math.sin(a)*7+S.vy*.6,life:.7,r:.22,k:'gold'})}}
       else if(e==='bounce')dust(S.x,S.y-1,8);
-      else if(e==='loop')toast('Loop',`+${has('stunt')?1.5:.5} mult`);
-      else if(e==='pass')toast('Low pass',`+${has('duster')?.75:.25} mult`);
-      else if(e==='thermal')toast('Thermal',`+${has('thermal')?.3:.1} mult`);
+      else if(e==='loop')toast('Loop',nth(S.loops,has('stunt')?mv('stunt'):.5));
+      else if(e==='pass')toast('Low pass',nth(S.passes,has('duster')?mv('duster'):.25));
+      else if(e==='thermal')toast('Thermal',`+${num(has('thermal')?mv('thermal','w'):.1)} mult`);
       else if(e==='burst')toast('Balloons burst','');
-      else if(e==='Sound barrier'){F.boom=0;toast('Sound barrier',has('sonic')?'×2 score':'+1 mult')}
-      else if(e==='Kármán line: space')toast('Space',has('escape')?'×3 score':'+2 mult');
+      else if(e==='Redline'){F.boom=0;toast('Redline',has('sonic')?`×${num(mv('sonic'))} score`:'+1 mult')}
+      else if(e==='Cloud nine')toast('Cloud nine',has('escape')?`×${num(mv('escape'))} score`:'+2 mult');
       else if(e==='Downdraft!')toast('Downdraft','The storm pushes you down');
       else toast(e,'');
     }
     S.events.length=0;
+    if(S.coinFx&&S.coinFx.length){for(const c of S.coinFx)F.flyCoins.push({x:c.x,y:c.y,t:0});S.coinFx.length=0}
+    for(const c of F.flyCoins)c.t+=dt;F.flyCoins=F.flyCoins.filter(c=>c.t<.28);
     if(!F.trail.length||Math.hypot(S.x-F.trail[F.trail.length-1].x,S.y-F.trail[F.trail.length-1].y)*F.cam.sc>6)F.trail.push({x:S.x,y:S.y});
     if(F.trail.length>160)F.trail.shift();
     emit(dt);
   }else if(!F.ended){
     F.ended=true;F.endT=now;F.toasts.length=0;F.toastT=0;
-    if(S.crashed){toast('Crashed',has('crashtest')?'+2 mult':'');dust(S.x,S.y,30,true)}
-    else if(S.landed)toast('Touchdown',has('greaser')?'×1.5 score':'+0.5 mult');
+    if(S.crashed){toast('Crashed',has('crashtest')?`+${num(mv('crashtest'))} mult`:'');dust(S.x,S.y,30,true)}
+    else if(S.landed)toast('Touchdown',has('greaser')?`×${num(mv('greaser'))} score`:'+0.5 mult');
   }
   updParts(dt);draw(now);hud(dt);
   if(F.ended&&now-F.endT>1300){finish();return}
@@ -591,11 +608,14 @@ function draw(now){
   if(mag&&!S.done){const R0=COINR*st.magnetR*sc;ctx.save();ctx.strokeStyle='rgba(255,196,60,.45)';ctx.lineWidth=1.5;ctx.setLineDash([5,6]);ctx.lineDashOffset=-now/40;
     ctx.beginPath();ctx.arc(X(S.x),Y(S.y),R0,0,7);ctx.stroke();ctx.restore()}
   if((right-left)/COINSEG<700){
-    for(let k=Math.floor(left/COINSEG)-1;k<=Math.ceil(right/COINSEG)+1;k++){if(S.got.has(k))continue;const cn=coinAt(k);if(!cn)continue;let cx=cn.x,cy=cn.y;
-      if(mag){const dx=S.x-cx,dy=S.y-cy,dd=Math.hypot(dx,dy),R0=COINR*st.magnetR;if(dd<R0*2.2&&dd>0){const f=clamp((R0*2.2-dd)/(R0*1.2),0,1)*.6;cx+=dx*f;cy+=dy*f}}
-      const px=X(cx),py=Y(cy);if(py<-20||py>vh+20)continue;
+    // coins sit where the sim has them, so whatever is inside the magnet ring really is collected
+    for(let k=Math.floor(left/COINSEG)-1;k<=Math.ceil(right/COINSEG)+1;k++){if(S.got.has(k))continue;const cn=coinAt(k);if(!cn)continue;
+      const px=X(cn.x),py=Y(cn.y);if(py<-20||py>vh+20)continue;
       const r=Math.max(3,.8*sc),sq=Math.abs(Math.cos(now/300+k));
       ctx.fillStyle='#ffb020';ctx.beginPath();ctx.ellipse(px,py,r*(.35+.65*sq),r,0,0,7);ctx.fill();ctx.strokeStyle='#b87300';ctx.lineWidth=Math.max(1,r*.18);ctx.stroke()}}
+  // collected coins fly from where they were into the craft (the magnet's pull, made visible)
+  for(const c of F.flyCoins){const k=Math.min(1,c.t/.28),e=k*k,px=X(c.x+(S.x-c.x)*e),py=Y(c.y+(S.y-c.y)*e),r=Math.max(3,.8*sc)*(1-.5*k);
+    ctx.fillStyle='#ffb020';ctx.beginPath();ctx.arc(px,py,r,0,7);ctx.fill();ctx.strokeStyle='#b87300';ctx.lineWidth=Math.max(1,r*.18);ctx.stroke()}
   // wind streaks
   if(st.wind||st.gust){ctx.strokeStyle='rgba(255,255,255,.35)';ctx.lineWidth=1.5;
     for(let i=0;i<24;i++){const spd=st.wind?260+hs(i)*160:0, vy=st.gust?Math.sin(now/700+i)*120:0;

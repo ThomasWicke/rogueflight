@@ -3,7 +3,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   newRun, stats, weatherFx, makeCraft, newFlight, step, popBalloons, summaryOf, scoreFlight, settleFlight,
-  quotaFor, openPack, PACKS, FIRST_PACKS, rollTunes,
+  quotaFor, openPack, PACKS, FIRST_PACKS, rollTunes, thermalSeg, G0, repeats, rerollShop, applyPurchase, offerPrice, rollMods,
+  isStorm, grantPacks, flightStats, MODMAX,
 } from '../client/src/sim.js';
 
 // 'c22 p32 w21 t23' -> cockpit at (2,2), prop at (3,2), wing at (2,1), tank at (2,3)
@@ -75,4 +76,63 @@ test('reaching the quota clears the contract and opens a new shop', () => {
   assert.equal(run.stage, 1);
   assert.equal(run.phase, 'shop');
   assert.equal(run.packs.length, FIRST_PACKS + PACKS, 'unopened packs carry over, the next contract adds two');
+});
+
+test('thermals never out-lift gravity, at any Thermal Rider or Antigravity level', () => {
+  for (let t = 0; t <= MODMAX; t++) for (let a = 0; a <= MODMAX; a++) {
+    const lv = {}; if (t) lv.thermal = t; if (a) lv.antigrav = a;
+    const st = stats({}, lv, weatherFx(null, 0));
+    for (let k = 1; k < 200; k++) { const th = thermalSeg(k, st); if (th) assert.ok(th.str < G0 * st.grav, `thermal ${t} antigrav ${a}: ${th.str} vs ${G0 * st.grav}`); }
+  }
+});
+
+test('repeated loops pay less each time', () => {
+  assert.equal(repeats(1), 1);
+  assert.ok(repeats(40) < 7, `40 loops count as ${repeats(40).toFixed(2)}`);
+  const f = { dist: 1000, maxY: 50, maxV: 30, coins: 0, loops: 10, passes: 0, thermals: 0, landed: false, fuelFrac: 0 };
+  assert.ok(scoreFlight(f, { mods: [], flightIdx: 1, cleared: 0, coins: 0, parts: 4, wings: 1, tanks: 1 }).mult < 1 + 10 * 0.5);
+});
+
+test('a balloon craft rises until its balloons burst instead of counting as stalled', () => {
+  const { S } = fly('c22 b21 b31 b11 b41 f32 f12 f42', { tune: { balloon: 2 }, ctl: () => ({ pitch: 0, throttle: 0 }) });
+  assert.ok(S.maxY > 1900, `max altitude ${S.maxY.toFixed(0)} m`);
+});
+
+test('a reroll is a whole new shop, sold slots included', () => {
+  const run = newRun(0, { bestStage: 0 });
+  run.coins = 100;
+  for (const o of run.shop.parts) applyPurchase(run, 'part', o);
+  assert.ok(run.shop.parts.every((o) => o.sold));
+  rerollShop(run, { bestStage: 0 });
+  assert.ok(run.shop.parts.every((o) => !o.sold) && run.shop.parts.length === 3);
+  assert.equal(run.shop.tunes.filter((o) => o.sold).length, 0);
+});
+
+test('owned mods level up to MODMAX, cost more each level and need no new slot', () => {
+  const run = newRun(0, { bestStage: 8 });
+  run.coins = 100;
+  const o = { id: 'third' };
+  assert.ok(applyPurchase(run, 'mod', o));
+  run.mods.push('a', 'b', 'c', 'd'); // fill the other slots
+  const up = { id: 'third' }, p1 = offerPrice(run, 'mod', up);
+  assert.ok(applyPurchase(run, 'mod', up));
+  assert.equal(run.modLv.third, 2);
+  assert.equal(offerPrice(run, 'mod', { id: 'third' }), p1 + 2);
+  applyPurchase(run, 'mod', { id: 'third' });
+  assert.equal(run.modLv.third, MODMAX);
+  assert.equal(applyPurchase(run, 'mod', { id: 'third' }), false);
+  run.mods.length = 1;
+  for (let i = 0; i < 300; i++) assert.ok(!rollMods(run, { bestStage: 8 }, 3, []).includes('third'));
+});
+
+test('ceiling rules: pricier shop, a fourth storm, fewer packs, a shorter clock', () => {
+  const meta = { bestStage: 0 };
+  const r1 = newRun(1, meta), r2 = newRun(2, meta);
+  assert.equal(offerPrice(r2, 'part', { t: 'wing' }), offerPrice(r1, 'part', { t: 'wing' }) + 1);
+  assert.ok(!isStorm(4, 3) && isStorm(4, 4));
+  const r6 = newRun(6, meta); r6.packs = []; r6.stage = 1; grantPacks(r6); assert.equal(r6.packs.length, 1);
+  const r5 = newRun(5, meta); r5.packs = []; r5.stage = 1; grantPacks(r5); assert.equal(r5.packs.length, PACKS);
+  assert.equal(flightStats(newRun(9, meta)).flightTime, 300);
+  assert.equal(flightStats(newRun(10, meta)).flightTime, 240);
+  assert.equal(quotaFor(0, 10), 1750);
 });
