@@ -9,14 +9,10 @@ const artRun = () => `<div class="gr-run">
   <div class="gr-pips">${Array.from({ length: 8 }, (_, i) => `<i class="${i < 2 ? 'done' : i === 2 ? 'now storm' : i === 5 || i === 7 ? 'storm' : ''}">${i + 1}</i>`).join('')}</div>
   <div class="gr-flights"><span class="label">Contract 3</span><span class="fpips"><i class="used"></i><i class="used"></i><i></i></span></div>
   <div class="cbar"><i style="transform:scaleX(.72)"></i><span>1,440 / 2,000</span></div></div>`;
-const artScore = () => `<div class="gr-eq"><b>1,240 m</b><span>×</span><b class="m">1.55</b><span>=</span><b class="t">1,922</b></div>
-  <div class="gr-chips"><span>Touchdown +0.5</span><span>Loop +0.5</span><span>Low pass +0.25</span><span>Thermal +0.1</span><span>Coin +0.05</span><span>Mach +1</span><span>Space +2</span></div>`;
 const artPacks = () => `<div class="gr-packs"><div class="gr-pack"><div class="pk-face"><div class="pk-mark">?</div><div class="pk-band">PARTS</div></div></div>
   <svg class="gr-arrow" viewBox="0 0 40 20" aria-hidden="true"><path d="M2 10h30M26 4l8 6-8 6"/></svg>
   <div class="gr-four">${img('tank')}${img('wing')}${img('prop')}<span>?</span></div></div>
   <div class="gr-row"><span class="label">Contract 1</span><b>4 packs</b><span class="label">Then</span><b>2 per contract</b></div>`;
-const artShop = () => `<div class="gr-shop"><div>${img('frame')}<b><i class="cn"></i>3</b></div><div><span class="glyph C">+</span><b><i class="cn"></i>4</b></div><div><span class="glyph R">S</span><b><i class="cn"></i>5</b></div></div>
-  <div class="gr-coins"><span><i class="cn"></i>3 per flight</span><span><i class="cn"></i>coins in the air</span><span><i class="cn"></i>6+ per cleared contract</span></div>`;
 // a small bench: amber bolts where parts connect, and a balloon that touches nothing structural (loose, so it stays behind)
 function artBuild() {
   const L = { '1,0': 'wing', '2,0': 'wing', '0,1': 'rocket', '1,1': 'cockpit', '2,1': 'frame', '3,1': 'prop', '1,2': 'tank', '4,0': 'balloon' };
@@ -49,54 +45,28 @@ const artFly = () => `<svg viewBox="0 0 300 130" class="gr-fly" aria-hidden="tru
 const artAlt = () => `<div class="gr-alt">
   <div class="gr-altbar"></div>
   <div class="gr-altlbl"><span style="bottom:88%"><b>100 km</b> space · rockets only</span><span style="bottom:58%"><b>11 km</b> thin air · fast, little lift</span>
-  <span style="bottom:28%"><b>2 km</b> balloons burst</span><span style="bottom:2%"><b>0 m</b> thick air · lift, thrust, drag</span></div></div>`;
-const artTime = () => `<div class="gr-time"><div class="gr-clock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/></svg><b>5:00</b></div>
-  <div class="gr-land"><span class="ok">soft touchdown <b>+0.5</b></span><span class="bad">hard or nose-first <b>crash</b></span></div></div>`;
-const artStorm = () => `<div class="fcast" style="justify-content:center"><span><b>3</b>Headwind</span><span><b>6</b>Thin air</span><span><b>8</b>Thunderheads</span></div>
-  <div class="gr-wx">${['Headwind', 'Thunderheads', 'Thin air', 'Gusts', 'Mail run', 'Fuel rationing', 'Short catapult'].map((w) => `<span>${w}</span>`).join('')}</div>`;
-
+  <span style="bottom:28%"><b>2 km</b> balloons burst</span><span style="bottom:2%"><b>0 m</b> thick air · lift, thrust, drag</span></div></div>
+  <div class="gr-clock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/></svg><b>5:00</b><span>per flight</span></div>`;
 /* ---------- slides ---------- */
 const SLIDES = [
   { t: 'The run', art: artRun, p: [
-    '8 contracts, 3 flights each.',
-    'Your flights add up. Reach the quota to clear the contract. Flights you did not need pay bonus coins.',
-    'Miss it and the run is over. Quotas climb fast, so keep improving your craft.'] },
-  { t: 'Score', art: artScore, p: [
-    'Score = distance × mult.',
-    'Flying well raises the mult: touch down cleanly, loop, skim the ground, ride thermals, grab coins, break the sound barrier, reach space.',
-    'Mods add bigger bonuses, some of them multiply the whole score.'] },
-  { t: 'Parts packs', art: artPacks, p: [
-    'Every contract starts with packs. Each holds one random part.',
-    'The first contract gives 4: always a tank, a wing and an engine, plus one surprise.',
-    'Every later contract gives 2.'] },
-  { t: 'Shop & coins', art: artShop, p: [
-    'The shop is always open: parts, tunings that stack, and up to 5 mods.',
-    'New stock only arrives after you clear a contract. Reroll if nothing fits.',
-    'Coins come from every flight, from coins you fly through, and from clearing contracts.'] },
+    '8 contracts, 3 flights each. Your flights add up: reach the quota or the run ends.',
+    'Red contracts have storms, forecast from the start. Build for them early.'] },
+  { t: 'Packs & shop', art: artPacks, p: [
+    'Each contract starts with parts packs: 4 in the first (tank, wing, engine + 1), then 2.',
+    'The shop is always open, but new stock only arrives after you clear a contract.'] },
   { t: 'Building', art: artBuild, p: [
-    'Everything connects to the cockpit. Frames and tanks pass the connection on; wings, engines and balloons must touch one of them.',
-    'Each part only bolts on at certain edges: propellers at their back, so they sit on the nose side; wings underneath or at the sides; balloons by their string. The bench shows the open sockets.',
-    'Propellers need a free square in front, rockets one behind for the exhaust. Blocked engines do nothing.',
-    'Loose parts stay behind on the ground. Tap to place or remove, hold a part to move it.'] },
+    'Everything connects to the cockpit through frames and tanks. Hold a part to move it.',
+    'Propellers need a free square in front, rockets one behind. Blocked engines do nothing.'] },
   { t: 'Balance', art: artBalance, p: [
-    'Keep the mass marker a little in front of the lift arrow. Then the craft holds its nose steady.',
-    'Lift ahead of the mass flips the craft. Lift far behind it makes the nose drop.',
-    'Engines push along their row. Keep thrust lines through the mass marker (red dashes mean off-center).'] },
+    'Keep the mass marker a little in front of the lift arrow. Lift ahead of it flips the craft.',
+    'Keep thrust lines through the mass marker. Red dashes mean the engine pitches the nose.'] },
   { t: 'Flying', art: artFly, p: [
-    'Wings only lift with airspeed. Climb at about 30–35°. Steeper bleeds speed until the wings stall.',
-    'When the fuel runs out, let go: the craft settles into a glide on its own.',
-    'Lower the throttle to make fuel last. Nose down trades height for speed.'] },
-  { t: 'Altitude', art: artAlt, p: [
-    'Air thins as you climb. Less drag: you fly faster and glide farther.',
-    'But wings and propellers get weaker up there. Rockets work all the way to space.',
-    'Balloons lift less the higher they go and burst at 2 km. POP drops them early.'] },
-  { t: 'Time & landing', art: artTime, p: [
-    'A flight lasts at most 5 minutes. The clock is at the top right.',
-    'Touch down gently for a bonus. Hitting the ground hard or nose-first is a crash.',
-    'Hanging in the air without power also ends the flight.'] },
-  { t: 'Storms', art: artStorm, p: [
-    'Contracts 3, 6 and 8 have storms.',
-    'They are forecast from the start of the run as red chips. Build for them before you get there.'] },
+    'Wings need airspeed. Climb at about 30–35°; steeper bleeds speed until you stall.',
+    'Out of fuel? Let go and the craft glides on its own. Throttle down to make fuel last.'] },
+  { t: 'Altitude & time', art: artAlt, p: [
+    'Thin air up high: less drag, but weaker wings and props. Balloons burst at 2 km.',
+    'A flight lasts 5 minutes at most. Hanging in the air without power also ends it.'] },
 ];
 
 /* ---------- drawer ---------- */
