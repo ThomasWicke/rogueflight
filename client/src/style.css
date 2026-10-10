@@ -506,3 +506,8 @@ button:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
 .poster{width:calc(100% - 32px);max-width:520px;margin:2px auto 10px}
 .htop{max-width:560px;width:100%;margin:0 auto}
 .sold>.offer{opacity:.55}
+/* everything that builds the multiplier shares one color */
+.eqn #tyM{color:var(--teal2)}
+.hc.x{background:var(--canvas)}.hc.x b{color:var(--teal2)}
+.srow .m{color:var(--teal2)}
+.tl.x b{color:var(--teal2)}
