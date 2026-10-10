@@ -186,13 +186,12 @@ button:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
 .srow .need.ok{color:var(--good)}
 .fuel{height:12px;border-radius:3px;background:var(--paper2);border:2px solid var(--ink);overflow:hidden;position:relative}
 .fuel i{position:absolute;inset:0;background:repeating-linear-gradient(-45deg,var(--brass) 0 6px,#f0b84f 6px 12px);transform-origin:left center}
-.fuelrow{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;font-family:var(--display);font-size:12px;color:var(--ink)}
+.fuelrow{display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:center;font-family:var(--display);font-size:12px;color:var(--ink)}
 .fuelrow>span{background:var(--paper);border:2px solid var(--ink);border-radius:4px;padding:1px 6px}
 .copybox{position:fixed;inset:0;z-index:50;background:rgba(34,40,58,.92);display:grid;grid-template-rows:1fr auto;gap:12px;padding:calc(var(--reserve) + 16px) 16px 24px}
 .copybox textarea{width:100%;height:100%;font:12px/1.4 ui-monospace,Menlo,monospace;background:var(--paper);color:var(--ink);border:var(--ol) solid var(--ink);border-radius:6px;padding:10px}
 .ffw{color:var(--red)}
 .wxhud{justify-self:start;font-family:var(--display);font-size:12px;color:var(--paper);background:var(--red);border:2px solid var(--ink);border-radius:4px;padding:2px 8px}
-#land{pointer-events:auto;background:var(--canvas);border:2px solid var(--ink);border-radius:5px;color:var(--ink);font-size:12.5px;font-weight:900;padding:4px 9px;box-shadow:2px 2px 0 var(--ink)}
 .toast{position:absolute;left:16px;right:16px;top:calc(var(--reserve) + 150px);text-align:center;pointer-events:none;font-family:var(--display);font-size:30px;color:var(--paper);text-shadow:3px 3px 0 var(--ink),-1px -1px 0 var(--ink),1px -1px 0 var(--ink),-1px 1px 0 var(--ink);transition:opacity .4s}
 .toast small{display:block;font-family:var(--body);font-size:16px;font-weight:900;color:var(--brass);text-shadow:2px 2px 0 var(--ink)}
 .ctrl{position:absolute;left:0;right:0;bottom:0;padding:0 14px calc(16px + env(safe-area-inset-bottom,0px));display:flex;justify-content:space-between;align-items:flex-end;pointer-events:none}
@@ -264,7 +263,7 @@ button:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
   mask:radial-gradient(circle at 4px 4px,#000 3px,transparent 3.5px),radial-gradient(circle at calc(100% - 4px) 4px,#000 3px,transparent 3.5px),radial-gradient(circle at 4px calc(100% - 4px),#000 3px,transparent 3.5px),radial-gradient(circle at calc(100% - 4px) calc(100% - 4px),#000 3px,transparent 3.5px)}
 .pk-brace{position:absolute;left:4%;right:4%;top:50%;height:16px;margin-top:8px;background:var(--wood2);border-block:3px solid var(--ink);transform:rotate(-40deg)}
 .pk-band{position:absolute;left:20%;right:20%;top:112px;height:30px;background:var(--paper);color:var(--red);border:3px solid var(--ink);
-  font-family:var(--display);font-size:17px;letter-spacing:.14em;display:grid;place-items:center;transform:rotate(-3deg);box-shadow:2px 2px 0 rgba(34,40,58,.4)}
+  font-family:var(--display);font-size:17px;letter-spacing:.14em;display:grid;place-items:center;transform:rotate(-2deg);box-shadow:2px 2px 0 rgba(34,40,58,.4)}
 .pk-mark{position:absolute;left:50%;top:46px;width:58px;height:58px;margin-left:-29px;border-radius:50%;border:3px solid var(--ink);background:var(--brass);
   display:grid;place-items:center;font-family:var(--display);font-size:38px;color:var(--ink);line-height:1;box-shadow:2px 2px 0 rgba(34,40,58,.4)}
 .pk-sheen{position:absolute;inset:0;background:linear-gradient(105deg,transparent 38%,rgba(255,255,255,.3) 50%,transparent 62%);background-size:300% 100%;animation:pk-sheen 2.8s ease-in-out infinite}
@@ -417,7 +416,7 @@ button:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
 .tool:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
 .tool .ti{width:26px;height:26px;color:var(--brass)}
 #tMods .ti{color:var(--red)}
-.tool.fresh::after{content:"NEW";position:absolute;top:-9px;right:-8px;font-family:var(--display);font-size:10px;color:var(--paper);background:var(--red);border:2px solid var(--ink);border-radius:4px;padding:1px 4px;transform:rotate(8deg)}
+.tool.fresh::after{content:"NEW";position:absolute;top:-9px;right:-8px;font-family:var(--display);font-size:10px;color:var(--paper);background:var(--red);border:2px solid var(--ink);border-radius:4px;padding:1px 4px;transform:rotate(4deg)}
 .dr-panel.dealer{height:min(86%,760px)}
 .dr-body{flex:1;min-height:0;overflow-y:auto;padding:4px 16px 12px;display:grid;gap:14px;align-content:start}
 .dr-body .card{box-shadow:3px 3px 0 var(--ink)}
@@ -428,9 +427,9 @@ button:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
 .tallysheet.kick{animation:kick .3s ease-out}
 @keyframes kick{0%{transform:translate(0,0)}20%{transform:translate(-5px,3px) rotate(-.6deg)}45%{transform:translate(4px,-2px) rotate(.4deg)}70%{transform:translate(-2px,1px)}100%{transform:none}}
 .stamp{position:absolute;top:-24px;right:-6px;font-family:var(--display);font-size:22px;color:var(--good);border:4px solid currentColor;border-radius:6px;padding:2px 10px;background:rgba(243,231,206,.92);
-  transform:rotate(-8deg);animation:stamp .38s cubic-bezier(.2,1.6,.4,1) both;letter-spacing:.02em}
+  transform:rotate(-3deg);animation:stamp .38s cubic-bezier(.2,1.6,.4,1) both;letter-spacing:.02em}
 .stamp.bad{color:var(--red)}.stamp.meh{color:var(--teal2)}
-@keyframes stamp{0%{transform:rotate(-8deg) scale(2.4);opacity:0}60%{transform:rotate(-8deg) scale(.92);opacity:1}100%{transform:rotate(-8deg) scale(1)}}
+@keyframes stamp{0%{transform:rotate(-3deg) scale(2.4);opacity:0}60%{transform:rotate(-3deg) scale(.92);opacity:1}100%{transform:rotate(-3deg) scale(1)}}
 .seats{display:grid;justify-items:center;gap:2px;margin-top:6px}
 .drum{font-family:var(--display);font-size:42px;line-height:1;color:var(--ink);background:var(--canvas);border:var(--ol) solid var(--ink);border-radius:6px;padding:6px 14px 3px;font-variant-numeric:tabular-nums;box-shadow:inset 0 -10px 0 rgba(34,40,58,.08),3px 3px 0 var(--ink);min-width:150px;text-align:center}
 .seats small{font-size:12.5px;color:var(--muted)}
@@ -446,14 +445,14 @@ button:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
 .eqn i{font-style:normal;color:var(--muted)}
 .eqn #tyM{color:var(--red)}
 .eqn b{font-weight:400;font-size:34px;color:var(--red);text-shadow:2px 2px 0 rgba(34,40,58,.2)}
-.sold{justify-self:center;font-family:var(--display);font-size:28px;color:var(--paper);background:var(--good);border:var(--ol) solid var(--ink);border-radius:6px;padding:2px 16px;transform:rotate(-4deg);box-shadow:3px 3px 0 var(--ink);animation:stamp .4s cubic-bezier(.2,1.6,.4,1) both}
+.soldout{justify-self:center;font-family:var(--display);font-size:28px;color:var(--paper);background:var(--good);border:var(--ol) solid var(--ink);border-radius:6px;padding:2px 16px;transform:rotate(-2deg);box-shadow:3px 3px 0 var(--ink);animation:stamp .4s cubic-bezier(.2,1.6,.4,1) both}
 .clip{background:#f7f1e3;border:2px solid var(--ink);padding:8px 12px 10px;font-family:Georgia,"Times New Roman",serif;font-weight:700;font-size:17px;line-height:1.2;text-align:center;transform:rotate(1deg);
   box-shadow:2px 3px 0 rgba(34,40,58,.35);animation:clip-in .4s cubic-bezier(.2,1.2,.4,1) both;clip-path:polygon(0 4%,4% 0,12% 3%,24% 0,40% 2%,55% 0,70% 3%,86% 0,100% 2%,99% 96%,92% 100%,76% 97%,60% 100%,44% 97%,28% 100%,12% 97%,0 100%)}
 .clip small{display:block;font-family:var(--body);font-size:10.5px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--ink);margin-bottom:5px;padding-bottom:3px}
 @keyframes clip-in{from{transform:translateY(20px) rotate(6deg);opacity:0}to{transform:rotate(1deg);opacity:1}}
 .confetti{position:fixed;inset:0;pointer-events:none;z-index:30;overflow:hidden}
 .confetti i{position:absolute;top:0;width:8px;height:12px;border:1px solid rgba(34,40,58,.6)}
-@media (prefers-reduced-motion: reduce){.stamp,.sold,.clip,.hc.in{animation:none;opacity:1;transform:none}.stamp{transform:rotate(-8deg)}}
+@media (prefers-reduced-motion: reduce){.stamp,.sold,.clip,.hc.in{animation:none;opacity:1;transform:none}.stamp{transform:rotate(-3deg)}}
 
 /* ---------- title ---------- */
 .titlebench{padding-top:calc(var(--reserve) + 18px)}
@@ -493,18 +492,19 @@ button:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
 .boon .bi img{width:40px;height:40px}
 /* tally, tightened: stamp on the top edge, the equation as the hero, one result line */
 .tallysheet{gap:9px;padding-top:34px}
-.tallysheet .stamp{top:-20px;left:50%;right:auto;transform:translateX(-50%) rotate(-6deg);animation:stamp2 .38s cubic-bezier(.2,1.6,.4,1) both;white-space:nowrap}
-@keyframes stamp2{0%{transform:translateX(-50%) rotate(-6deg) scale(2.4);opacity:0}60%{transform:translateX(-50%) rotate(-6deg) scale(.92);opacity:1}100%{transform:translateX(-50%) rotate(-6deg) scale(1)}}
+.tallysheet .stamp{top:-20px;left:50%;right:auto;transform:translateX(-50%) rotate(-2deg);animation:stamp2 .38s cubic-bezier(.2,1.6,.4,1) both;white-space:nowrap}
+@keyframes stamp2{0%{transform:translateX(-50%) rotate(-2deg) scale(2.4);opacity:0}60%{transform:translateX(-50%) rotate(-2deg) scale(.92);opacity:1}100%{transform:translateX(-50%) rotate(-2deg) scale(1)}}
 .tallysheet>.label{text-align:center}
 .eqn{margin-top:2px;flex-wrap:wrap;row-gap:4px}
 .eqn .drum{font-size:30px;min-width:0;padding:4px 10px 1px}
 .eqsub{text-align:center;font-size:11.5px;color:var(--muted);margin-top:-4px}
 .tres{margin:0;text-align:center;font-size:13.5px;color:var(--muted)}
 .tres.warn{color:var(--red)}
-.sold{font-size:24px;padding:2px 14px}
-.sold small{font-family:var(--body);font-weight:900;font-size:14px;margin-left:6px}
+.soldout{font-size:24px;padding:2px 14px}
+.soldout small{font-family:var(--body);font-weight:900;font-size:14px;margin-left:6px}
 .clip{font-size:15px;padding:6px 10px 8px}
-@media (prefers-reduced-motion: reduce){.tallysheet .stamp{animation:none;transform:translateX(-50%) rotate(-6deg)}}
+@media (prefers-reduced-motion: reduce){.tallysheet .stamp{animation:none;transform:translateX(-50%) rotate(-2deg)}}
 /* keep the show poster to the column width on wide screens */
 .poster{width:calc(100% - 32px);max-width:520px;margin:2px auto 10px}
 .htop{max-width:560px;width:100%;margin:0 auto}
+.sold>.offer{opacity:.55}

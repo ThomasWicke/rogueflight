@@ -94,7 +94,7 @@ function renderTitle(){
     $('aband').onclick=()=>{if(!armAbandon){armAbandon=true;renderTitle();return}endRun()};
   }else{
     const lv=$('lvl');if(lv)lv.onclick=e=>{const b=e.target.closest('button');if(b){pickLevel=+b.dataset.l;renderTitle()}};
-    $('start').onclick=()=>{save.run=newRun(pickLevel,save.meta);persist();tab='shop';sel='wing';openHangar()};
+    $('start').onclick=()=>{save.run=newRun(pickLevel,save.meta);persist();tab='build';sel='wing';openHangar()};
   }
 }
 
@@ -132,7 +132,6 @@ function openHangar(){
   show('hangar');
   if(r.phase==='won'){renderHangar();showVictory();return}
   if(r.phase==='over'){renderHangar();showRunOver();return}
-  if(r.phase==='shop'&&tab==='build')tab='shop';
   setTab(tab);
 }
 // tab: 'build' is the barn itself; 'shop' and 'mods' open the dealer drawer over it
@@ -478,7 +477,6 @@ const keys={};
 window.addEventListener('keydown',e=>{if(!F)return;keys[e.key]=1;sync(e)});
 window.addEventListener('keyup',e=>{keys[e.key]=0;sync(e)});
 function sync(e){if(!F)return;const up=keys.ArrowUp||keys.w||keys.W,dn=keys.ArrowDown||keys.s||keys.S;ctl.pitch=up?1:dn?-1:0;if(e&&[' ','ArrowUp','ArrowDown'].includes(e.key))e.preventDefault()}
-$('land').onclick=()=>{if(F&&!F.S.done){F.S.done=true;F.S.banked=true}};
 
 function startFlight(){
   const r=R(),w=curWx(),st=curStats(),K=makeCraft(r.cells,st);
@@ -695,7 +693,7 @@ function showResults(out,S,f){
   let btn='',next='',result='';
   // one result line: sold out (with the bonus), or what is still needed; the gate cash rides along
   if(out.cleared){btn=out.won?'Continue':'On to the next town';next=out.won?'won':'shop';
-    result=`<div id="tySold" class="sold" hidden>Sold out! <small>+${out.reward+out.interest+out.pay} cash</small></div>`+(out.unlocks&&out.unlocks.length?`<p class="hint">Unlocked: <strong>${out.unlocks.join(', ')}</strong></p>`:'');}
+    result=`<div id="tySold" class="soldout" hidden>Sold out! <small>+${out.reward+out.interest+out.pay} cash</small></div>`+(out.unlocks&&out.unlocks.length?`<p class="hint">Unlocked: <strong>${out.unlocks.join(', ')}</strong></p>`:'');}
   else if(out.failed){btn='Tour summary';next='over';result=`<p class="tres warn">No flights left: the crowd goes home · +${out.pay} cash</p>`}
   else{const left=FLIGHTS-out.flightNo;btn='Back to the barn';next='hangar';result=`<p class="tres">${fmt(q-out.contractScore)} more needed · ${plural(left,'flight')} left · +${out.pay} cash</p>`}
   const news=headline({...f,cleared:!!out.cleared},{town:town.town,pilot:'Goat'},r.seed+out.stage*7+out.flightNo);
@@ -739,7 +737,7 @@ function showResults(out,S,f){
     veil.classList.remove('tally');sheet.className='sheet';sheet.onclick=null;
     if(next==='won'){showVictory();return}
     if(next==='over'){showRunOver();return}
-    veil.hidden=true;show('hangar');tab=next==='shop'?'shop':'build';setTab(tab);
+    veil.hidden=true;show('hangar');setTab('build');
   };
 }
 // paper confetti over the sheet for a sold-out show
@@ -766,7 +764,7 @@ function showVictory(){
     <button class="big win" type="button" id="endless">Encore tour</button>
     <button class="big alt" type="button" id="retire">Take a bow</button><button class="ghost" type="button" data-copyrun="cur">Copy run</button>`;
   veil.hidden=false;sfx('fanfare');sfx('cheer',{intensity:1});confetti();
-  $('endless').onclick=()=>{sheet.className='sheet';r.endless=true;r.phase='shop';r.shop=genShop(r,m);weatherOf(r,r.stage);grantPacks(r);persist();veil.hidden=true;show('hangar');setTab('shop')};
+  $('endless').onclick=()=>{sheet.className='sheet';r.endless=true;r.phase='shop';r.shop=genShop(r,m);weatherOf(r,r.stage);grantPacks(r);persist();veil.hidden=true;show('hangar');setTab('build')};
   $('retire').onclick=()=>{sheet.className='sheet';endRun()};
 }
 function showRunOver(){
