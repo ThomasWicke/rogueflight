@@ -143,8 +143,6 @@ button:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
 .unl li.done{color:var(--ink)}
 .unl li i{font-style:normal;font-family:var(--inst);color:var(--muted)}
 .unl li.done i{color:var(--good)}
-.rules{display:flex;flex-wrap:wrap;gap:6px}
-.rules span{font-family:var(--inst);font-size:12px;color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:5px 10px}
 
 /* flight */
 #flight{background:#5fb0ea}

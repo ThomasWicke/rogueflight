@@ -134,7 +134,6 @@ function renderTitle(){
       <div style="margin-top:12px"><button class="big" id="start" type="button">Start run</button></div></div>`;
   }
   h+=`<div><button class="ghost howto${m.guideSeen?'':' new'}" id="howto" type="button">How to play</button></div>`;
-  h+=`<div class="rules"><span>${CONTRACTS} contracts</span><span>${FLIGHTS} flights each</span><span>Score = distance \u00d7 mult</span><span>${MAXMODS} mod slots</span></div>`;
   h+=`<div class="card"><span class="label">Logbook</span>
     <dl class="stats"><dt>Runs</dt><dd>${m.runs}</dd><dt>Wins</dt><dd>${m.wins}</dd><dt>Best run</dt><dd>${m.deepest||m.bestStage}</dd><dt>Best flight</dt><dd>${fmt(m.bestFlight)}</dd>${m.level?`<dt>Highest Ceiling</dt><dd>${m.level}</dd>`:''}</dl>
     <div class="row" style="margin-top:12px"><span class="label">Unlocks</span><span class="hint">contracts in one run</span></div>
