@@ -21,6 +21,7 @@ npm run preview   # serve dist/ (service worker only registers in production bui
 client/index.html        markup for all screens (title, hangar, flight, veil/sheet modal)
 client/src/main.js       entry: self-hosted fonts (@fontsource), style.css, ui.js, service-worker registration
 client/src/sim.js        PURE game logic, no DOM. Data tables, physics step, craft assembly, scoring, economy, run state
+client/src/guide.js      "How to play" drawer: swipeable slides with small HTML/SVG illustrations (opened from the title and the ? chip in the hangar)
 client/src/ui.js         everything DOM/canvas: part art, hangar (build/shop/mods), flight loop + HUD + input, result screens
 client/src/style.css     all styles; dark blueprint theme, tokens on :root
 client/public/           manifest.webmanifest, sw.js, _headers (Cloudflare), icons/
@@ -45,7 +46,7 @@ Code style is dense (many one-line functions, short names: `S` flight state, `K`
 
 ### Building (`makeCraft`, `linkage`)
 - 7×5 grid, cockpit fixed at (2,2). Sockets per edge `[right(nose), top, left(tail), bottom]` in `SOCK`. Structural parts (`STRUCT`: cockpit, frame, tank) pass connections on; leaf parts must bolt to a structural part.
-- Wings and balloons mount on their bottom edge. Props face the nose and are blocked if the cell in front is occupied. Rockets are blocked if the cell behind is occupied.
+- Wings mount on their bottom or side edges, balloons on their bottom edge (the string), props on their back edge, rockets on their top, bottom or nose edge. Engines work wherever they sit; nothing needs a free square in front or behind.
 - The bench overlay shows bolts and open sockets, the centre-of-mass marker, the centre-of-lift arrow, and dashed thrust lines (red when more than `GIMBAL`=0.4 m off the centre of mass).
 - Editor input: tap places the selected part or removes the same part. Press and hold (280 ms) to pick a part up; drop it on an empty cell to move it or onto a part to swap.
 
@@ -55,7 +56,9 @@ Code style is dense (many one-line functions, short names: `S` flight state, `K`
 - Quadratic drag. Air density is exp(−y/8500). Extra vacuum drag terms appear at altitude, and speed is capped at the speed of light.
 - Balloons lift ∝ density and burst at 2 km (6 km with Weather Envelope) or when the POP button is pressed.
 - Thermals are smooth columns (cos² profile). Gusts are time-varying vertical forces whose net energy gain per flight is capped (~60 m of height) so they cannot be pumped for infinite climb.
+- A flight ends after `FLIGHT_TIME` (300 s of sim time, "Out of time"). The HUD shows the time left under the speed, amber from 60 s, red and pulsing from 20 s.
 - Crash if a touchdown impact exceeds 15 m/s, or exceeds 5 m/s nose-down past 45°. Rubber Hull bounces instead.
+- Far zoomed out, the craft keeps a minimum on-screen size (about 32 px across) with a soft halo, instead of shrinking to nothing.
 - UI fast-forward: from 12 s into a flight, time speeds up to 4× but only while no pitch input has been given for a second. Any input snaps back to real time. A ▸▸ badge shows when it is active.
 
 ### Scoring (`scoreFlight`)

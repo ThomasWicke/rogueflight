@@ -25,7 +25,7 @@
 <section class="screen blue" id="hangar" hidden>
   <div class="top">
     <div class="brand">ROGUE<span>FLIGHT</span></div>
-    <div class="chips"><span class="chip" id="hCeil" hidden></span><span class="chip">Coins <b id="hCoins">0</b></span></div>
+    <div class="chips"><button class="chip help" id="hHelp" type="button" aria-label="How to play">?</button><span class="chip" id="hCeil" hidden></span><span class="chip">Coins <b id="hCoins">0</b></span></div>
   </div>
   <div class="cstrip" id="cstrip"></div>
   <div class="tabs" role="tablist">
@@ -43,7 +43,7 @@
   <div class="hud">
     <div class="hrow">
       <div class="dist" id="fDist">0 m</div>
-      <div class="mini"><span id="fAlt">ALT 0 m</span><span id="fSpd">0 km/h</span><span id="fTs" class="ffw" hidden></span></div>
+      <div class="mini"><span id="fAlt">ALT 0 m</span><span id="fSpd">0 km/h</span><span id="fTime" class="ftime" aria-label="Flight time left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/></svg><b>5:00</b></span><span id="fTs" class="ffw" hidden></span></div>
     </div>
     <div class="srow"><span>SCORE <b id="fScore">0</b> <span class="m" id="fMult">×1.0</span></span><span class="need" id="fNeed"></span></div>
     <div class="fuelrow"><span>FUEL</span><div class="fuel"><i id="fFuel"></i></div><button id="land" type="button">Land now</button></div>
@@ -69,6 +69,17 @@
   <div class="pk-tray" id="pkTray"></div>
   <div class="pk-cta"><button class="big" id="pkDone" type="button" hidden>To the hangar</button></div>
 </section>
+
+<!-- ============ HOW TO PLAY ============ -->
+<div class="drawer" id="guide" hidden role="dialog" aria-modal="true" aria-label="How to play">
+  <div class="dr-scrim" id="grScrim"></div>
+  <div class="dr-panel">
+    <div class="dr-grab" aria-hidden="true"></div>
+    <div class="dr-head"><span class="label">How to play · <span id="grCount"></span></span><button class="dr-x" id="grClose" type="button" aria-label="Close">×</button></div>
+    <div class="gr-track" id="grTrack"></div>
+    <div class="dr-foot"><button class="ghost" id="grPrev" type="button">Back</button><div class="gr-dots" id="grDots"></div><button class="big" id="grNext" type="button">Next</button></div>
+  </div>
+</div>
 
 <div class="veil" id="veil" hidden><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
 <script type="module" src="/src/main.js"></script>

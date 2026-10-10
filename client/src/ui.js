@@ -1,7 +1,7 @@
 // rogueflight UI: hangar (build / shop / mods), flight rendering + input, results and run screens.
 import {
   GIMBAL, NEUT, PAR, VAC, VAC2, C_LIGHT, G0, COLS,
-  ROWS, COCKPIT, MAXMODS, FLIGHTS, CONTRACTS, clamp, PARTS, PALETTE,
+  ROWS, COCKPIT, MAXMODS, FLIGHTS, CONTRACTS, FLIGHT_TIME, clamp, PARTS, PALETTE,
   TUNES, tuneCost, RARITY, MODS, WEATHER, weatherFx, START, UNLOCKS,
   modUnlocked, QUOTA, quotaFor, isStorm, weatherOf, stats, DIRS,
   SOCK, STRUCT, linkage, connected, balanceOf, makeCraft, hs, groundY,
@@ -10,6 +10,7 @@ import {
   rerollShop, priceOf, offerPrice, rerollCost, sellValue, newRun, craftCounts, settleFlight,
   PACKS, FIRST_PACKS, rollPacks, grantPacks, openPack,
 } from './sim.js';
+import { initGuide, openGuide } from './guide.js';
 
 /* ================= persistence ================= */
 const KEY='rogueflight-1';
@@ -130,12 +131,14 @@ function renderTitle(){
       ${m.level>0?`<div style="margin-top:12px"><div class="row" style="margin-bottom:6px"><span class="label">Ceiling</span><span class="hint">+25% quota per level</span></div><div class="seg" id="lvl">${Array.from({length:m.level+1},(_,i)=>`<button type="button" data-l="${i}" aria-pressed="${i===pickLevel}">${i}</button>`).join('')}</div></div>`:''}
       <div style="margin-top:12px"><button class="big" id="start" type="button">Start run</button></div></div>`;
   }
+  h+=`<div><button class="ghost howto${m.guideSeen?'':' new'}" id="howto" type="button">How to play</button></div>`;
   h+=`<div class="rules"><span>${CONTRACTS} contracts</span><span>${FLIGHTS} flights each</span><span>Score = distance \u00d7 mult</span><span>${MAXMODS} mod slots</span></div>`;
   h+=`<div class="card"><span class="label">Logbook</span>
     <dl class="stats"><dt>Runs</dt><dd>${m.runs}</dd><dt>Wins</dt><dd>${m.wins}</dd><dt>Best run</dt><dd>${m.deepest||m.bestStage}</dd><dt>Best flight</dt><dd>${fmt(m.bestFlight)}</dd>${m.level?`<dt>Highest Ceiling</dt><dd>${m.level}</dd>`:''}</dl>
     <div class="row" style="margin-top:12px"><span class="label">Unlocks</span><span class="hint">contracts in one run</span></div>
     <ul class="unl">${UNLOCKS.map(u=>{const d=m.bestStage>=u.at;return `<li class="${d?'done':''}"><i>${d?'\u2713':u.at}</i><span>${u.text}</span></li>`}).join('')}</ul>${m.lastRun?'<div style="margin-top:12px"><button class="ghost" type="button" data-copyrun="last">Copy last run</button></div>':''}</div>`;
   $('titleBody').innerHTML=h;
+  $('howto').onclick=openGuide;
   if(r){
     $('cont').onclick=()=>{armAbandon=false;openHangar()};
     $('aband').onclick=()=>{if(!armAbandon){armAbandon=true;renderTitle();return}endRun()};
@@ -190,11 +193,10 @@ function renderHangar(){
 function renderBuild(){
   const r=R(), st=curStats(), K=makeCraft(r.cells,st);
   const link=linkage(r.cells), conn=link.seen;
-  const blockedSet=new Set(K.parts.filter(p=>p.blocked).map(p=>p.gc+','+p.gr));
   const map=new Map(r.cells.map(x=>[x.c+','+x.r,x]));
   let cells='';
   for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){const k=x+','+y,p=map.get(k);
-    const cls='cell'+(p?' on':'')+(p&&!conn.has(k)?' loose':'')+(p&&p.type==='cockpit'?' cock':'')+(blockedSet.has(k)?' blocked':'');
+    const cls='cell'+(p?' on':'')+(p&&!conn.has(k)?' loose':'')+(p&&p.type==='cockpit'?' cock':'');
     cells+=`<button class="${cls}" data-c="${x}" data-r="${y}" type="button" aria-label="${p?PARTS[p.type].name:'Empty'} at column ${x+1}, row ${y+1}">${p?`<img alt="" src="${ICON[p.type]}">`:''}</button>`}
   const W=K.m*G0*st.grav, n=K.counts;
   const propT=n.prop*st.prop*st.rhoMul/W, rockT=n.rocket*st.rocket/W;
@@ -214,13 +216,13 @@ function renderBuild(){
     if(jointKey.has(p.c+','+p.r+','+e)&&live)ov+=`<ellipse cx="${x}" cy="${y}" rx=".09" ry=".09" class="bolt"/>`;
     else{const hz=e%2===0;ov+=`<rect x="${hz?x-(e===0?.07:0):x-.16}" y="${hz?y-.16:y-(e===3?.07:0)}" width="${hz?.07:.32}" height="${hz?.32:.07}" class="sock"/>`}}}
   // thrust lines: each engine's push runs along its row; it should pass through the mass marker
-  for(const p of K.parts){if((p.type!=='prop'&&p.type!=='rocket')||p.blocked)continue;const y=p.gr+.5,bad=offLine(p.type==='prop'?K.propLine:K.rocketLine);
+  for(const p of K.parts){if(p.type!=='prop'&&p.type!=='rocket')continue;const y=p.gr+.5,bad=offLine(p.type==='prop'?K.propLine:K.rocketLine);
     ov+=`<line x1="0" y1="${y}" x2="7" y2="${y}" stroke="${bad?'#ff6b5b':'rgba(233,241,247,.28)'}" stroke-width=".05" stroke-dasharray=".14 .12"/>`}
   if(K.parts.length){const cx=K.com.x,cy=K.com.y;
     if(off!=null)ov+=`<g class="col"><line x1="${cx+off}" y1="${cy-.55}" x2="${cx+off}" y2="${cy+.1}"/><path d="M${cx+off-.14} ${cy-.4}L${cx+off} ${cy-.62}L${cx+off+.14} ${cy-.4}Z"/></g>`;
     ov+=`<g class="com"><ellipse cx="${cx}" cy="${cy}" rx=".17" ry=".17" class="c0"/><path d="M${cx} ${cy}L${cx+.17} ${cy}A.17 .17 0 0 1 ${cx} ${cy+.17}Z M${cx} ${cy}L${cx-.17} ${cy}A.17 .17 0 0 1 ${cx} ${cy-.17}Z" class="c1"/></g>`}
   const w=curWx();
-  const warns=[];if(K.loose)warns.push(plural(K.loose,'loose part'));if(K.blocked)warns.push(K.blocked+' blocked engine'+(K.blocked>1?'s':''));
+  const warns=[];if(K.loose)warns.push(plural(K.loose,'loose part'));
   if(offLine(K.propLine))warns.push('propeller off-center');if(offLine(K.rocketLine))warns.push('rocket off-center');
   const rows=[['Mass',mul(K.m)+' t','']];
   if(off!=null)rows.push(['Balance',balTxt,balCls]);
@@ -333,6 +335,9 @@ function renderMods(){
 $('launch').onclick=()=>{const r=R();if(!r)return;
   if(r.phase==='shop'){r.phase='contract';persist();setTab('build');return}
   if(r.phase==='contract')startFlight()};
+
+initGuide(ICON,()=>{if(!save.meta.guideSeen){save.meta.guideSeen=true;persist();if(!$('title').hidden)renderTitle()}});
+$('hHelp').onclick=openGuide;
 
 /* ================= parts packs ================= */
 // every contract starts with packs to open: shake, tear the top off, burst, the part pops out and flies to the tray
@@ -601,19 +606,25 @@ function draw(now){
   const cx=X(S.x),cy=Y(S.y);
   if(F.boom>=0){F.boom+=1/60;const R2=20+F.boom*260;ctx.strokeStyle=`rgba(255,255,255,${Math.max(0,1-F.boom*1.6)})`;ctx.lineWidth=3;ctx.beginPath();ctx.arc(cx,cy,R2,0,7);ctx.stroke();if(F.boom>.7)F.boom=-1}
   if(!S.crashed){
-    if(sc>=3){ctx.save();ctx.translate(cx,cy);ctx.scale(sc,sc);ctx.rotate(-S.th);
-      const frac=K.fuelMax?S.fuel/K.fuelMax:0;
-      for(const p of K.parts){ctx.save();ctx.translate(p.lx,-p.ly);drawPart(ctx,p.type,now/1000,{on:p.type==='rocket'?S.rocketOn:S.propOn,frac});ctx.restore()}
-      ctx.restore()}
-    else{ctx.fillStyle='#ffb020';ctx.beginPath();ctx.arc(cx,cy,4,0,7);ctx.fill();ctx.strokeStyle='#ffb020';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+Math.cos(S.th)*14,cy-Math.sin(S.th)*14);ctx.stroke()}
+    // zoomed far out the craft keeps a minimum on-screen size, with a soft halo so it stays easy to find
+    let ext=.7;for(const p of K.parts)ext=Math.max(ext,Math.hypot(p.lx,p.ly)+.7);
+    const ds=Math.max(sc,16/ext);
+    if(ds>sc*1.05){const R=ext*ds*1.9,a=clamp(ds/sc/4,0,1)*.32,hg=ctx.createRadialGradient(cx,cy,0,cx,cy,R);
+      hg.addColorStop(0,`rgba(255,255,255,${a})`);hg.addColorStop(1,'rgba(255,255,255,0)');ctx.fillStyle=hg;ctx.beginPath();ctx.arc(cx,cy,R,0,7);ctx.fill()}
+    ctx.save();ctx.translate(cx,cy);ctx.scale(ds,ds);ctx.rotate(-S.th);
+    const frac=K.fuelMax?S.fuel/K.fuelMax:0;
+    for(const p of K.parts){ctx.save();ctx.translate(p.lx,-p.ly);drawPart(ctx,p.type,now/1000,{on:p.type==='rocket'?S.rocketOn:S.propOn,frac});ctx.restore()}
+    ctx.restore()
   }
 }
-const elD=$('fDist'),elA=$('fAlt'),elV=$('fSpd'),elF=$('fFuel'),elT=$('toast'),elS=$('fScore'),elM=$('fMult'),elN=$('fNeed'),elFF=$('fTs');
+const elD=$('fDist'),elA=$('fAlt'),elV=$('fSpd'),elF=$('fFuel'),elT=$('toast'),elS=$('fScore'),elM=$('fMult'),elN=$('fNeed'),elFF=$('fTs'),elTm=$('fTime');
 function hud(dt){
   const {S}=F,K=F.K;
   elD.textContent=fmtD(Math.max(0,S.x));
   elA.textContent='ALT '+fmtD(Math.max(0,S.y));
   elV.textContent=fmtV(Math.hypot(S.vx,S.vy));
+  // flight clock: a flight ends at FLIGHT_TIME, so slow climbers (balloons) can plan their descent
+  {const rem=Math.max(0,Math.ceil(FLIGHT_TIME-S.t));elTm.lastChild.textContent=Math.floor(rem/60)+':'+String(rem%60).padStart(2,'0');elTm.className='ftime'+(rem<=20?' crit':rem<=60?' warn':'')}
   if(S.burst&&$('bPop').style.visibility!=='hidden')$('bPop').style.visibility='hidden';
   {const t=F.ts>1.15&&!S.done;elFF.hidden=!t;if(t)elFF.textContent='\u25b8\u25b8 '+(F.ts<9.95?F.ts.toFixed(1):Math.round(F.ts))+'\u00d7'}
   const sc=scoreFlight(summaryOf(S,K),F.ctx);

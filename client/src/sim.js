@@ -2,15 +2,15 @@
 // Physics (step), craft assembly (makeCraft), scoring (scoreFlight), economy and run state (newRun, settleFlight).
 // Imported by the browser UI (ui.js) and by the node tests/tools, so keep it free of window/document.
 const GIMBAL=.4, NEUT=.8, PAR=.0016, VAC=.002, VAC2=1.5e-4, C_LIGHT=299792458, G0=9.81, COLS=7, ROWS=5, COCKPIT={c:2,r:2};
-const MAXMODS=5, FLIGHTS=3, CONTRACTS=8;
+const MAXMODS=5, FLIGHTS=3, CONTRACTS=8, FLIGHT_TIME=300;
 const clamp=(v,a,b)=>v<a?a:v>b?b:v;
 
 /* ---------- parts ---------- */
 const PARTS={
   cockpit:{name:'Cockpit',mass:1.0,price:0,mount:'all four sides',blurb:'Holds the pilot and a small fuel reserve. It stays put and works like a frame.'},
   wing:{name:'Wing',mass:0.4,price:4,mount:'left, right or bottom edge, to a frame, tank or the cockpit',blurb:'Lift grows with speed. Flies best with its lift just behind the center of mass. Useless in thin air.'},
-  prop:{name:'Propeller',mass:0.7,price:5,mount:'left edge only, to a frame, tank or the cockpit, with a free square in front',blurb:'Steady thrust while fuel lasts. Needs air. Keep it level with the center of mass or it pitches the nose.'},
-  rocket:{name:'Rocket',mass:0.9,price:6,mount:'top, bottom or nose edge, to a frame, tank or the cockpit, with a free square behind for the exhaust',blurb:'Hold Boost to fire. Burns 4 fuel per second and works in space. Off-center rockets flip the craft.'},
+  prop:{name:'Propeller',mass:0.7,price:5,mount:'left edge only, to a frame, tank or the cockpit',blurb:'Steady thrust while fuel lasts. Needs air. Keep it level with the center of mass or it pitches the nose.'},
+  rocket:{name:'Rocket',mass:0.9,price:6,mount:'top, bottom or nose edge, to a frame, tank or the cockpit',blurb:'Hold Boost to fire. Burns 4 fuel per second and works in space. Off-center rockets flip the craft.'},
   tank:{name:'Fuel tank',mass:0.6,price:4,mount:'all four sides, and passes connections on like a frame',blurb:'Adds fuel and weight, and works as structure. Use tanks to move the center of mass.'},
   balloon:{name:'Balloon',mass:0.15,price:4,mount:'bottom edge only (the string), to a frame, tank or the cockpit',blurb:'Pulls upward where it is tied and weakens as the air thins. Bursts above 2 km.'},
   frame:{name:'Frame',mass:0.45,price:3,mount:'all four sides, and passes connections on',blurb:'Light structure. Frames, tanks and the cockpit carry connections onward; everything else must bolt to one of them.'},
@@ -145,23 +145,20 @@ const connected=cells=>linkage(cells).list;
 const balanceOf=off=>off<=-.3?clamp(1-(-.3-off)*.45,.15,1):clamp(1-(off+.3)*.15,.5,1);
 function makeCraft(cells,st){
   const list=connected(cells), parts=[], counts={};
-  const occ=new Set(cells.map(x=>x.c+','+x.r));
   let m=0,cx=0,cy=0;
   for(const c of list){const mass=PARTS[c.type].mass*st.massMul;const lx=c.c+.5,ly=-(c.r+.5);
-    const blocked=(c.type==='prop'&&occ.has((c.c+1)+','+c.r))||(c.type==='rocket'&&occ.has((c.c-1)+','+c.r));
-    parts.push({type:c.type,lx,ly,m:mass,blocked,gc:c.c,gr:c.r});m+=mass;cx+=mass*lx;cy+=mass*ly;if(!blocked)counts[c.type]=(counts[c.type]||0)+1}
+    parts.push({type:c.type,lx,ly,m:mass,gc:c.c,gr:c.r});m+=mass;cx+=mass*lx;cy+=mass*ly;counts[c.type]=(counts[c.type]||0)+1}
   const cg={x:COCKPIT.c+.5,y:-(COCKPIT.r+.5)};
   if(st.cargo){m+=st.cargo;cx+=st.cargo*cg.x;cy+=st.cargo*cg.y}
   cx/=m;cy/=m;let I=0;
   for(const p of parts){p.lx-=cx;p.ly-=cy;I+=p.m*(p.lx*p.lx+p.ly*p.ly+1/6)}
   const cargoPos={x:cg.x-cx,y:cg.y-cy};if(st.cargo)I+=st.cargo*(cargoPos.x**2+cargoPos.y**2+1/6);
   const n=k=>counts[k]||0;
-  const wings=parts.filter(p=>p.type==='wing'), props=parts.filter(p=>p.type==='prop'&&!p.blocked), rockets=parts.filter(p=>p.type==='rocket'&&!p.blocked);
+  const wings=parts.filter(p=>p.type==='wing'), props=parts.filter(p=>p.type==='prop'), rockets=parts.filter(p=>p.type==='rocket');
   const avg=(a,f)=>a.length?a.reduce((t,p)=>t+f(p),0)/a.length:null;
   return {parts,m,I,cells:list,cargoPos,counts:{prop:n('prop'),rocket:n('rocket'),wing:n('wing'),tank:n('tank'),balloon:n('balloon')},
     fuelMax:st.reserve+n('tank')*st.tankFuel,loose:cells.length-list.length,
-    com:{x:cx,y:-cy},lift:avg(wings,p=>p.lx),propLine:avg(props,p=>p.ly),rocketLine:avg(rockets,p=>p.ly),
-    blocked:parts.filter(p=>p.blocked).length};
+    com:{x:cx,y:-cy},lift:avg(wings,p=>p.lx),propLine:avg(props,p=>p.ly),rocketLine:avg(rockets,p=>p.ly)};
 }
 
 /* ---------- world ---------- */
@@ -212,8 +209,8 @@ function step(S,K,st,dt,ctl){
   for(const p of K.parts){
     const rx=p.lx*c-p.ly*s, ry=p.lx*s+p.ly*c;
     let fx=0,fy=0,tx=0,ty=0;
-    if(p.type==='prop'){if(hasFuel&&!p.blocked&&thrl>0){const th=st.prop*rho*thrl;tx=c*th;ty=s*th;thr+=th;use+=st.propUse*thrl;S.propOn=true}}
-    else if(p.type==='rocket'){if(hasFuel&&rocketThr>0&&!p.blocked){const th=st.rocket*rocketThr*(1+st.afterburner*Math.min(v,1000)/100);tx=c*th;ty=s*th;thr+=th;use+=4*rocketThr;S.rocketOn=true}}
+    if(p.type==='prop'){if(hasFuel&&thrl>0){const th=st.prop*rho*thrl;tx=c*th;ty=s*th;thr+=th;use+=st.propUse*thrl;S.propOn=true}}
+    else if(p.type==='rocket'){if(hasFuel&&rocketThr>0){const th=st.rocket*rocketThr*(1+st.afterburner*Math.min(v,1000)/100);tx=c*th;ty=s*th;thr+=th;use+=4*rocketThr;S.rocketOn=true}}
     else if(p.type==='wing'){
       const L=Lact/nw;Fx+=-uy*L;Fy+=ux*L;
       const D=st.wingCD*rho*q*(.06+sa*sa)*st.drag;fx-=ux*D;fy-=uy*D;
@@ -301,7 +298,7 @@ function step(S,K,st,dt,ctl){
   if(S.vy<-.5)S.calm=0;
   if(S.calm>6||S.slow>5){S.done=true;S.becalmed=true}
   if(S.ground>.5){S.done=true;S.landed=true}
-  if(S.t>300)S.done=true;
+  if(S.t>FLIGHT_TIME){S.done=true;S.timeout=true}
 }
 // balloons burst: rebuild the craft without them and keep it where it is in the sky
 function popBalloons(S,K,st){
@@ -413,7 +410,7 @@ function settleFlight(run,meta,f){
 
 export {
   GIMBAL, NEUT, PAR, VAC, VAC2, C_LIGHT, G0, COLS,
-  ROWS, COCKPIT, MAXMODS, FLIGHTS, CONTRACTS, clamp, PARTS, PALETTE,
+  ROWS, COCKPIT, MAXMODS, FLIGHTS, CONTRACTS, FLIGHT_TIME, clamp, PARTS, PALETTE,
   TUNES, tuneCost, RARITY, MODS, WEATHER, weatherFx, START, UNLOCKS,
   modUnlocked, QUOTA, quotaFor, isStorm, weatherOf, stats, DIRS,
   SOCK, STRUCT, linkage, connected, balanceOf, makeCraft, hs, groundY,
