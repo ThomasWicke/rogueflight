@@ -1,11 +1,10 @@
 // Entry point: self-hosted fonts (so the installed PWA works offline), styles, the game, and the service worker.
-import '@fontsource/big-shoulders-stencil-display/700';
-import '@fontsource/big-shoulders-stencil-display/800';
-import '@fontsource/barlow/400';
-import '@fontsource/barlow/600';
-import '@fontsource/barlow/700';
-import '@fontsource/chakra-petch/500';
-import '@fontsource/chakra-petch/600';
+import '@fontsource/bowlby-one/400';
+import '@fontsource/nunito/400';
+import '@fontsource/nunito/700';
+import '@fontsource/nunito/800';
+import '@fontsource/nunito/900';
+import '@fontsource/caveat/600';
 import './style.css';
 import './ui.js';
 

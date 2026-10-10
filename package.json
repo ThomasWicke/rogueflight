@@ -12,9 +12,9 @@
     "bot": "node tools/bot.js"
   },
   "dependencies": {
-    "@fontsource/barlow": "^5.3.0",
-    "@fontsource/big-shoulders-stencil-display": "^5.3.0",
-    "@fontsource/chakra-petch": "^5.3.0"
+    "@fontsource/bowlby-one": "^5.3.0",
+    "@fontsource/caveat": "^5.3.0",
+    "@fontsource/nunito": "^5.3.0"
   },
   "devDependencies": {
     "vite": "^8.3.4"

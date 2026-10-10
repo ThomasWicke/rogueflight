@@ -451,7 +451,8 @@ function flightStats(run){const w=weatherOf(run,run.stage),fx=weatherFx(w,severi
   st.drag*=Math.pow(.92,b('drag'));st.grav*=Math.pow(.92,b('grav'));const fm=Math.pow(1.12,b('fuel'));st.tankFuel*=fm;st.reserve*=fm;
   return st}
 function newRun(level,meta){
-  const run={level:level||0,stage:0,flight:0,score:0,total:0,best:0,bestDist:0,coins:START.coins,inv:{...START.inv},
+  // seed: cosmetic only (town names, headlines in fiction.js); gameplay randomness stays on Math.random
+  const run={seed:Math.floor(Math.random()*1e9),level:level||0,stage:0,flight:0,score:0,total:0,best:0,bestDist:0,coins:START.coins,inv:{...START.inv},
     cells:[{...COCKPIT,type:'cockpit'}],mods:[],modLv:{},boons:{},boonOffer:null,tune:{},weather:{},shop:null,phase:'contract',log:[],endless:false,unlocks:[],packs:[]};
   run.shop=genShop(run,meta);
   grantPacks(run);

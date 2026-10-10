@@ -13,6 +13,7 @@ import {
   MAX_CEILING, CEILING_RULES, ceilingRules, REDLINE, CLOUD9,
   BOONS, rollBoons, boonDesc, pickBoon, modSlots,
 } from './sim.js';
+import { townOf, showTitle, headline } from './fiction.js';
 import { initGuide, openGuide } from './guide.js';
 
 /* ================= persistence ================= */
@@ -107,7 +108,7 @@ for(const t of Object.keys(PARTS)){const c=document.createElement('canvas');c.wi
 
 const $=id=>document.getElementById(id);
 const veil=$('veil'), sheet=$('sheet'), bench=$('bench');
-function show(id){for(const s of ['title','hangar','flight'])$(s).hidden=s!==id}
+function show(id){for(const s of ['title','hangar','flight'])$(s).hidden=s!==id;if(id!=='hangar'){const d=$('dealer');d.classList.remove('open');d.hidden=true;tab='build'}}
 const R=()=>save.run;
 let armAbandon=false;
 function runCode(r){if(!r)return '';const L=t=>t==='cockpit'?'c':t[0];
@@ -175,33 +176,41 @@ function openHangar(){
   if(r.phase==='shop'&&tab==='build')tab='shop';
   setTab(tab);
 }
-function setTab(t){tab=t;armSell=null;armAbandon=false;for(const [id,k] of [['tBuild','build'],['tShop','shop'],['tMods','mods']])$(id).setAttribute('aria-selected',k===t?'true':'false');renderHangar();const r=R();if(!r||r.phase==='won'||r.phase==='over')return;if(r.boonOffer)showBoons();else if(r.packs&&r.packs.length)showPacks()}
-$('tBuild').onclick=()=>setTab('build');$('tShop').onclick=()=>setTab('shop');$('tMods').onclick=()=>setTab('mods');
+// tab: 'build' is the barn itself; 'shop' and 'mods' open the dealer drawer over it
+const dealer=$('dealer'), dbody=$('dealerBody');
+function setTab(t){tab=t;armSell=null;armAbandon=false;
+  const open=t!=='build';
+  if(open&&dealer.hidden){dealer.hidden=false;requestAnimationFrame(()=>dealer.classList.add('open'))}
+  else if(!open&&!dealer.hidden){dealer.classList.remove('open');setTimeout(()=>{if(tab==='build')dealer.hidden=true},260)}
+  renderHangar();const r=R();if(!r||r.phase==='won'||r.phase==='over')return;if(r.boonOffer)showBoons();else if(r.packs&&r.packs.length)showPacks()}
+$('tShop').onclick=()=>setTab('shop');$('tMods').onclick=()=>setTab('mods');
+$('dealerX').onclick=$('dealerScrim').onclick=()=>setTab('build');
 function wxLine(id,s){return `<div class="wx"><b>${WEATHER[id].name}</b>${WEATHER[id].d(s)}</div>`}
 // storm forecast: every storm in the run is known from the start, so builds can plan around them
 function forecast(r){const out=[];for(let i=r.stage+1;i<CONTRACTS;i++){const w=weatherOf(r,i);if(w)out.push(`<span title="${WEATHER[w].d(severity(r,i))}"><b>${i+1}</b>${WEATHER[w].name}</span>`)}
   return out.length?`<div class="fcast">${out.join('')}</div>`:''}
+// the show poster: town, which show of the season, the crowd target with a thermometer, ticket stubs for flights left
 function renderStrip(){
-  const r=R(),q=quotaFor(r.stage,r.level),w=curWx();
-  const title=`Contract ${r.stage+1}${r.endless?' · endless':' of '+CONTRACTS}`;
-  if(r.phase==='shop'){
-    $('cstrip').innerHTML=`<div class="row"><span class="label">Next: ${title}</span><span class="fpips"><b style="color:var(--ink)">${fmt(q)}</b></span></div>${w?wxLine(w,severity(r,r.stage)):''}${forecast(r)}`;
-  }else{
-    const p=Math.min(1,r.score/q);
-    $('cstrip').innerHTML=`<div class="row"><span class="label">${title}</span><span class="fpips" aria-label="${FLIGHTS-r.flight} flights left">${Array.from({length:FLIGHTS},(_,i)=>`<i class="${i<r.flight?'used':''}"></i>`).join('')}</span></div>
-      <div class="cbar"><i style="transform:scaleX(${p})"></i><span>${fmt(r.score)} / ${fmt(q)}</span></div>${w?wxLine(w,severity(r,r.stage)):''}${forecast(r)}`;
-  }
+  const r=R(),q=quotaFor(r.stage,r.level),w=curWx(),t=townOf(r.seed,r.stage);
+  const sub=`Show ${r.stage+1}${r.endless?' · encore tour':' of '+CONTRACTS}`;
+  const stubs=`<span class="fpips" aria-label="${FLIGHTS-r.flight} flights left">${Array.from({length:FLIGHTS},(_,i)=>`<i class="${i<r.flight?'used':''}"></i>`).join('')}</span>`;
+  const storm=w?`<div class="pstorm"><b>${WEATHER[w].name}</b>${WEATHER[w].d(severity(r,r.stage))}</div>`:'';
+  const p=r.phase==='shop'?0:Math.min(1,r.score/q);
+  $('cstrip').innerHTML=`<div class="prow"><span class="psub">${r.phase==='shop'?'Next · ':''}${sub}</span>${r.phase==='shop'?'':stubs}</div>
+    <div class="ptown">${t.town}<small>${t.show==='Grand Finale'?'Grand Finale':t.show}</small></div>
+    <div class="cbar"><i style="transform:scaleX(${p})"></i><span>Crowd ${r.phase==='shop'?'target '+fmt(q):fmt(r.score)+' / '+fmt(q)}</span></div>${storm}${forecast(r)}`;
 }
 function renderHangar(){
   const r=R();if(!r)return;
   $('hCeil').textContent='Ceiling '+r.level;$('hCeil').hidden=!r.level;
   $('hCoins').textContent=fmt(r.coins);
-  $('tShop').innerHTML='Shop'+(r.phase==='shop'?'<span class="dot" aria-label="open"></span>':'');
-  $('tMods').textContent=`Mods ${r.mods.length}/${modSlots(r)}`;
+  $('tShop').classList.toggle('fresh',r.phase==='shop');
+  $('tModsL').textContent=`Decals ${r.mods.length}/${modSlots(r)}`;
   renderStrip();
-  bench.onclick=null;
-  if(tab==='build')renderBuild();else if(tab==='shop')renderShop();else renderMods();
-  $('launch').textContent=r.phase==='shop'?`START CONTRACT ${r.stage+1}`:`LAUNCH · FLIGHT ${r.flight+1} OF ${FLIGHTS}`;
+  renderBuild();
+  dbody.onclick=null;
+  if(tab==='shop')renderShop();else if(tab==='mods')renderMods();
+  $('launch').textContent=r.phase==='shop'?`START SHOW ${r.stage+1}`:'LAUNCH!';
 }
 
 function renderBuild(){
@@ -248,10 +257,10 @@ function renderBuild(){
   if(n.balloon)rows.push(['Balloons',ratio(bal),'']);
   bench.innerHTML=`
   <div class="card">
-    <div class="row"><span class="label">Bench</span><button class="ghost${armClear?' armed':''}" id="clear" type="button" ${r.cells.length<=1?'disabled':''}>${armClear?'Tap again':'Clear'}</button></div>
+    <div class="row"><span class="label">Workbench</span><button class="ghost${armClear?' armed':''}" id="clear" type="button" ${r.cells.length<=1?'disabled':''}>${armClear?'Tap again':'Clear'}</button></div>
     <div class="grid" id="grid">${cells}<svg class="ov" viewBox="0 0 7 5" preserveAspectRatio="none" aria-hidden="true">${ov}</svg></div>
     <div class="legend"><span><i class="lg-com"></i>Mass</span><span><i class="lg-col"></i>Lift</span><span style="margin-left:auto">Nose \u2192</span></div>
-    <div class="pal" id="pal">${PALETTE.map(t=>`<button type="button" data-t="${t}" aria-pressed="${t===sel}"><img alt="" src="${ICON[t]}"><span>${PARTS[t].name}<small class="${left(t)?'':'none'}">${left(t)}/${owned(t)}</small></span></button>`).join('')}</div>
+    <div class="pal" id="pal">${PALETTE.map(t=>`<button type="button" data-t="${t}" aria-pressed="${t===sel}"><img alt="" src="${ICON[t]}"><span>${PARTS[t].name}</span><small class="${left(t)?'':'none'}">${left(t)}/${owned(t)}</small></button>`).join('')}</div>
     <div class="blurb" id="blurb">${warns.length?`<span class="warn">${warns.join(' \u00b7 ')}</span>`:''}</div>
   </div>
   <div class="card">
@@ -314,12 +323,13 @@ function renderShop(){
   const tunes=S.tunes.map((o,i)=>{const T=TUNES[o.k],L=r.tune[o.k]||0;return `<div class="offer${o.sold?' sold':''}"><div class="glyph C" aria-hidden="true">+</div><div><h3>${T.name}</h3><p>${T.d} \u00b7 Lv ${L+1}${T.max?'/'+T.max:''}</p></div>${btn('tune',i,o)}</div>`}).join('');
   const parts=S.parts.map((o,i)=>`<div class="offer${o.sold?' sold':''}"><img alt="" src="${ICON[o.t]}"><div><h3>${PARTS[o.t].name}</h3><p>${owned(o.t)} owned</p></div>${btn('part',i,o)}</div>`).join('');
   const rc=rerollCost(r);
-  bench.innerHTML=`
+  $('dealerTitle').textContent='Junk dealer';
+  dbody.innerHTML=`
   <div class="card"><span class="label">Parts</span><div class="offers">${parts}</div></div>
   <div class="card"><span class="label">Tuning</span><div class="offers">${tunes}</div></div>
   <div class="card"><div class="row"><span class="label">Mods</span><span class="hint${full?' warn':''}">${r.mods.length}/${modSlots(r)}${full?' full':''}</span></div><div class="offers">${mods}</div></div>
   <div class="row" style="justify-content:flex-end"><button class="ghost" id="reroll" type="button" ${rc>r.coins?'disabled':''}>Reroll <i class="cn"></i>${rc}</button></div>`;
-  bench.onclick=e=>{
+  dbody.onclick=e=>{
     const b=e.target.closest('.buy[data-kind]');
     if(b){buy(b.dataset.kind,+b.dataset.i);return}
     if(e.target.closest('#reroll')){if(rc>r.coins)return;r.coins-=rc;rerollShop(r,save.meta);persist();renderHangar()}
@@ -338,13 +348,14 @@ function renderMods(){
   const bl=Object.entries(r.boons||{}).filter(([k,n])=>n>0&&k!=='coins'&&k!=='upgrade').map(([k,n])=>`${BOONS[k].name}${n>1?' ×'+n:''}`).join(' · ');
   const byStage={};for(const l of r.log)(byStage[l.stage]=byStage[l.stage]||[]).push(l.score);
   const log=Object.keys(byStage).map(s=>{s=+s;const done=s<r.stage;return `<div><span>Contract ${s+1}${isStorm(s,r.level)?' \u00b7 storm':''}</span><b>${byStage[s].map(fmt).join(' · ')}${done?' ✓':''}</b></div>`}).join('');
-  bench.innerHTML=`
-  <div class="card"><div class="row"><span class="label">Mods</span><span class="hint">${r.mods.length}/${modSlots(r)}</span></div><div class="offers">${slots}</div></div>
+  $('dealerTitle').textContent='Sponsor decals';
+  dbody.innerHTML=`
+  <div class="card"><div class="row"><span class="label">Decals</span><span class="hint">${r.mods.length}/${modSlots(r)}</span></div><div class="offers">${slots}</div></div>
   <div class="card"><span class="label">Tuning</span><p class="hint" style="margin-top:6px">${tl||'\u2014'}</p></div>
   ${bl?`<div class="card"><span class="label">Storm rewards</span><p class="hint" style="margin-top:6px">${bl}</p></div>`:''}
   <div class="card"><span class="label">Log</span><div class="log">${log||'<div>\u2014</div>'}</div></div>
   <div class="card stack"><button class="ghost" type="button" data-copyrun="cur">Copy run</button><button class="ghost${armAbandon?' armed':''}" id="aband2" type="button">${armAbandon?'Tap again':'Abandon run'}</button></div>`;
-  bench.onclick=e=>{
+  dbody.onclick=e=>{
     const b=e.target.closest('[data-sell]');
     if(b){const id=b.dataset.sell;if(armSell!==id){armSell=id;renderMods();return}armSell=null;sellMod(r,id);persist();renderHangar();return}
     if(e.target.closest('#aband2')){if(!armAbandon){armAbandon=true;renderMods();return}endRun()}
