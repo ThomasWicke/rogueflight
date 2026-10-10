@@ -149,6 +149,8 @@ function build(run, st, prev, tries = 40) {
 }
 
 /* ---------- shopper ---------- */
+// share of the flight clock the last flight used; a permit is only worth buying once flights run into the limit
+let lastFlightFrac = 0;
 const MOD_VALUE = {
   third: 9, opening: 8, greaser: 8, frugal: 6, logbook: 9, compound: 7, wingman: 8, hauler: 7, odometer: 7, collector: 5,
   altimeter: 5, speedtrap: 4, slipstream: 7, overclock: 6, burnoff: 6, secondwind: 6, sponsor: 6, coupon: 5, piggy: 5,
@@ -160,7 +162,7 @@ function offerValue(run, kind, o) {
     if (!engine && (o.t === 'prop' || o.t === 'rocket')) return o.t === 'prop' ? 100 : 90;
     return { wing: inv('wing') < 3 ? 6 : 0, tank: inv('tank') < 3 ? 5 : 0, frame: inv('frame') < 2 ? 4 : 0, prop: inv('prop') < 2 ? 4 : 0, rocket: 0, balloon: 0 }[o.t];
   }
-  if (kind === 'tune') return { prop: inv('prop') ? 9 : 0, rocket: inv('rocket') && !inv('prop') ? 8 : 0, fuel: 8, light: 6, wing: 5, launch: 3, balloon: 0 }[o.k];
+  if (kind === 'tune') return { prop: inv('prop') ? 9 : 0, rocket: inv('rocket') && !inv('prop') ? 8 : 0, fuel: 8, light: 6, wing: 5, launch: 3, time: lastFlightFrac > 0.85 ? 7 : 0, balloon: 0 }[o.k];
   if (run.mods.length >= MAXMODS) return 0;
   if (o.id === 'minimal') return run.cells.length <= 6 ? 8 : 0;
   return MOD_VALUE[o.id] || 0;
@@ -198,6 +200,7 @@ const t0 = Date.now();
 for (let n = 0; n < RUNS; n++) {
   const meta = { bestStage: 8 };
   const run = newRun(0, meta);
+  lastFlightFrac = 0;
   let craft = null, sig = '';
   let guard = 0;
   while (run.phase !== 'over' && run.phase !== 'won' && guard++ < 60) {
@@ -211,6 +214,7 @@ for (let n = 0; n < RUNS; n++) {
     const K = makeCraft(run.cells, st);
     const { S, K: K2 } = fly(K, st, POL.make(craft.thr ?? 1)());
     const f = summaryOf(S, K2), stg = run.stage;
+    lastFlightFrac = S.t / st.flightTime;
     const out = settleFlight(run, meta, f);
     (stageScores[stg] = stageScores[stg] || []).push(out.sc.total);
     if (VERBOSE) console.log(`  c${stg + 1} f${out.flightNo} ${String(out.sc.total).padStart(6)} ${Math.round(f.dist)} m ×${out.sc.mult * out.sc.xm}${f.crashed ? ' crash' : ''}  ${out.contractScore}/${out.quota}  thr ${craft.thr}  ${wx || ''}`);

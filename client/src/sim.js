@@ -26,6 +26,8 @@ const TUNES={
   light:{name:'Featherweight',d:'−10% mass'},
   launch:{name:'Catapult spring',d:'+20% launch speed'},
   balloon:{name:'Helium refill',d:'+25% balloon lift',needs:'balloon'},
+  // capped: the flight clock is what bounds fuel-free thrust (Solar Wings, Ram Scoop), so it may only stretch so far
+  time:{name:'Flight permit',d:'+1 min flight time',max:3},
 };
 const tuneCost=L=>4+2*L;
 
@@ -120,6 +122,7 @@ function stats(tune,mods,wx){
     solar:has('solar')?.3:0, burnoff:has('burnoff')?.3:0, drag:has('slipstream')?.6:1,
     grav:has('antigrav')?.65:1, gyro:has('gyro')?1:0, bounce:has('bounce')?1:0, thermal:has('thermal')?2.5:1,
     wind:wx.wind, ceiling:wx.ceiling, rhoMul:wx.rhoMul, gust:wx.gust,
+    flightTime:FLIGHT_TIME+60*Math.min(t('time'),TUNES.time.max),
   };
 }
 
@@ -301,7 +304,7 @@ function step(S,K,st,dt,ctl){
   if(S.vy<-.5)S.calm=0;
   if(S.calm>6||S.slow>5){S.done=true;S.becalmed=true}
   if(S.ground>.5){S.done=true;S.landed=true}
-  if(S.t>FLIGHT_TIME){S.done=true;S.timeout=true}
+  if(S.t>st.flightTime){S.done=true;S.timeout=true}
 }
 // balloons burst: rebuild the craft without them and keep it where it is in the sky
 function popBalloons(S,K,st){
@@ -353,7 +356,7 @@ function rollMods(run,meta,n,exclude){
   while(out.length<n&&pool.length){const w={};for(const k of pool)w[k]=RARITY[MODS[k].r].w;const k=wpick(w);out.push(k);pool.splice(pool.indexOf(k),1)}
   return out}
 function rollTunes(run,n,exclude){
-  const pool=Object.keys(TUNES).filter(k=>(!TUNES[k].needs||(run.inv[TUNES[k].needs]||0)>0)&&!exclude.includes(k));
+  const pool=Object.keys(TUNES).filter(k=>(!TUNES[k].needs||(run.inv[TUNES[k].needs]||0)>0)&&!(TUNES[k].max&&(run.tune[k]||0)>=TUNES[k].max)&&!exclude.includes(k));
   for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]]}
   return pool.slice(0,n)}
 function genShop(run,meta){return {parts:[0,1,2].map(()=>({t:wpick(PART_W)})),tunes:rollTunes(run,2,[]).map(k=>({k})),mods:rollMods(run,meta,3,[]).map(id=>({id})),rerolls:0}}

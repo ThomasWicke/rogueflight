@@ -294,7 +294,7 @@ function renderShop(){
   const btn=(kind,i,o,block)=>{if(o.sold)return `<button class="buy" type="button" disabled>\u2713</button>`;const p=offerPrice(r,kind,o);
     return `<button class="buy" type="button" data-kind="${kind}" data-i="${i}" ${p>r.coins||block?'disabled':''}><i class="cn"></i>${p}</button>`};
   const mods=S.mods.length?S.mods.map((o,i)=>`<div class="${o.sold?'sold':''}">${modCard(o.id,btn('mod',i,o,full))}</div>`).join(''):'<p class="hint">\u2014</p>';
-  const tunes=S.tunes.map((o,i)=>{const T=TUNES[o.k],L=r.tune[o.k]||0;return `<div class="offer${o.sold?' sold':''}"><div class="glyph C" aria-hidden="true">+</div><div><h3>${T.name}</h3><p>${T.d} \u00b7 Lv ${L+1}</p></div>${btn('tune',i,o)}</div>`}).join('');
+  const tunes=S.tunes.map((o,i)=>{const T=TUNES[o.k],L=r.tune[o.k]||0;return `<div class="offer${o.sold?' sold':''}"><div class="glyph C" aria-hidden="true">+</div><div><h3>${T.name}</h3><p>${T.d} \u00b7 Lv ${L+1}${T.max?'/'+T.max:''}</p></div>${btn('tune',i,o)}</div>`}).join('');
   const parts=S.parts.map((o,i)=>`<div class="offer${o.sold?' sold':''}"><img alt="" src="${ICON[o.t]}"><div><h3>${PARTS[o.t].name}</h3><p>${owned(o.t)} owned</p></div>${btn('part',i,o)}</div>`).join('');
   const rc=rerollCost(r);
   bench.innerHTML=`
@@ -624,8 +624,8 @@ function hud(dt){
   elD.textContent=fmtD(Math.max(0,S.x));
   elA.textContent='ALT '+fmtD(Math.max(0,S.y));
   elV.textContent=fmtV(Math.hypot(S.vx,S.vy));
-  // flight clock: a flight ends at FLIGHT_TIME, so slow climbers (balloons) can plan their descent
-  {const rem=Math.max(0,Math.ceil(FLIGHT_TIME-S.t));elTm.lastChild.textContent=Math.floor(rem/60)+':'+String(rem%60).padStart(2,'0');elTm.className='ftime'+(rem<=20?' crit':rem<=60?' warn':'')}
+  // flight clock: a flight ends at st.flightTime (5 min + Flight permits), so slow climbers can plan their descent
+  {const rem=Math.max(0,Math.ceil(F.st.flightTime-S.t));elTm.lastChild.textContent=Math.floor(rem/60)+':'+String(rem%60).padStart(2,'0');elTm.className='ftime'+(rem<=20?' crit':rem<=60?' warn':'')}
   if(S.burst&&$('bPop').style.visibility!=='hidden')$('bPop').style.visibility='hidden';
   {const t=F.ts>1.15&&!S.done;elFF.hidden=!t;if(t)elFF.textContent='\u25b8\u25b8 '+(F.ts<9.95?F.ts.toFixed(1):Math.round(F.ts))+'\u00d7'}
   const sc=scoreFlight(summaryOf(S,K),F.ctx);

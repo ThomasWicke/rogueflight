@@ -66,7 +66,7 @@ const SLIDES = [
     'Out of fuel? Let go and the craft glides on its own. Throttle down to make fuel last.'] },
   { t: 'Altitude & time', art: artAlt, p: [
     'Thin air up high: less drag, but weaker wings and props. Balloons burst at 2 km.',
-    'A flight lasts 5 minutes at most. Hanging in the air without power also ends it.'] },
+    'A flight lasts 5 minutes (Flight permits add more). Hanging in the air without power also ends it.'] },
 ];
 
 /* ---------- drawer ---------- */

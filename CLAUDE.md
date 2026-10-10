@@ -56,7 +56,7 @@ Code style is dense (many one-line functions, short names: `S` flight state, `K`
 - Quadratic drag. Air density is exp(−y/8500). Extra vacuum drag terms appear at altitude, and speed is capped at the speed of light.
 - Balloons lift ∝ density and burst at 2 km (6 km with Weather Envelope) or when the POP button is pressed.
 - Thermals are smooth columns (cos² profile). Gusts are time-varying vertical forces whose net energy gain per flight is capped (~60 m of height) so they cannot be pumped for infinite climb.
-- A flight ends after `FLIGHT_TIME` (300 s of sim time, "Out of time"). The HUD shows the time left under the speed, amber from 60 s, red and pulsing from 20 s.
+- A flight ends after `st.flightTime`: `FLIGHT_TIME` (300 s of sim time, "Out of time") plus 60 s per Flight permit tuning, capped at 3 permits (8 min). The cap matters: the clock is what bounds fuel-free thrust (Solar Wings, Ram Scoop), so never let it grow without limit. The HUD shows the time left under the speed, amber from 60 s, red and pulsing from 20 s.
 - Crash if a touchdown impact exceeds 15 m/s, or exceeds 5 m/s nose-down past 45°. Rubber Hull bounces instead.
 - Far zoomed out, the craft keeps a minimum on-screen size (about 32 px across) with a soft halo, instead of shrinking to nothing.
 - UI fast-forward: from 12 s into a flight, time speeds up to 4× but only while no pitch input has been given for a second. Any input snaps back to real time. A ▸▸ badge shows when it is active.
@@ -76,6 +76,7 @@ Code style is dense (many one-line functions, short names: `S` flight state, `K`
 
 ## Balance notes
 - The bot starts from the universal start, opens its packs and shops before every flight, and picks its layout by test-flying variants of its inventory in the forecast weather. Pilots press buttons like a player (pitch −1/0/+1, re-decided every 0.2 s). `climb` waits for flying speed, climbs at about 35° under power, then glides hands-off, using full or 60% throttle (whichever tested better for the build). That is how a good human flies. `hands` is the old weak baseline. `--seed=N` makes runs repeatable, so compare balance changes with the same seed.
+- Flight permit (added after the baseline below) cost the bot about 0.2 contracts (5.61 → 5.39 over 5×100 seeded runs), mostly because it takes one of the two tuning slots in a shop and the bot rarely needs it. Seeded runs diverge as soon as one purchase differs, so compare balance changes over several seeds, not one.
 - Baseline with packs (30 runs, `--seed=7`, Ceiling 0): `climb` clears 5.8 contracts on average and wins 5 of 30; `hands` clears 5.2 and wins 1. Over 200 runs the pack economy came out even with the old one (5.68 vs 5.75 contracts for `climb`). Median flight scores fall behind the quota from contract 3 on, so runs are won by the occasional big flight (thermals, sound barrier, xmult mods).
 - One human data point: the player won all 8 contracts on their first serious run with a light, strong-prop glider (before quotas 6–8 were raised by about 20%). A balloon-heavy build later died to thin air on contract 6; that loss motivated revealing storms early.
 - Additive per-part mods (Wingman +0.3 per wing, Fuel Hauler +0.4 per tank) stack strongly with big builds.

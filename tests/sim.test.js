@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   newRun, stats, weatherFx, makeCraft, newFlight, step, popBalloons, summaryOf, scoreFlight, settleFlight,
-  quotaFor, openPack, PACKS, FIRST_PACKS,
+  quotaFor, openPack, PACKS, FIRST_PACKS, rollTunes,
 } from '../client/src/sim.js';
 
 // 'c22 p32 w21 t23' -> cockpit at (2,2), prop at (3,2), wing at (2,1), tank at (2,3)
@@ -44,6 +44,15 @@ test('throttle scales fuel burn', () => {
   const full = fly('c22 p32 w21 t23', { ctl: () => ({ pitch: 0, throttle: 1 }) });
   const half = fly('c22 p32 w21 t23', { ctl: (S) => ({ pitch: 0, throttle: S.t < 5 ? 0.5 : 1 }) });
   assert.notEqual(Math.round(full.S.maxX), Math.round(half.S.maxX));
+});
+
+test('flight permits add a minute each, up to three, and stop being offered', () => {
+  assert.equal(stats({}, [], weatherFx(null, 0)).flightTime, 300);
+  assert.equal(stats({ time: 2 }, [], weatherFx(null, 0)).flightTime, 420);
+  assert.equal(stats({ time: 9 }, [], weatherFx(null, 0)).flightTime, 480);
+  const run = newRun(0, { bestStage: 0 });
+  run.tune.time = 3;
+  for (let i = 0; i < 200; i++) assert.ok(!rollTunes(run, 2, []).includes('time'));
 });
 
 test('gusts cannot be farmed for unlimited height', () => {
