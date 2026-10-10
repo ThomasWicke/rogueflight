@@ -64,12 +64,14 @@ function drawPart(g,type,t,o){
     g.strokeStyle='rgba(12,26,44,.5)';g.lineWidth=.03;for(const y of [-.15,0,.15]){g.beginPath();g.moveTo(.16,y);g.lineTo(.3,y);g.stroke()}
     g.strokeStyle=INK;g.lineWidth=.045;rivets(g,.38);
   }else if(type==='wing'){
+    // airfoil drawn with its round leading edge at -x, so mirror it to face the nose (+x)
+    g.save();g.scale(-1,1);
     g.strokeStyle=SHADE;g.lineWidth=.06;g.beginPath();g.moveTo(-.1,.08);g.lineTo(-.1,.5);g.moveTo(.18,.06);g.lineTo(.18,.5);g.stroke();
     g.strokeStyle=INK;g.lineWidth=.045;
     g.beginPath();g.moveTo(-.5,.08);g.bezierCurveTo(-.42,-.2,.15,-.22,.5,-.02);g.bezierCurveTo(.2,.08,-.2,.12,-.5,.08);g.closePath();
     g.fillStyle='#ffffff';g.fill();
     g.save();g.clip();g.fillStyle=RED;g.fillRect(-.5,-.3,.16,.5);g.fillStyle='rgba(12,26,44,.1)';g.fillRect(-.5,.04,1,.1);g.restore();
-    g.stroke();
+    g.stroke();g.restore();
   }else if(type==='prop'){
     // nacelle with cooling fins, spinner and two blades at the nose
     rr(g,-.46,-.22,.66,.44,.2);g.fillStyle=HULL2;g.fill();g.stroke();
