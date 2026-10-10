@@ -72,7 +72,7 @@ function renderTitle(){
   if(r){
     const tw=townOf(r.seed,r.stage);
     h+=`<div class="card stack"><span class="label">On tour</span>
-      <p class="hint">Show ${r.stage+1}${r.endless?' (encore tour)':' of '+CONTRACTS}: <strong>${tw.town}</strong> · ${r.coins} cash · ${plural(r.mods.length,'decal')}${r.level?' · Ceiling '+r.level:''}</p>
+      <p class="hint">Show ${r.stage+1}${r.endless?' (encore tour)':' of '+CONTRACTS}: <strong>${tw.town}</strong> · ${r.coins} cash · ${plural(r.mods.length,'mod')}${r.level?' · Ceiling '+r.level:''}</p>
       <button class="big" id="cont" type="button">Back on the road</button>
       <button class="ghost${armAbandon?' armed':''}" id="aband" type="button">${armAbandon?'Tap again to cancel':'Cancel the tour'}</button></div>`;
   }else{
@@ -154,8 +154,7 @@ function routeStrip(r){
   for(let i=0;i<n;i++){const w=weatherOf(r,i),done=i<r.stage,cur=i===r.stage;
     h+=`<circle cx="${x(i)}" cy="${y(i)}" r="${cur?8:6}" class="rtown${done?' done':''}${cur?' cur':''}${w?' storm':''}"/>`;
     if(done)h+=`<path d="M${x(i)-3} ${y(i)}l2.4 2.6 4.4-5" class="rtick"/>`;
-    if(w)h+=`<g class="rcloud" transform="translate(${x(i)} ${y(i)-15})"><path d="M-8 3a4 4 0 0 1 2-7a5 5 0 0 1 9-1a4 4 0 0 1 5 5a3 3 0 0 1-1 3z"/><path d="M-1 4l-2 5 3-1-1 4" class="rbolt"/></g>`;
-    if(cur)h+=`<g transform="translate(${x(i)} ${y(i)+14})"><path d="M-6 0h12M0 -4v8" class="rplane"/></g>`}
+    if(w)h+=`<g class="rcloud" transform="translate(${x(i)} ${y(i)-15})"><path d="M-8 3a4 4 0 0 1 2-7a5 5 0 0 1 9-1a4 4 0 0 1 5 5a3 3 0 0 1-1 3z"/><path d="M-1 4l-2 5 3-1-1 4" class="rbolt"/></g>`;}
   const names=[];for(let i=r.stage+1;i<n;i++){const w=weatherOf(r,i);if(w)names.push(`<span title="${WEATHER[w].d(severity(r,i))}"><b>${i+1}</b>${WEATHER[w].name}</span>`)}
   return `<svg class="route" viewBox="0 0 ${W} 46" role="img" aria-label="Tour route: show ${r.stage+1} of ${n}">${h}</svg>${names.length?`<div class="fcast">${names.join('')}</div>`:''}`;
 }
@@ -177,7 +176,7 @@ function renderHangar(){
   $('hCeil').textContent='Ceiling '+r.level;$('hCeil').hidden=!r.level;
   $('hCoins').textContent=fmt(r.coins);
   $('tShop').classList.toggle('fresh',r.phase==='shop');
-  $('tModsL').textContent=`Decals ${r.mods.length}/${modSlots(r)}`;
+  $('tModsL').textContent=`Mods ${r.mods.length}/${modSlots(r)}`;
   renderStrip();
   renderBuild();
   dbody.onclick=null;
@@ -299,7 +298,7 @@ function renderShop(){
   dbody.innerHTML=`
   <div class="card"><span class="label">Parts</span><div class="offers">${parts}</div></div>
   <div class="card"><span class="label">Tune-ups</span><div class="offers">${tunes}</div></div>
-  <div class="card"><div class="row"><span class="label">Sponsor decals</span><span class="hint${full?' warn':''}">${r.mods.length}/${modSlots(r)}${full?' full':''}</span></div><div class="offers">${mods}</div></div>
+  <div class="card"><div class="row"><span class="label">Mods</span><span class="hint${full?' warn':''}">${r.mods.length}/${modSlots(r)}${full?' full':''}</span></div><div class="offers">${mods}</div></div>
   <div class="row" style="justify-content:flex-end"><button class="ghost" id="reroll" type="button" ${rc>r.coins?'disabled':''}>Reroll <i class="cn"></i>${rc}</button></div>`;
   dbody.onclick=e=>{
     const b=e.target.closest('.buy[data-kind]');
@@ -320,9 +319,9 @@ function renderMods(){
   const bl=Object.entries(r.boons||{}).filter(([k,n])=>n>0&&k!=='coins'&&k!=='upgrade').map(([k,n])=>`${BOONS[k].name}${n>1?' ×'+n:''}`).join(' · ');
   const byStage={};for(const l of r.log)(byStage[l.stage]=byStage[l.stage]||[]).push(l.score);
   const log=Object.keys(byStage).map(s=>{s=+s;const done=s<r.stage;return `<div><span>${townOf(r.seed,s).town}${isStorm(s,r.level)?' \u00b7 storm':''}</span><b>${byStage[s].map(fmt).join(' · ')}${done?' ✓':''}</b></div>`}).join('');
-  $('dealerTitle').textContent='Sponsor decals';
+  $('dealerTitle').textContent='Your mods';
   dbody.innerHTML=`
-  <div class="card"><div class="row"><span class="label">Decals</span><span class="hint">${r.mods.length}/${modSlots(r)}</span></div><div class="offers">${slots}</div></div>
+  <div class="card"><div class="row"><span class="label">Mods</span><span class="hint">${r.mods.length}/${modSlots(r)}</span></div><div class="offers">${slots}</div></div>
   <div class="card"><span class="label">Tune-ups</span><p class="hint" style="margin-top:6px">${tl||'\u2014'}</p></div>
   ${bl?`<div class="card"><span class="label">Storm rewards</span><p class="hint" style="margin-top:6px">${bl}</p></div>`:''}
   <div class="card"><span class="label">Log</span><div class="log">${log||'<div>\u2014</div>'}</div></div>
@@ -636,7 +635,7 @@ function draw(now){
     ctx.save();ctx.translate(px,py);ctx.scale(ds,ds);ctx.rotate(-S.th);
     if(F.stretch>0)ctx.scale(1+.18*F.stretch,1-.12*F.stretch);
     const frac=K.fuelMax?S.fuel/K.fuelMax:0, mood=pilotMood();
-    for(const p of K.parts){ctx.save();ctx.translate(p.lx,-p.ly);drawPart(ctx,p.type,now/1000,{on:p.type==='rocket'?S.rocketOn:S.propOn,frac,lw:2.5/ds,mood});ctx.restore()}
+    for(const p of K.parts){ctx.save();ctx.translate(p.lx,-p.ly);drawPart(ctx,p.type,now/1000,{on:p.type==='rocket'?S.rocketOn:S.propOn,frac,lw:clamp(ds*.06,.9,2.5)/ds,mood});ctx.restore()}
     ctx.restore()
   }
   drawGrain(ctx,vw,vh);
@@ -701,7 +700,6 @@ function showResults(out,S,f){
   sheet.innerHTML=`<div class="stamp ${kind}">${title}</div>
     <span class="label">${town.town} · flight ${out.flightNo} of ${FLIGHTS}</span>
     <div class="eqn"><span class="drum" id="tyBase">0</span><i>×</i><span id="tyM">1</span><i>=</i><b id="tyT">0</b></div>
-    <small class="eqsub">${base.map(l=>l.dist?'seats from '+fmtD(l.v):'+'+fmt(l.v)+' '+l.label.toLowerCase()).join(' · ')} · hype · crowd</small>
     <div class="hype" id="tyHype">${hype.map((l,k)=>{const m=lineMod(l.label);return `<span class="hc ${l.t}" data-k="${k}">${m&&DECAL?`<img alt="" src="${DECAL(m,48,modLevels(r)[m]||1)}">`:''}${l.label}<b>${l.t==='x'?'×':'+'}${num(l.v)}</b></span>`}).join('')||'<span class="hc none">No stunts this time</span>'}</div>
     <div class="cbar${out.cleared?' done':''}"><i id="rbar" style="transform:scaleX(${p0})"></i><span id="rbarT">Crowd ${fmt(out.prevScore)} / ${fmt(q)}</span></div>
     ${result}
@@ -714,13 +712,13 @@ function showResults(out,S,f){
     const tick=t=>{const k=Math.min(1,(t-t0)/d);node.textContent=fmtf(to*(1-Math.pow(1-k,3)));if(k<1&&!skip)requestAnimationFrame(tick);else{node.textContent=fmtf(to);res()}};requestAnimationFrame(tick)});
   const wait=ms=>new Promise(res=>setTimeout(res,rm||skip?0:ms));
   let skip=false, done=false;
-  const finishNow=()=>{skip=true;sheet.querySelectorAll('.hc').forEach(c=>c.classList.add('in'));el('tyM').textContent=num(sc.mult*sc.xm);el('tyT').textContent=fmt(sc.total);el('tyBase').textContent=fmt(sc.base);
+  const finishNow=()=>{skip=true;sheet.querySelectorAll('.hc').forEach(c=>c.classList.add('in'));el('tyM').textContent=num(sc.mult*sc.xm);el('tyT').textContent=fmt(sc.total);el('tyBase').textContent=fmt(sc.base)+(base.length===1?' m':'');
     el('rbar').style.transform=`scaleX(${p1})`;el('rbarT').textContent=`Crowd ${fmt(out.contractScore)} / ${fmt(q)}`;el('tyNews').hidden=false;if(out.cleared)el('tySold').hidden=false};
   sheet.onclick=e=>{if(!e.target.closest('button')&&!done)finishNow()};
   (async()=>{
     sfx('stamp');buzz(15);
     await wait(350);
-    await roll(el('tyBase'),sc.base,650);
+    await roll(el('tyBase'),sc.base,650,x=>fmt(x)+(base.length===1?' m':''));
     let m=1,x=1;
     const chips=[...sheet.querySelectorAll('.hc[data-k]')];
     for(let k=0;k<chips.length;k++){if(skip)break;const l=hype[k];

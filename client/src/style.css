@@ -128,8 +128,6 @@ button:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
 .offer h3{margin:0;font-size:15.5px;font-weight:900}
 .offer p{margin:2px 0 0;font-size:13px;color:var(--muted);line-height:1.35;font-weight:700}
 .offer.sold{opacity:.45}
-.offer.R{background:#efe6f5}
-.offer.U{background:#e9eef0}
 .glyph{width:44px;height:44px;border-radius:8px;display:grid;place-items:center;font-family:var(--display);font-size:20px;background:var(--paper2);border:2px solid var(--ink)}
 .glyph.C{color:var(--ink)}.glyph.U{color:var(--teal2)}.glyph.R{color:var(--rare)}
 .rar{font-size:11px;font-weight:900;letter-spacing:.06em;text-transform:uppercase}
@@ -491,7 +489,7 @@ button:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
 .chip.help.off{color:var(--muted);text-decoration:line-through;text-decoration-thickness:2px}
 .boon .bi img{width:40px;height:40px}
 /* tally, tightened: stamp on the top edge, the equation as the hero, one result line */
-.tallysheet{gap:9px;padding-top:34px}
+.tallysheet{gap:14px;padding:38px 18px 18px}
 .tallysheet .stamp{top:-20px;left:50%;right:auto;transform:translateX(-50%) rotate(-2deg);animation:stamp2 .38s cubic-bezier(.2,1.6,.4,1) both;white-space:nowrap}
 @keyframes stamp2{0%{transform:translateX(-50%) rotate(-2deg) scale(2.4);opacity:0}60%{transform:translateX(-50%) rotate(-2deg) scale(.92);opacity:1}100%{transform:translateX(-50%) rotate(-2deg) scale(1)}}
 .tallysheet>.label{text-align:center}
