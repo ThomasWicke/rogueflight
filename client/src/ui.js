@@ -78,7 +78,7 @@ function renderTitle(){
   }else{
     h+=`<div class="card"><span class="label">A new season</span>
       ${m.level>0?`<div style="margin-top:12px"><div class="row" style="margin-bottom:6px"><span class="label">Ceiling</span></div><div class="seg" id="lvl">${Array.from({length:m.level+1},(_,i)=>`<button type="button" data-l="${i}" aria-pressed="${i===pickLevel}">${i}</button>`).join('')}</div>
-        ${pickLevel?`<div class="crules"><span>+${pickLevel*25}% quota</span>${ceilingRules(pickLevel).map(t=>`<span>${t}</span>`).join('')}</div>`:''}</div>`:''}
+        ${pickLevel?`<div class="crules"><span>+${pickLevel*25}% crowd targets</span>${ceilingRules(pickLevel).map(t=>`<span>${t}</span>`).join('')}</div>`:''}</div>`:''}
       <div style="margin-top:12px"><button class="big" id="start" type="button">Start the tour</button></div></div>`;
   }
   h+=`<div><button class="ghost howto${m.guideSeen?'':' new'}" id="howto" type="button">How to play</button></div>`;
@@ -299,8 +299,8 @@ function renderShop(){
   $('dealerTitle').textContent='Junk dealer';
   dbody.innerHTML=`
   <div class="card"><span class="label">Parts</span><div class="offers">${parts}</div></div>
-  <div class="card"><span class="label">Tuning</span><div class="offers">${tunes}</div></div>
-  <div class="card"><div class="row"><span class="label">Mods</span><span class="hint${full?' warn':''}">${r.mods.length}/${modSlots(r)}${full?' full':''}</span></div><div class="offers">${mods}</div></div>
+  <div class="card"><span class="label">Tune-ups</span><div class="offers">${tunes}</div></div>
+  <div class="card"><div class="row"><span class="label">Sponsor decals</span><span class="hint${full?' warn':''}">${r.mods.length}/${modSlots(r)}${full?' full':''}</span></div><div class="offers">${mods}</div></div>
   <div class="row" style="justify-content:flex-end"><button class="ghost" id="reroll" type="button" ${rc>r.coins?'disabled':''}>Reroll <i class="cn"></i>${rc}</button></div>`;
   dbody.onclick=e=>{
     const b=e.target.closest('.buy[data-kind]');
@@ -324,7 +324,7 @@ function renderMods(){
   $('dealerTitle').textContent='Sponsor decals';
   dbody.innerHTML=`
   <div class="card"><div class="row"><span class="label">Decals</span><span class="hint">${r.mods.length}/${modSlots(r)}</span></div><div class="offers">${slots}</div></div>
-  <div class="card"><span class="label">Tuning</span><p class="hint" style="margin-top:6px">${tl||'\u2014'}</p></div>
+  <div class="card"><span class="label">Tune-ups</span><p class="hint" style="margin-top:6px">${tl||'\u2014'}</p></div>
   ${bl?`<div class="card"><span class="label">Storm rewards</span><p class="hint" style="margin-top:6px">${bl}</p></div>`:''}
   <div class="card"><span class="label">Log</span><div class="log">${log||'<div>\u2014</div>'}</div></div>
   <div class="card stack"><button class="ghost" type="button" data-copyrun="cur">Copy run</button><button class="ghost${armAbandon?' armed':''}" id="aband2" type="button">${armAbandon?'Tap again':'Abandon run'}</button></div>`;
