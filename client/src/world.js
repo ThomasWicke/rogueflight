@@ -142,6 +142,13 @@ function launchSite(ctx,v,b){
   ctx.fillStyle='rgba(34,40,58,.18)';for(let i=0;i<14;i++){const xx=X(-hs(i*3.1)*40),yy=top+(gy-top)*hs(i*5.3);if(xx>x0&&xx<x1){ctx.beginPath();ctx.ellipse(xx,yy,Math.max(2,.5*sc),Math.max(1.5,.3*sc),0,0,7);ctx.fill()}}
   ctx.fillStyle=b.ground;ctx.fillRect(x0,top-Math.max(2,.6*sc),x1-x0,Math.max(3,.8*sc));
   ctx.strokeStyle=INK;ctx.lineWidth=lw;ctx.beginPath();ctx.moveTo(x1,top);ctx.lineTo(x1,gy);ctx.stroke();
+  // a painted banner hung on the bluff: the town welcomes the circus
+  if(v.town&&sc>4){const bx0=X(-24),bx1=X(-3),by0=Y(15.5),by1=Y(8.5),wv=Math.sin(now/900)*sc*.15;
+    ctx.fillStyle=PAPER;ctx.strokeStyle=INK;ctx.lineWidth=lw;ctx.beginPath();ctx.moveTo(bx0,by0);ctx.quadraticCurveTo((bx0+bx1)/2,by0+sc*.6+wv,bx1,by0);ctx.lineTo(bx1,by1);ctx.quadraticCurveTo((bx0+bx1)/2,by1+sc*.6+wv,bx0,by1);ctx.closePath();ctx.fill();ctx.stroke();
+    ctx.fillStyle=RED;ctx.fillRect(bx0+lw,by0+sc*.35,bx1-bx0-lw*2,Math.max(2,sc*.35));ctx.fillRect(bx0+lw,by1-sc*.7,bx1-bx0-lw*2,Math.max(2,sc*.35));
+    ctx.fillStyle=INK;ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.font=`400 ${Math.round(sc*1.1)}px "Nunito", sans-serif`;ctx.fillText('Welcome to',(bx0+bx1)/2,by0+sc*1.9+wv*.5);
+    ctx.font=`400 ${Math.round(sc*2.3)}px "Bowlby One", Impact, sans-serif`;ctx.fillStyle=RED;ctx.fillText(v.town,(bx0+bx1)/2,by0+sc*4.3+wv*.5)}
   const W=(fn,x,y,s)=>{ctx.save();ctx.translate(X(x),Y(y));ctx.scale(sc*s,sc*s);fn(lw/(sc*s));ctx.restore()};
   // grandstand: three wooden tiers with a striped awning, the crowd bobbing (more when hyped)
   W(l=>{
