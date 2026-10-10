@@ -196,7 +196,7 @@ const reach = [], stageScores = {};
 const t0 = Date.now();
 for (let n = 0; n < RUNS; n++) {
   const meta = { bestStage: 8 };
-  const run = newRun('start', 0, meta);
+  const run = newRun(0, meta);
   let craft = null, sig = '';
   let guard = 0;
   while (run.phase !== 'over' && run.phase !== 'won' && guard++ < 60) {

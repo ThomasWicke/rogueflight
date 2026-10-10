@@ -85,27 +85,13 @@ function weatherFx(id,s){const f={wind:0,ceiling:0,rhoMul:1,gust:0,cargo:0,fuelM
   else if(id==='gusts')f.gust=4+.5*s;else if(id==='cargo')f.cargo=1+.25*s;else if(id==='ration')f.fuelMul=.6;else if(id==='short')f.launchMul=.45;
   return f}
 
-/* ---------- starting hangars ---------- */
-const KITS={
-  start:{name:'Run',coins:12,mods:[],inv:{tank:1,wing:1},cells:[{c:2,r:2,type:'cockpit'}]},
-  glider:{name:'Glider Club',blurb:'A balanced little propeller plane with room to grow.',coins:4,mods:[],
-    inv:{wing:2,prop:1,frame:1,tank:1},
-    cells:[{c:2,r:2,type:'cockpit'},{c:3,r:2,type:'frame'},{c:4,r:2,type:'prop'},{c:2,r:1,type:'wing'},{c:3,r:1,type:'wing'},{c:2,r:3,type:'tank'}]},
-  rocket:{name:'Rocket Lab',blurb:'No propeller: one rocket, two tanks and a Gyroscope. Short, violent flights.',coins:6,mods:['gyro'],unlock:3,
-    inv:{rocket:1,wing:1,tank:2,frame:1},
-    cells:[{c:2,r:2,type:'cockpit'},{c:1,r:2,type:'rocket'},{c:3,r:2,type:'tank'},{c:2,r:1,type:'wing'},{c:3,r:3,type:'tank'}]},
-  balloon:{name:'Balloon Circus',blurb:'Two balloons, a fuel tank and a Coin Magnet. Slow, floaty and rich.',coins:4,mods:['magnet'],unlock:5,
-    inv:{balloon:2,prop:1,wing:1,frame:2,tank:1},
-    cells:[{c:2,r:2,type:'cockpit'},{c:2,r:1,type:'wing'},{c:3,r:2,type:'frame'},{c:3,r:1,type:'balloon'},{c:1,r:2,type:'frame'},{c:1,r:1,type:'balloon'},{c:4,r:2,type:'prop'},{c:2,r:3,type:'tank'}]},
-  scrap:{name:'Scrapyard',blurb:'A bare cockpit, three frames, three random parts, a random mod and 12 coins.',coins:12,mods:[],unlock:8,
-    inv:{frame:3},cells:[{c:2,r:2,type:'cockpit'}]},
-};
+/* ---------- every run starts the same: a bare cockpit, a tank and a wing in inventory, 12 coins ---------- */
+const START={coins:12,inv:{tank:1,wing:1}};
 const UNLOCKS=[
   {at:4,text:'Afterburner, Ram Scoop'},
   {at:6,text:'Solar Wings, Antigravity Coil'},
   {at:8,text:'4 rare mods, Ceiling 1'},
 ];
-const kitUnlocked=(id,meta)=>!KITS[id].unlock||(meta.bestStage||0)>=KITS[id].unlock;
 const modUnlocked=(id,meta)=>!MODS[id].lock||(meta.bestStage||0)>=MODS[id].lock;
 
 /* ---------- contracts ---------- */
@@ -383,15 +369,12 @@ const priceOf=(run,p)=>run.mods.includes('coupon')?Math.max(1,Math.floor(p*.75))
 function offerPrice(run,kind,o){return priceOf(run,kind==='part'?PARTS[o.t].price:kind==='tune'?tuneCost(run.tune[o.k]||0):RARITY[MODS[o.id].r].price)}
 const rerollCost=run=>2+run.shop.rerolls;
 const sellValue=id=>Math.floor(RARITY[MODS[id].r].price/2);
-function newRun(kitId,level,meta){
-  const k=KITS[kitId];
-  const run={kit:kitId,level:level||0,stage:0,flight:0,score:0,total:0,best:0,bestDist:0,coins:k.coins,inv:{...k.inv},
-    cells:k.cells.map(c=>({...c})),mods:[...k.mods],tune:{},weather:{},shop:null,phase:'contract',log:[],endless:false,unlocks:[]};
+function newRun(level,meta){
+  const run={level:level||0,stage:0,flight:0,score:0,total:0,best:0,bestDist:0,coins:START.coins,inv:{...START.inv},
+    cells:[{...COCKPIT,type:'cockpit'}],mods:[],tune:{},weather:{},shop:null,phase:'contract',log:[],endless:false,unlocks:[]};
   run.shop=genShop(run,meta);
   // the opening shop always offers an engine, since the run starts without one
-  if(kitId==='start'&&!run.shop.parts.some(o=>o.t==='prop'||o.t==='rocket'))run.shop.parts[Math.floor(Math.random()*3)]={t:Math.random()<.5?'prop':'rocket'};
-  if(kitId==='scrap'){for(let i=0;i<3;i++){const t=wpick(PART_W);run.inv[t]=(run.inv[t]||0)+1}
-    const commons=Object.keys(MODS).filter(id=>MODS[id].r==='C'&&modUnlocked(id,meta));run.mods.push(commons[Math.floor(Math.random()*commons.length)])}
+  if(!run.shop.parts.some(o=>o.t==='prop'||o.t==='rocket'))run.shop.parts[Math.floor(Math.random()*3)]={t:Math.random()<.5?'prop':'rocket'};
   for(let i=0;i<CONTRACTS;i++)weatherOf(run,i);
   return run}
 function craftCounts(cells){const l=connected(cells);const n=t=>l.filter(c=>c.type===t).length;return {parts:l.length,wings:n('wing'),tanks:n('tank')}}
@@ -423,8 +406,8 @@ function settleFlight(run,meta,f){
 export {
   GIMBAL, NEUT, PAR, VAC, VAC2, C_LIGHT, G0, COLS,
   ROWS, COCKPIT, MAXMODS, FLIGHTS, CONTRACTS, clamp, PARTS, PALETTE,
-  TUNES, tuneCost, RARITY, MODS, WEATHER, weatherFx, KITS, UNLOCKS,
-  kitUnlocked, modUnlocked, QUOTA, quotaFor, isStorm, weatherOf, stats, DIRS,
+  TUNES, tuneCost, RARITY, MODS, WEATHER, weatherFx, START, UNLOCKS,
+  modUnlocked, QUOTA, quotaFor, isStorm, weatherOf, stats, DIRS,
   SOCK, STRUCT, linkage, connected, balanceOf, makeCraft, hs, groundY,
   COINSEG, COINR, thermalSeg, coinAt, newFlight, segDist, flag, step,
   popBalloons, summaryOf, scoreFlight, wpick, PART_W, rollMods, rollTunes, genShop,

@@ -35,7 +35,7 @@ Code style is dense (many one-line functions, short names: `S` flight state, `K`
 ## How the game works
 
 ### Run structure
-- `newRun('start', ceilingLevel, meta)`: cockpit alone on the bench, a fuel tank and a wing in inventory, 12 coins, shop open. The opening shop is guaranteed to offer a propeller or a rocket. (`KITS` still contains the old kits `glider`, `rocket`, `balloon` and `scrap`, which are no longer offered. They are kept only so older saves load.)
+- `newRun(ceilingLevel, meta)`: every run starts the same (`START`): cockpit alone on the bench, a fuel tank and a wing in inventory, 12 coins, shop open. The opening shop is guaranteed to offer a propeller or a rocket.
 - 8 contracts × 3 flights. A contract's score is the sum of its flights. `QUOTA=[500,1100,2000,4000,7500,16000,30000,54000]`, ×(1+0.25·ceiling). Endless mode after a win multiplies the quota by 2.5 per extra contract.
 - Storm contracts are 3, 6 and 8 (`isStorm`). Their weather is rolled at run start (`weatherOf`) and shown from the start as forecast chips. Weathers: headwind, thunderheads (altitude ceiling with downdraft), thin air (density ×0.5), gusts, mail run (cargo mass), fuel rationing, short catapult.
 - Shop: always open. 3 parts, 2 tunings and 3 mods. New stock only arrives after a contract is cleared (`phase:'shop'` = between contracts, which shows START CONTRACT). Reroll costs 2 + the number of rerolls. Up to 5 mods; selling refunds half.
@@ -77,6 +77,5 @@ Code style is dense (many one-line functions, short names: `S` flight state, `K`
 - Additive per-part mods (Wingman +0.3 per wing, Fuel Hauler +0.4 per tank) stack strongly with big builds.
 
 ## Open items / ideas
-- Remove the legacy kits from `KITS` once old saves don't matter (there are none on the new origin).
 - Consider a browser smoke test (Playwright) for the main flow: start → buy → build → launch → results.
 - Deploy: Cloudflare Pages, build `npm run build`, output `dist`. `_headers` keeps `sw.js` and HTML uncached. Bump `CACHE` in `client/public/sw.js` if cached files ever need a hard reset.

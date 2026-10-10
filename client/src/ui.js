@@ -2,8 +2,8 @@
 import {
   GIMBAL, NEUT, PAR, VAC, VAC2, C_LIGHT, G0, COLS,
   ROWS, COCKPIT, MAXMODS, FLIGHTS, CONTRACTS, clamp, PARTS, PALETTE,
-  TUNES, tuneCost, RARITY, MODS, WEATHER, weatherFx, KITS, UNLOCKS,
-  kitUnlocked, modUnlocked, QUOTA, quotaFor, isStorm, weatherOf, stats, DIRS,
+  TUNES, tuneCost, RARITY, MODS, WEATHER, weatherFx, START, UNLOCKS,
+  modUnlocked, QUOTA, quotaFor, isStorm, weatherOf, stats, DIRS,
   SOCK, STRUCT, linkage, connected, balanceOf, makeCraft, hs, groundY,
   COINSEG, COINR, thermalSeg, coinAt, newFlight, segDist, flag, step,
   popBalloons, summaryOf, scoreFlight, wpick, PART_W, rollMods, rollTunes, genShop,
@@ -12,7 +12,7 @@ import {
 
 /* ================= persistence ================= */
 const KEY='rogueflight-1';
-const META0={runs:0,wins:0,bestStage:0,bestFlight:0,deepest:0,level:0,lastKit:'glider'};
+const META0={runs:0,wins:0,bestStage:0,bestFlight:0,deepest:0,level:0};
 let save=(()=>{try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s&&s.meta)return {meta:{...META0,...s.meta},run:s.run||null}}catch(e){}return {meta:{...META0},run:null}})();
 function persist(){try{localStorage.setItem(KEY,JSON.stringify(save))}catch(e){}}
 
@@ -104,7 +104,7 @@ function show(id){for(const s of ['title','hangar','flight'])$(s).hidden=s!==id}
 const R=()=>save.run;
 let armAbandon=false;
 function runCode(r){if(!r)return '';const L=t=>t==='cockpit'?'c':t[0];
-  return 'ROGUEFLIGHT '+JSON.stringify({kit:r.kit,lvl:r.level,cleared:r.stage,endless:!!r.endless,coins:r.coins,mods:r.mods,tune:r.tune,inv:r.inv,
+  return 'ROGUEFLIGHT '+JSON.stringify({lvl:r.level,cleared:r.stage,endless:!!r.endless,coins:r.coins,mods:r.mods,tune:r.tune,inv:r.inv,
     cells:r.cells.map(c=>L(c.type)+c.c+c.r).join(' '),log:r.log.map(l=>[l.stage+1,l.flight,l.score,l.d,l.x])})}
 function copyRun(r,btn){const txt=runCode(r);const ok=()=>{if(btn){btn.textContent='Copied';setTimeout(()=>{btn.textContent='Copy run'},1500)}};
   const fall=()=>{const d=document.createElement('div');d.className='copybox';d.innerHTML='<textarea readonly></textarea><button class="big" type="button">Close</button>';
@@ -114,8 +114,7 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-copyrun]')
 function endRun(){if(save.run)save.meta.lastRun={...JSON.parse(JSON.stringify(save.run)),shop:null};save.meta.runs=(save.meta.runs||0)+1;save.run=null;persist();veil.hidden=true;armAbandon=false;show('title');renderTitle()}
 
 /* ================= title ================= */
-let pickKit=save.meta.lastKit||'glider', pickLevel=save.meta.level||0;
-function kitIcons(k){return Object.entries(KITS[k].inv).map(([t,n])=>`<img alt="${PARTS[t].name}" src="${ICON[t]}">${n>1?'×'+n:''}`).join(' ')}
+let pickLevel=save.meta.level||0;
 function renderTitle(){
   const m=save.meta, r=save.run;
   pickLevel=Math.min(pickLevel,m.level||0);
@@ -141,7 +140,7 @@ function renderTitle(){
     $('aband').onclick=()=>{if(!armAbandon){armAbandon=true;renderTitle();return}endRun()};
   }else{
     const lv=$('lvl');if(lv)lv.onclick=e=>{const b=e.target.closest('button');if(b){pickLevel=+b.dataset.l;renderTitle()}};
-    $('start').onclick=()=>{save.run=newRun('start',pickLevel,save.meta);persist();tab='shop';sel='wing';openHangar()};
+    $('start').onclick=()=>{save.run=newRun(pickLevel,save.meta);persist();tab='shop';sel='wing';openHangar()};
   }
 }
 
@@ -177,7 +176,7 @@ function renderStrip(){
 }
 function renderHangar(){
   const r=R();if(!r)return;
-  $('hKit').textContent='Ceiling '+r.level;$('hKit').hidden=!r.level;
+  $('hCeil').textContent='Ceiling '+r.level;$('hCeil').hidden=!r.level;
   $('hCoins').textContent=fmt(r.coins);
   $('tShop').innerHTML='Shop'+(r.phase==='shop'?'<span class="dot" aria-label="open"></span>':'');
   $('tMods').textContent=`Mods ${r.mods.length}/${MAXMODS}`;

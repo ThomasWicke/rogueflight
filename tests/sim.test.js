@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   newRun, stats, weatherFx, makeCraft, newFlight, step, popBalloons, summaryOf, scoreFlight, settleFlight,
-  KITS, quotaFor, CONTRACTS,
+  quotaFor, CONTRACTS,
 } from '../client/src/sim.js';
 
 // 'c22 p32 w21 t23' -> cockpit at (2,2), prop at (3,2), wing at (2,1), tank at (2,3)
@@ -23,7 +23,7 @@ function fly(cells, { tune = {}, mods = [], wx = null, stage = 0, ctl = () => ({
 
 test('every new run offers an engine in the opening shop', () => {
   for (let i = 0; i < 500; i++) {
-    const run = newRun('start', 0, { bestStage: 0 });
+    const run = newRun(0, { bestStage: 0 });
     assert.ok(run.shop.parts.some((o) => o.t === 'prop' || o.t === 'rocket'));
     assert.deepEqual(run.cells, [{ c: 2, r: 2, type: 'cockpit' }]);
   }
@@ -54,12 +54,11 @@ test('long, heavy flights stay finite', () => {
 });
 
 test('reaching the quota clears the contract and opens a new shop', () => {
-  const run = newRun('start', 0, { bestStage: 0 });
+  const run = newRun(0, { bestStage: 0 });
   const meta = { bestStage: 0 };
   const f = { dist: quotaFor(0, 0), maxY: 50, maxV: 30, coins: 0, loops: 0, passes: 0, thermals: 0, landed: true, fuelFrac: 0 };
   const out = settleFlight(run, meta, f);
   assert.ok(out.cleared);
   assert.equal(run.stage, 1);
   assert.equal(run.phase, 'shop');
-  assert.ok(CONTRACTS >= 8 && KITS.start);
 });
