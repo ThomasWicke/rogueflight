@@ -348,3 +348,15 @@ button:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
 .crules{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .crules span{font-family:var(--inst);font-size:11.5px;color:#ffd2cc;background:rgba(255,90,78,.1);border:1px solid rgba(255,90,78,.35);border-radius:999px;padding:3px 9px}
 #lvl{display:flex;flex-wrap:nowrap}#lvl button{flex:1;padding:6px 0;min-width:0}
+/* storm reward picker */
+.boons{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.boon{display:grid;justify-items:center;align-content:start;gap:6px;padding:16px 10px 14px;border-radius:14px;border:1.5px solid var(--line);background:var(--panel2);
+  text-align:center;animation:boon-in .35s cubic-bezier(.2,1.4,.4,1) both;animation-delay:calc(var(--i)*90ms);transition:transform .25s,opacity .25s,border-color .2s}
+.boon:hover,.boon:focus-visible{border-color:var(--signal)}
+.boon .bi{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;background:rgba(255,176,32,.14);border:1.5px solid var(--signal);color:var(--signal);font-family:var(--stencil);font-weight:800;font-size:24px}
+.boon b{font-size:15px}
+.boon small{font-size:12.5px;color:var(--muted);line-height:1.35}
+.boon.picked{border-color:var(--signal);transform:scale(1.06)}
+.boon.gone{opacity:0;transform:scale(.9)}
+@keyframes boon-in{from{opacity:0;transform:translateY(16px) scale(.9)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){.boon{animation:none;transition:none}}

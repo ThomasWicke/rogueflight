@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {
   newRun, stats, weatherFx, makeCraft, newFlight, step, popBalloons, summaryOf, scoreFlight, settleFlight,
   quotaFor, openPack, PACKS, FIRST_PACKS, rollTunes, thermalSeg, G0, repeats, rerollShop, applyPurchase, offerPrice, rollMods,
-  isStorm, grantPacks, flightStats, MODMAX,
+  isStorm, grantPacks, flightStats, MODMAX, pickBoon, rollBoons, modSlots,
 } from '../client/src/sim.js';
 
 // 'c22 p32 w21 t23' -> cockpit at (2,2), prop at (3,2), wing at (2,1), tank at (2,3)
@@ -135,4 +135,21 @@ test('ceiling rules: pricier shop, a fourth storm, fewer packs, a shorter clock'
   assert.equal(flightStats(newRun(9, meta)).flightTime, 300);
   assert.equal(flightStats(newRun(10, meta)).flightTime, 240);
   assert.equal(quotaFor(0, 10), 1750);
+});
+
+test('clearing a storm contract offers 2 storm rewards; picks apply and the slot reward comes once', () => {
+  const meta = { bestStage: 0 };
+  const run = newRun(0, meta);
+  run.stage = 2; // contract 3 is a storm
+  const f = { dist: quotaFor(2, 0), maxY: 50, maxV: 30, coins: 0, loops: 0, passes: 0, thermals: 0, landed: true, fuelFrac: 0 };
+  settleFlight(run, meta, f);
+  assert.equal(run.boonOffer.length, 2);
+  run.boonOffer = [{ id: 'slot' }, { id: 'drag' }];
+  assert.ok(pickBoon(run, 0));
+  assert.equal(modSlots(run), 6);
+  assert.equal(run.boonOffer, null);
+  for (let i = 0; i < 200; i++) assert.ok(!rollBoons(run).some((o) => o.id === 'slot'));
+  run.boonOffer = [{ id: 'drag' }, { id: 'coins' }];
+  pickBoon(run, 0);
+  assert.ok(Math.abs(flightStats(run).drag - 0.92) < 1e-9);
 });

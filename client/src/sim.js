@@ -100,6 +100,37 @@ function weatherFx(id,s){const f={wind:0,ceiling:0,rhoMul:1,gust:0,cargo:0,fuelM
   else if(id==='gusts')f.gust=5+.6*s;else if(id==='cargo')f.cargo=1+.25*s;else if(id==='ration')f.fuelMul=.6;else if(id==='short')f.launchMul=.45;
   return f}
 
+/* ---------- storm rewards ---------- */
+// After clearing a storm contract the player picks 1 of 2. Buffs stack, but a run has only 3-4 storms, so they stay bounded.
+// once: at most one per run. up: offered only while an owned mod can still level up (the offer names the mod).
+const BOONS={
+  slot:{name:'Hangar Bay',d:'+1 mod slot.',once:true},
+  coins:{name:'Prize Money',d:'+15 coins.'},
+  upgrade:{name:'Field Upgrade',d:'Free upgrade: {mod}.',up:true},
+  drag:{name:'Polished Hull',d:'Drag −8%.'},
+  grav:{name:'Updraft Charm',d:'Gravity −8%.'},
+  fuel:{name:'Reserve Tanks',d:'Fuel +12%.'},
+  thermal:{name:'Thermal Map',d:'Thermals +0.1 mult each.'},
+  pass:{name:'Low Rider',d:'Low passes +0.1 mult each.'},
+  loop:{name:'Barnstormer',d:'Loops +0.1 mult each.'},
+  coin:{name:'Lucky Coin',d:'Coins +0.03 mult each.'},
+  land:{name:'Soft Landing',d:'Touchdown +0.25 mult.'},
+};
+const boonN=(run,id)=>(run.boons&&run.boons[id])||0;
+function rollBoons(run){
+  const lv=modLevels(run), canUp=run.mods.filter(id=>lv[id]<MODMAX);
+  const pool=Object.keys(BOONS).filter(k=>!(BOONS[k].once&&boonN(run,k))&&!(BOONS[k].up&&!canUp.length));
+  for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]]}
+  return pool.slice(0,2).map(id=>id==='upgrade'?{id,mod:canUp[Math.floor(Math.random()*canUp.length)]}:{id})}
+const boonDesc=o=>BOONS[o.id].d.replace('{mod}',o.mod?MODS[o.mod].name:'');
+function pickBoon(run,i){
+  const o=run.boonOffer&&run.boonOffer[i];if(!o)return false;
+  run.boons=run.boons||{};run.boons[o.id]=(run.boons[o.id]||0)+1;
+  if(o.id==='coins')run.coins+=15;
+  if(o.id==='upgrade'&&run.mods.includes(o.mod)){run.modLv=run.modLv||{};run.modLv[o.mod]=Math.min(MODMAX,(run.modLv[o.mod]||1)+1)}
+  run.boonOffer=null;return true}
+const modSlots=run=>MAXMODS+boonN(run,'slot');
+
 /* ---------- every run starts the same: a bare cockpit, 12 coins and the opening packs ---------- */
 const START={coins:12,inv:{}};
 const UNLOCKS=[
@@ -347,18 +378,18 @@ function summaryOf(S,K){return {dist:Math.max(0,S.maxX),maxY:S.maxY,maxV:S.maxV,
 const repeats=n=>{let t=0;for(let k=0;k<n;k++)t+=1/(1+.5*k);return t};
 // ctx.lv: owned mods as {id: level} (ctx.mods, a plain id array, still works and counts as Lv 1)
 function scoreFlight(f,ctx){
-  const lv=ctx.lv||modLevels(ctx.mods||[]), has=k=>!!lv[k], mv=(k,key)=>modVal(lv,k,key), lines=[];
+  const lv=ctx.lv||modLevels(ctx.mods||[]), has=k=>!!lv[k], mv=(k,key)=>modVal(lv,k,key), bn=k=>(ctx.boons&&ctx.boons[k])||0, lines=[];
   let base=Math.floor(f.dist);lines.push({t:'b',label:'Distance',v:base,dist:true});
   if(has('odometer')){base+=mv('odometer');lines.push({t:'b',label:'Odometer',v:mv('odometer')})}
   let mult=1,xm=1;
   const addM=(label,v)=>{v=Math.round(v*100)/100;if(v>0){mult+=v;lines.push({t:'m',label,v})}};
   const addX=(label,v)=>{if(v>1){xm*=v;lines.push({t:'x',label,v})}};
   const pl=(n,w)=>n+' '+w+(n===1?'':'s');
-  if(f.landed){if(has('greaser'))addX('Greaser touchdown',mv('greaser'));else addM('Clean touchdown',.5)}
+  if(f.landed){if(has('greaser'))addX('Greaser touchdown',mv('greaser'));else addM('Clean touchdown',.5);if(bn('land'))addM('Soft Landing',.25*bn('land'))}
   if(f.crashed&&has('crashtest'))addM('Crash Test',mv('crashtest'));
-  if(f.loops)addM(pl(f.loops,'loop'),repeats(f.loops)*(has('stunt')?mv('stunt'):.5));
-  if(f.passes)addM(pl(f.passes,'low pass'),repeats(f.passes)*(has('duster')?mv('duster'):.25));
-  if(f.thermals)addM(pl(f.thermals,'thermal')+' ridden',f.thermals*(has('thermal')?mv('thermal','w'):.1));
+  if(f.loops)addM(pl(f.loops,'loop'),repeats(f.loops)*((has('stunt')?mv('stunt'):.5)+.1*bn('loop')));
+  if(f.passes)addM(pl(f.passes,'low pass'),repeats(f.passes)*((has('duster')?mv('duster'):.25)+.1*bn('pass')));
+  if(f.thermals)addM(pl(f.thermals,'thermal')+' ridden',f.thermals*((has('thermal')?mv('thermal','w'):.1)+.1*bn('thermal')));
   if(f.bounces&&has('bounce'))addM(pl(f.bounces,'bounce'),f.bounces*mv('bounce'));
   if(f.mach){if(has('sonic'))addX('Overdrive',mv('sonic'));else addM('Redline',1)}
   if(f.space){if(has('escape'))addX('Escape Plan',mv('escape'));else addM('Cloud nine',2)}
@@ -366,7 +397,7 @@ function scoreFlight(f,ctx){
   if(has('hauler'))addM('Fuel Hauler',mv('hauler')*ctx.tanks);
   if(has('altimeter'))addM('Altimeter',mv('altimeter')*Math.floor(f.maxY/1000));
   if(has('speedtrap'))addM('Speed Trap',mv('speedtrap')*Math.max(0,Math.floor((f.maxV*3.6-200)/100)));
-  if(f.coins)addM(pl(f.coins,'coin'),f.coins*(has('collector')?mv('collector'):.05));
+  if(f.coins)addM(pl(f.coins,'coin'),f.coins*((has('collector')?mv('collector'):.05)+.03*bn('coin')));
   if(has('opening')&&ctx.flightIdx===0)addX('Opening Act',mv('opening'));
   if(has('third')&&ctx.flightIdx===2)addX('Third Time Lucky',mv('third'));
   if(has('frugal')&&f.landed&&f.fuelFrac>=.3)addX('Frugal',mv('frugal'));
@@ -405,7 +436,7 @@ function offerPrice(run,kind,o){return priceOf(run,kind==='part'?PARTS[o.t].pric
 const rerollCost=run=>2+run.shop.rerolls;
 const sellValue=(id,L)=>Math.floor(RARITY[MODS[id].r].price/2)+2*((L||1)-1);
 // can this offer be bought right now (coins aside)? New mods need a free slot, upgrades do not
-function canBuy(run,kind,o){if(o.sold)return false;if(kind==='mod'){const L=modLevels(run)[o.id];return L?L<MODMAX:run.mods.length<MAXMODS}return true}
+function canBuy(run,kind,o){if(o.sold)return false;if(kind==='mod'){const L=modLevels(run)[o.id];return L?L<MODMAX:run.mods.length<modSlots(run)}return true}
 function applyPurchase(run,kind,o){
   const p=offerPrice(run,kind,o);if(!canBuy(run,kind,o)||p>run.coins)return false;
   run.coins-=p;o.sold=true;
@@ -415,10 +446,13 @@ function applyPurchase(run,kind,o){
   return true}
 function sellMod(run,id){const i=run.mods.indexOf(id);if(i<0)return 0;const v=sellValue(id,modLevels(run)[id]);run.mods.splice(i,1);if(run.modLv)delete run.modLv[id];run.coins+=v;return v}
 // everything a flight of this run needs: tunings, mod levels, this contract's weather, the ceiling's clock
-function flightStats(run){const w=weatherOf(run,run.stage),fx=weatherFx(w,severity(run,run.stage));if((run.level||0)>=10)fx.clock=240;return stats(run.tune,modLevels(run),fx)}
+function flightStats(run){const w=weatherOf(run,run.stage),fx=weatherFx(w,severity(run,run.stage));if((run.level||0)>=10)fx.clock=240;
+  const st=stats(run.tune,modLevels(run),fx),b=k=>boonN(run,k);
+  st.drag*=Math.pow(.92,b('drag'));st.grav*=Math.pow(.92,b('grav'));const fm=Math.pow(1.12,b('fuel'));st.tankFuel*=fm;st.reserve*=fm;
+  return st}
 function newRun(level,meta){
   const run={level:level||0,stage:0,flight:0,score:0,total:0,best:0,bestDist:0,coins:START.coins,inv:{...START.inv},
-    cells:[{...COCKPIT,type:'cockpit'}],mods:[],modLv:{},tune:{},weather:{},shop:null,phase:'contract',log:[],endless:false,unlocks:[],packs:[]};
+    cells:[{...COCKPIT,type:'cockpit'}],mods:[],modLv:{},boons:{},boonOffer:null,tune:{},weather:{},shop:null,phase:'contract',log:[],endless:false,unlocks:[],packs:[]};
   run.shop=genShop(run,meta);
   grantPacks(run);
   for(let i=0;i<CONTRACTS;i++)weatherOf(run,i);
@@ -435,7 +469,7 @@ function openPack(run){const t=run.packs&&run.packs.shift();if(t)run.inv[t]=(run
 function craftCounts(cells){const l=connected(cells);const n=t=>l.filter(c=>c.type===t).length;return {parts:l.length,wings:n('wing'),tanks:n('tank')}}
 function settleFlight(run,meta,f){
   const lv=modLevels(run), has=k=>!!lv[k];
-  const sc=scoreFlight(f,{lv,flightIdx:run.flight,cleared:run.stage,coins:run.coins,...craftCounts(run.cells)});
+  const sc=scoreFlight(f,{lv,boons:run.boons,flightIdx:run.flight,cleared:run.stage,coins:run.coins,...craftCounts(run.cells)});
   const pay=3+f.coins+modVal(lv,'sponsor');
   run.coins+=pay;run.score+=sc.total;run.total+=sc.total;run.flight++;run.best=Math.max(run.best,sc.total);run.bestDist=Math.max(run.bestDist||0,f.dist);
   run.log.push({stage:run.stage,flight:run.flight,score:sc.total,d:Math.round(f.dist),x:Math.round(sc.mult*sc.xm*100)/100});
@@ -454,7 +488,7 @@ function settleFlight(run,meta,f){
     run.unlocks.push(...out.unlocks);
     if(run.stage===CONTRACTS&&!run.endless){run.phase='won';meta.wins=(meta.wins||0)+1;
       if(run.level>=(meta.level||0)&&run.level<MAX_CEILING){meta.level=run.level+1;out.newLevel=meta.level}out.won=true}
-    else{run.phase='shop';run.shop=genShop(run,meta);weatherOf(run,run.stage);grantPacks(run)}
+    else{run.phase='shop';run.shop=genShop(run,meta);weatherOf(run,run.stage);grantPacks(run);if(storm){run.boonOffer=rollBoons(run);out.boons=true}}
   }else if(run.flight>=FLIGHTS){run.phase='over';out.failed=true}
   return out}
 
@@ -470,4 +504,5 @@ export {
   PACKS, FIRST_PACKS, rollPacks, grantPacks, openPack,
   MODMAX, modLevels, modVal, modDesc, modPrice, canBuy, applyPurchase, sellMod, flightStats, repeats, severity,
   MAX_CEILING, CEILING_RULES, ceilingRules, REDLINE, CLOUD9,
+  BOONS, rollBoons, boonDesc, pickBoon, modSlots,
 };

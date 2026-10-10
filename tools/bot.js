@@ -10,7 +10,7 @@
 // so builds are sensible but not optimal. It opens its parts packs and shops before every flight.
 import {
   newRun, weatherOf, stats, weatherFx, makeCraft, newFlight, step, popBalloons, summaryOf, scoreFlight, settleFlight,
-  craftCounts, offerPrice, rerollCost, rerollShop, openPack, applyPurchase, canBuy, modLevels, flightStats, MAXMODS, COLS, ROWS, COCKPIT, quotaFor, isStorm, CONTRACTS, WEATHER,
+  craftCounts, offerPrice, rerollCost, rerollShop, openPack, applyPurchase, canBuy, modLevels, flightStats, pickBoon, MAXMODS, COLS, ROWS, COCKPIT, quotaFor, isStorm, CONTRACTS, WEATHER,
 } from '../client/src/sim.js';
 
 const args = process.argv.slice(2);
@@ -172,7 +172,10 @@ function offerValue(run, kind, o) {
   // an upgrade of a mod already in use is worth a bit less than a fresh one
   return modLevels(run)[o.id] ? base * 0.8 : base;
 }
+// storm rewards, best first for this bot's long glides
+const BOON_RANK = ['slot', 'upgrade', 'drag', 'fuel', 'grav', 'coins', 'land', 'thermal', 'coin', 'pass', 'loop'];
 function botShop(run, meta) {
+  if (run.boonOffer) { const r = (o) => BOON_RANK.indexOf(o.id); pickBoon(run, r(run.boonOffer[0]) <= r(run.boonOffer[1]) ? 0 : 1); }
   while (run.packs && run.packs.length) openPack(run);
   for (let pass = 0; pass < 2; pass++) {
     const offers = [];

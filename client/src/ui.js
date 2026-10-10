@@ -11,6 +11,7 @@ import {
   PACKS, FIRST_PACKS, rollPacks, grantPacks, openPack,
   MODMAX, modLevels, modVal, modDesc, modPrice, canBuy, applyPurchase, sellMod, flightStats, repeats, severity,
   MAX_CEILING, CEILING_RULES, ceilingRules, REDLINE, CLOUD9,
+  BOONS, rollBoons, boonDesc, pickBoon, modSlots,
 } from './sim.js';
 import { initGuide, openGuide } from './guide.js';
 
@@ -110,7 +111,7 @@ function show(id){for(const s of ['title','hangar','flight'])$(s).hidden=s!==id}
 const R=()=>save.run;
 let armAbandon=false;
 function runCode(r){if(!r)return '';const L=t=>t==='cockpit'?'c':t[0];
-  return 'ROGUEFLIGHT '+JSON.stringify({lvl:r.level,cleared:r.stage,endless:!!r.endless,coins:r.coins,mods:r.mods.map(id=>{const L=modLevels(r)[id];return L>1?id+':'+L:id}),tune:r.tune,inv:r.inv,
+  return 'ROGUEFLIGHT '+JSON.stringify({lvl:r.level,cleared:r.stage,boons:r.boons||{},endless:!!r.endless,coins:r.coins,mods:r.mods.map(id=>{const L=modLevels(r)[id];return L>1?id+':'+L:id}),tune:r.tune,inv:r.inv,
     cells:r.cells.map(c=>L(c.type)+c.c+c.r).join(' '),log:r.log.map(l=>[l.stage+1,l.flight,l.score,l.d,l.x])})}
 function copyRun(r,btn){const txt=runCode(r);const ok=()=>{if(btn){btn.textContent='Copied';setTimeout(()=>{btn.textContent='Copy run'},1500)}};
   const fall=()=>{const d=document.createElement('div');d.className='copybox';d.innerHTML='<textarea readonly></textarea><button class="big" type="button">Close</button>';
@@ -174,7 +175,7 @@ function openHangar(){
   if(r.phase==='shop'&&tab==='build')tab='shop';
   setTab(tab);
 }
-function setTab(t){tab=t;armSell=null;armAbandon=false;for(const [id,k] of [['tBuild','build'],['tShop','shop'],['tMods','mods']])$(id).setAttribute('aria-selected',k===t?'true':'false');renderHangar();const r=R();if(r&&r.packs&&r.packs.length&&r.phase!=='won'&&r.phase!=='over')showPacks()}
+function setTab(t){tab=t;armSell=null;armAbandon=false;for(const [id,k] of [['tBuild','build'],['tShop','shop'],['tMods','mods']])$(id).setAttribute('aria-selected',k===t?'true':'false');renderHangar();const r=R();if(!r||r.phase==='won'||r.phase==='over')return;if(r.boonOffer)showBoons();else if(r.packs&&r.packs.length)showPacks()}
 $('tBuild').onclick=()=>setTab('build');$('tShop').onclick=()=>setTab('shop');$('tMods').onclick=()=>setTab('mods');
 function wxLine(id,s){return `<div class="wx"><b>${WEATHER[id].name}</b>${WEATHER[id].d(s)}</div>`}
 // storm forecast: every storm in the run is known from the start, so builds can plan around them
@@ -196,7 +197,7 @@ function renderHangar(){
   $('hCeil').textContent='Ceiling '+r.level;$('hCeil').hidden=!r.level;
   $('hCoins').textContent=fmt(r.coins);
   $('tShop').innerHTML='Shop'+(r.phase==='shop'?'<span class="dot" aria-label="open"></span>':'');
-  $('tMods').textContent=`Mods ${r.mods.length}/${MAXMODS}`;
+  $('tMods').textContent=`Mods ${r.mods.length}/${modSlots(r)}`;
   renderStrip();
   bench.onclick=null;
   if(tab==='build')renderBuild();else if(tab==='shop')renderShop();else renderMods();
@@ -305,7 +306,7 @@ function modCard(id,btn,L,up){const M=MODS[id];L=L||1;return `<div class="offer 
 function renderShop(){
   const r=R();
   if(!r.shop){r.shop=genShop(r,save.meta);persist()}
-  const S=r.shop, full=r.mods.length>=MAXMODS, lv=modLevels(r);
+  const S=r.shop, full=r.mods.length>=modSlots(r), lv=modLevels(r);
   const btn=(kind,i,o)=>{if(o.sold)return `<button class="buy" type="button" disabled>\u2713</button>`;const p=offerPrice(r,kind,o);
     return `<button class="buy" type="button" data-kind="${kind}" data-i="${i}" ${p>r.coins||!canBuy(r,kind,o)?'disabled':''}><i class="cn"></i>${p}</button>`};
   // an owned mod on offer is an upgrade: show the level it would reach (a sold one already shows its new level)
@@ -316,7 +317,7 @@ function renderShop(){
   bench.innerHTML=`
   <div class="card"><span class="label">Parts</span><div class="offers">${parts}</div></div>
   <div class="card"><span class="label">Tuning</span><div class="offers">${tunes}</div></div>
-  <div class="card"><div class="row"><span class="label">Mods</span><span class="hint${full?' warn':''}">${r.mods.length}/${MAXMODS}${full?' full':''}</span></div><div class="offers">${mods}</div></div>
+  <div class="card"><div class="row"><span class="label">Mods</span><span class="hint${full?' warn':''}">${r.mods.length}/${modSlots(r)}${full?' full':''}</span></div><div class="offers">${mods}</div></div>
   <div class="row" style="justify-content:flex-end"><button class="ghost" id="reroll" type="button" ${rc>r.coins?'disabled':''}>Reroll <i class="cn"></i>${rc}</button></div>`;
   bench.onclick=e=>{
     const b=e.target.closest('.buy[data-kind]');
@@ -331,14 +332,16 @@ function buy(kind,i){
 function renderMods(){
   const r=R();
   const lv=modLevels(r);
-  const slots=Array.from({length:MAXMODS},(_,i)=>{const id=r.mods[i];if(!id)return `<div class="slot">Empty</div>`;const v=sellValue(id,lv[id]);
+  const slots=Array.from({length:modSlots(r)},(_,i)=>{const id=r.mods[i];if(!id)return `<div class="slot">Empty</div>`;const v=sellValue(id,lv[id]);
     return modCard(id,`<button class="buy sell${armSell===id?' armed':''}" type="button" data-sell="${id}">${armSell===id?'Sell?':'Sell +'+v}</button>`,lv[id])}).join('');
   const tl=Object.entries(r.tune).filter(([,L])=>L>0).map(([k,L])=>`${TUNES[k].name} ×${L}`).join(' · ');
+  const bl=Object.entries(r.boons||{}).filter(([k,n])=>n>0&&k!=='coins'&&k!=='upgrade').map(([k,n])=>`${BOONS[k].name}${n>1?' ×'+n:''}`).join(' · ');
   const byStage={};for(const l of r.log)(byStage[l.stage]=byStage[l.stage]||[]).push(l.score);
   const log=Object.keys(byStage).map(s=>{s=+s;const done=s<r.stage;return `<div><span>Contract ${s+1}${isStorm(s,r.level)?' \u00b7 storm':''}</span><b>${byStage[s].map(fmt).join(' · ')}${done?' ✓':''}</b></div>`}).join('');
   bench.innerHTML=`
-  <div class="card"><div class="row"><span class="label">Mods</span><span class="hint">${r.mods.length}/${MAXMODS}</span></div><div class="offers">${slots}</div></div>
+  <div class="card"><div class="row"><span class="label">Mods</span><span class="hint">${r.mods.length}/${modSlots(r)}</span></div><div class="offers">${slots}</div></div>
   <div class="card"><span class="label">Tuning</span><p class="hint" style="margin-top:6px">${tl||'\u2014'}</p></div>
+  ${bl?`<div class="card"><span class="label">Storm rewards</span><p class="hint" style="margin-top:6px">${bl}</p></div>`:''}
   <div class="card"><span class="label">Log</span><div class="log">${log||'<div>\u2014</div>'}</div></div>
   <div class="card stack"><button class="ghost" type="button" data-copyrun="cur">Copy run</button><button class="ghost${armAbandon?' armed':''}" id="aband2" type="button">${armAbandon?'Tap again':'Abandon run'}</button></div>`;
   bench.onclick=e=>{
@@ -353,6 +356,20 @@ $('launch').onclick=()=>{const r=R();if(!r)return;
 
 initGuide(ICON,()=>{if(!save.meta.guideSeen){save.meta.guideSeen=true;persist();if(!$('title').hidden)renderTitle()}});
 $('hHelp').onclick=openGuide;
+
+/* ================= storm rewards ================= */
+// after a cleared storm contract: pick 1 of 2 (rolled in sim and saved, so a reload shows the same pair)
+const BOON_ICON={slot:'+',coins:'¢',upgrade:'↑',drag:'≋',grav:'↥',fuel:'▮',thermal:'≈',pass:'_',loop:'∞',coin:'●',land:'⌒'};
+function showBoons(){
+  const r=R();if(!r||!r.boonOffer)return;
+  sheet.innerHTML=`<span class="label">Storm cleared</span><h2>Pick a reward</h2>
+    <div class="boons">${r.boonOffer.map((o,i)=>`<button class="boon" type="button" data-i="${i}" style="--i:${i}"><span class="bi" aria-hidden="true">${BOON_ICON[o.id]||'★'}</span><b>${BOONS[o.id].name}</b><small>${boonDesc(o)}</small></button>`).join('')}</div>`;
+  veil.hidden=false;
+  sheet.querySelectorAll('.boon').forEach(b=>b.onclick=()=>{
+    if(!pickBoon(r,+b.dataset.i))return;persist();
+    b.classList.add('picked');sheet.querySelectorAll('.boon').forEach(x=>{if(x!==b)x.classList.add('gone')});
+    setTimeout(()=>{veil.hidden=true;setTab(tab)},reduceMotion()?0:420)});
+}
 
 /* ================= parts packs ================= */
 // every contract starts with packs to open: shake, tear the top off, burst, the part pops out and flies to the tray
