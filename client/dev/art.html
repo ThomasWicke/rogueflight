@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Circus art preview</title>
+<style>
+  :root { --ink:#22283a; --paper:#f3e7ce; --paper2:#e6d4ae; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 13px/1.3 system-ui, sans-serif; }
+  header { padding: 14px 20px 4px; }
+  h1 { font-size: 18px; margin: 0; }
+  h2 { font-size: 14px; margin: 18px 0 6px; }
+  .note { opacity: .7; margin: 2px 0 0; }
+  .bands { display: grid; grid-template-columns: 1fr 1fr; }
+  .band { padding: 6px 16px 16px; }
+  .band.sky { background: linear-gradient(#7fc3cf, #bfe0dc 55%, #f4dcae); }
+  .row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 14px; }
+  figure { margin: 0; text-align: center; }
+  figcaption { font-size: 11px; opacity: .75; margin-top: 2px; }
+  canvas { display: block; }
+  .wide { grid-column: 1 / -1; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Circus art preview</h1>
+  <p class="note">client/src/art.js. Faint squares show the cell bounds. Outline width = 2.5 px / pixels per cell. Add <code>?t=1.2</code> to freeze time.</p>
+</header>
+<div class="bands" id="root"></div>
+<script type="module">
+import { drawPart, drawPilot, drawParachute, PILOT_MOODS } from '../src/art.js';
+
+const qs = new URLSearchParams(location.search);
+const frozen = qs.has('t') ? parseFloat(qs.get('t')) : null;
+const DPR = Math.min(window.devicePixelRatio || 1, 2);
+const lwFor = px => 2.5 / px;
+const items = []; // {cv, draw(g,t)} redrawn each frame
+
+function canvas(w, h, draw) {
+  const cv = document.createElement('canvas');
+  cv.width = Math.round(w * DPR); cv.height = Math.round(h * DPR);
+  cv.style.width = w + 'px'; cv.style.height = h + 'px';
+  items.push({ cv, w, h, draw });
+  return cv;
+}
+function fig(cv, label) {
+  const f = document.createElement('figure'); f.appendChild(cv);
+  if (label) { const c = document.createElement('figcaption'); c.textContent = label; f.appendChild(c); }
+  return f;
+}
+function cellBox(g, px) { g.strokeStyle = 'rgba(34,40,58,.18)'; g.lineWidth = 1; g.strokeRect(-px / 2 + .5, -px / 2 + .5, px - 1, px - 1); }
+
+// one part at px pixels per cell, with room for flames / blur
+function partFig(type, px, o, label) {
+  const pad = type === 'rocket' && o.on ? px * 1.05 : px * .12;
+  const w = px + pad + px * .12, h = px * 1.24;
+  const cv = canvas(w, h, (g, t) => {
+    g.translate(pad + px / 2, h / 2);
+    cellBox(g, px);
+    g.scale(px, px);
+    drawPart(g, type, t, { ...o, lw: lwFor(px) });
+  });
+  return fig(cv, label);
+}
+function pilotFig(mood, px) {
+  const cv = canvas(px * 1.35, px * 1.15, (g, t) => {
+    g.translate(px * .78, px * .6); g.scale(px, px);
+    drawPilot(g, mood, t, { lw: lwFor(px) });
+  });
+  return fig(cv, mood + ' ' + px);
+}
+const only = qs.get('only'); // show only sections whose title contains this text
+const bgs = qs.get('bg') === 'paper' ? [false] : qs.get('bg') === 'sky' ? [true] : [false, true];
+function section(title, build, wide) {
+  if (only && !title.toLowerCase().includes(only.toLowerCase())) return;
+  for (const sky of bgs) {
+    const band = document.createElement('div'); band.className = 'band' + (sky ? ' sky' : '') + (wide ? ' wide' : '');
+    const h = document.createElement('h2'); h.textContent = title + (sky ? ' (sky)' : ' (paper)'); band.appendChild(h);
+    build(band, sky);
+    document.getElementById('root').appendChild(band);
+  }
+}
+function row(parent) { const r = document.createElement('div'); r.className = 'row'; parent.appendChild(r); return r; }
+
+const PARTS = [
+  ['cockpit', {}], ['frame', {}], ['tank', { frac: .2 }], ['tank', { frac: 1 }], ['wing', {}],
+  ['prop', { on: false }], ['prop', { on: true }], ['rocket', { on: false }], ['rocket', { on: true }], ['balloon', {}],
+];
+const tag = (t, o) => t + (o.frac != null ? ' ' + o.frac : '') + (o.on != null ? (o.on ? ' on' : ' off') : '');
+
+section('Parts at 24 and 48 px', band => {
+  const r24 = row(band), r48 = row(band);
+  for (const [t, o] of PARTS) { r24.appendChild(partFig(t, 24, o, '')); r48.appendChild(partFig(t, 48, o, tag(t, o))); }
+});
+section('Parts at 120 px', band => {
+  const r = row(band);
+  for (const [t, o] of PARTS) r.appendChild(partFig(t, 120, o, tag(t, o)));
+});
+section('Pilot moods at 24 px', band => {
+  const r = row(band); for (const m of PILOT_MOODS) r.appendChild(pilotFig(m, 24));
+});
+section('Pilot moods at 64 px', band => {
+  const r = row(band); for (const m of PILOT_MOODS) r.appendChild(pilotFig(m, 64));
+});
+section('Pilot moods at 160 px', band => {
+  const r = row(band); for (const m of PILOT_MOODS) r.appendChild(pilotFig(m, 160));
+});
+section('Cockpit moods at 120 px', band => {
+  const r = row(band); for (const m of PILOT_MOODS) r.appendChild(partFig('cockpit', 120, { mood: m }, m));
+});
+section('Cockpit moods at 48 px', band => {
+  const r = row(band); for (const m of PILOT_MOODS) r.appendChild(partFig('cockpit', 48, { mood: m }, m));
+});
+
+// assembled crafts on a 7x5 grid, 48 px per cell
+const CRAFTS = [
+  { mood: 'grin', on: true, cells: [['cockpit', 2, 2], ['frame', 3, 2], ['prop', 4, 2], ['wing', 2, 1], ['wing', 3, 1], ['tank', 2, 3]] },
+  { mood: 'scared', on: true, cells: [['cockpit', 2, 2], ['rocket', 1, 2], ['frame', 3, 2], ['wing', 4, 2], ['balloon', 2, 1], ['balloon', 3, 1], ['tank', 3, 3]] },
+  // connection test: wing above the cockpit, wings bolted to both sides, rocket behind a frame and below a tank
+  { mood: 'grin', on: false, cells: [['cockpit', 2, 2], ['wing', 2, 1], ['wing', 1, 2], ['frame', 3, 2], ['wing', 4, 2], ['tank', 2, 3], ['frame', 3, 3], ['frame', 3, 4], ['rocket', 2, 4], ['tank', 4, 3], ['prop', 5, 3]] },
+];
+function craftFig(c, sky) {
+  const px = 48, W = 7 * px, H = 5 * px;
+  const cv = canvas(W, H, (g, t) => {
+    g.strokeStyle = sky ? 'rgba(255,255,255,.35)' : 'rgba(34,40,58,.15)'; g.lineWidth = 1;
+    for (let x = 0; x <= 7; x++) { g.beginPath(); g.moveTo(x * px + .5, 0); g.lineTo(x * px + .5, H); g.stroke(); }
+    for (let y = 0; y <= 5; y++) { g.beginPath(); g.moveTo(0, y * px + .5); g.lineTo(W, y * px + .5); g.stroke(); }
+    for (const [type, cx, cy] of c.cells) {
+      g.save(); g.translate((cx + .5) * px, (cy + .5) * px); g.scale(px, px);
+      drawPart(g, type, t, { lw: lwFor(px), on: c.on, frac: .6, mood: c.mood });
+      g.restore();
+    }
+  });
+  return fig(cv, c.mood);
+}
+section('Sample craft, 48 px cells', (band, sky) => {
+  const r = row(band); for (const c of CRAFTS) r.appendChild(craftFig(c, sky));
+});
+section('Parachute', band => {
+  const r = row(band);
+  for (const [px, mood] of [[44, 'crash'], [80, 'sad']]) {
+    const cv = canvas(px * 2.8, px * 3.9, (g, t) => { g.translate(px * 1.4, px * 2.65); g.scale(px, px); drawParachute(g, t, { lw: lwFor(px), mood }); });
+    r.appendChild(fig(cv, mood + ' ' + px));
+  }
+});
+
+function frame(now) {
+  const t = frozen != null ? frozen : now / 1000;
+  for (const it of items) {
+    const g = it.cv.getContext('2d');
+    g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, it.cv.width, it.cv.height);
+    g.setTransform(DPR, 0, 0, DPR, 0, 0);
+    it.draw(g, t);
+  }
+  if (frozen == null) requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+if (frozen != null) frame(0);
+
+// ?bench: time 600 frames of a 30-part craft at 40 px per cell (roughly a busy flight frame)
+if (qs.has('bench')) {
+  const cv = document.createElement('canvas'); cv.width = 400; cv.height = 300;
+  const g = cv.getContext('2d'), types = ['cockpit', 'frame', 'tank', 'wing', 'prop', 'rocket', 'balloon'];
+  const run = () => {
+    const t0 = performance.now();
+    for (let f = 0; f < 600; f++) {
+      g.clearRect(0, 0, 400, 300);
+      for (let i = 0; i < 30; i++) {
+        g.save(); g.translate(20 + (i % 7) * 40, 20 + Math.floor(i / 7) * 40); g.scale(40, 40);
+        drawPart(g, i ? types[i % 7] : 'cockpit', f / 60, { lw: 2.5 / 40, on: true, frac: .5, mood: PILOT_MOODS[f % 8] });
+        g.restore();
+      }
+    }
+    return (performance.now() - t0) / 600;
+  };
+  run(); const ms = run();
+  const pre = document.createElement('pre'); pre.id = 'bench'; pre.textContent = 'bench: ' + ms.toFixed(3) + ' ms per 30-part frame';
+  document.body.prepend(pre);
+}
+</script>
+</body>
+</html>

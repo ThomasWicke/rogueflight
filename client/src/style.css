@@ -83,7 +83,9 @@ button:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
 .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin:10px 0 8px;position:relative;padding:6px;border-radius:6px;border:var(--ol) solid var(--ink);
   background-color:#2f4a52;background-image:linear-gradient(rgba(243,231,206,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(243,231,206,.08) 1px,transparent 1px),var(--grain);background-size:12px 12px,12px 12px,160px 160px}
 .cell{aspect-ratio:1;max-width:100%;border:1.5px dashed rgba(243,231,206,.28);background:rgba(243,231,206,.04);border-radius:5px;padding:0;display:grid;place-items:center}
-.cell img{width:96%;height:96%;pointer-events:none;-webkit-user-drag:none}
+/* parts fill their cell and bridge the grid gap, so bolted neighbours look joined */
+.cell{position:relative;overflow:visible}
+.cell img{position:absolute;inset:-2px;width:calc(100% + 4px);height:calc(100% + 4px);pointer-events:none;-webkit-user-drag:none}
 .grid{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 .cell.lift{opacity:.3}
 .cell.drop{outline:3px solid var(--brass);outline-offset:-2px}
@@ -108,7 +110,7 @@ button:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
 .mount{color:var(--teal2)}
 .pal{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
 .pal button{position:relative;display:grid;justify-items:center;gap:1px;background:var(--canvas);border:2px solid var(--ink);border-radius:6px;padding:4px 4px 5px;font-size:12.5px;font-weight:900;min-width:0;box-shadow:2px 2px 0 var(--ink)}
-.pal button img{width:40px;height:40px}
+.pal button img{width:38px;height:38px}
 .pal button[aria-pressed="true"]{background:var(--brass);transform:translateY(-1px);box-shadow:3px 3px 0 var(--ink)}
 .pal button span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.15}
 .pal small{position:absolute;top:-7px;right:-6px;min-width:28px;font-size:11.5px;font-weight:900;color:var(--paper);background:var(--good);border:2px solid var(--ink);border-radius:999px;padding:0 5px;line-height:16px;text-align:center}

@@ -15,6 +15,7 @@ import {
 } from './sim.js';
 import { drawWorld, drawGrain, biomeOf } from './world.js';
 import { audio } from './audio.js';
+import { drawPart, drawPilot, drawParachute } from './art.js';
 import { townOf, showTitle, headline } from './fiction.js';
 import { initGuide, openGuide } from './guide.js';
 
@@ -33,80 +34,9 @@ const mul=x=>x>=1000?fmt(x):x>=10?x.toFixed(1):x.toFixed(2);
 const num=x=>{const r=Math.round(x*100)/100;return (r>=100?fmt(r):String(r))};
 const plural=(n,w)=>n+' '+w+(n===1?'':'s');
 
-/* ================= part drawing ================= */
-function rr(g,x,y,w,h,r){g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath()}
-const INK='#0c1a2c';
-// one visual language: structural parts share a riveted alloy hull; red and amber are the livery accents
-const HULL='#f4f8fb',HULL2='#d3e0eb',SHADE='#9db0c2',RED='#ff6655',AMB='#ffc23d',DARK='#3b4d61';
-function rivets(g,d){g.fillStyle=SHADE;for(const [x,y] of [[-d,-d],[d,-d],[-d,d],[d,d]]){g.beginPath();g.arc(x,y,.035,0,7);g.fill()}}
-function hull(g,fill){rr(g,-.46,-.46,.92,.92,.1);g.fillStyle=fill||HULL;g.fill();
-  g.save();rr(g,-.46,-.46,.92,.92,.1);g.clip();g.fillStyle='rgba(255,255,255,.35)';g.fillRect(-.5,-.5,1,.1);g.fillStyle='rgba(12,26,44,.12)';g.fillRect(-.5,.36,1,.14);g.restore();
-  rr(g,-.46,-.46,.92,.92,.1);g.stroke()}
-function drawPart(g,type,t,o){
-  o=o||{};g.lineWidth=.045;g.strokeStyle=INK;g.lineJoin='round';g.lineCap='round';
-  if(type==='cockpit'){
-    hull(g);
-    g.fillStyle=RED;g.fillRect(-.44,.1,.88,.1);g.fillStyle=AMB;g.fillRect(-.44,.2,.88,.035);
-    g.beginPath();g.moveTo(-.3,-.06);g.quadraticCurveTo(-.26,-.4,.08,-.4);g.quadraticCurveTo(.36,-.38,.4,-.06);g.closePath();
-    g.fillStyle='#8fdcff';g.fill();g.stroke();
-    g.beginPath();g.arc(.0,-.13,.11,0,7);g.fillStyle='#f0c08a';g.fill();
-    g.beginPath();g.arc(.0,-.16,.115,Math.PI*1.05,Math.PI*1.95);g.lineTo(.0,-.16);g.fillStyle='#7a4a2a';g.fill();
-    g.fillStyle=DARK;g.fillRect(.02,-.17,.1,.04);
-    g.fillStyle='rgba(255,255,255,.6)';g.beginPath();g.ellipse(.2,-.27,.05,.08,-.5,0,7);g.fill();
-    rivets(g,.36);
-  }else if(type==='frame'){
-    hull(g,HULL2);
-    // open truss: four triangular cut-outs leave an X brace inside the rim
-    g.fillStyle='#6f87a0';
-    for(const r of [0,1,2,3]){g.save();g.rotate(r*Math.PI/2);g.beginPath();g.moveTo(-.22,-.31);g.lineTo(.22,-.31);g.lineTo(0,-.09);g.closePath();g.fill();g.stroke();g.restore()}
-    rivets(g,.37);g.beginPath();g.arc(0,0,.05,0,7);g.fillStyle=SHADE;g.fill();
-  }else if(type==='tank'){
-    const fr=o.frac==null?1:o.frac;
-    hull(g);
-    rr(g,-.3,-.3,.6,.6,.12);g.fillStyle=DARK;g.fill();
-    g.save();rr(g,-.3,-.3,.6,.6,.12);g.clip();g.fillStyle=AMB;g.fillRect(-.3,.3-.6*fr,.6,.6*fr);
-    g.fillStyle='rgba(255,255,255,.25)';g.fillRect(-.24,-.3,.08,.6);g.restore();
-    rr(g,-.3,-.3,.6,.6,.12);g.stroke();
-    g.strokeStyle='rgba(12,26,44,.5)';g.lineWidth=.03;for(const y of [-.15,0,.15]){g.beginPath();g.moveTo(.16,y);g.lineTo(.3,y);g.stroke()}
-    g.strokeStyle=INK;g.lineWidth=.045;rivets(g,.38);
-  }else if(type==='wing'){
-    // airfoil drawn with its round leading edge at -x, so mirror it to face the nose (+x)
-    g.save();g.scale(-1,1);
-    g.strokeStyle=SHADE;g.lineWidth=.06;g.beginPath();g.moveTo(-.1,.08);g.lineTo(-.1,.5);g.moveTo(.18,.06);g.lineTo(.18,.5);g.stroke();
-    g.strokeStyle=INK;g.lineWidth=.045;
-    g.beginPath();g.moveTo(-.5,.08);g.bezierCurveTo(-.42,-.2,.15,-.22,.5,-.02);g.bezierCurveTo(.2,.08,-.2,.12,-.5,.08);g.closePath();
-    g.fillStyle='#ffffff';g.fill();
-    g.save();g.clip();g.fillStyle=RED;g.fillRect(-.5,-.3,.16,.5);g.fillStyle='rgba(12,26,44,.1)';g.fillRect(-.5,.04,1,.1);g.restore();
-    g.stroke();g.restore();
-  }else if(type==='prop'){
-    // nacelle with cooling fins, spinner and two blades at the nose
-    rr(g,-.46,-.22,.66,.44,.2);g.fillStyle=HULL2;g.fill();g.stroke();
-    g.strokeStyle='rgba(12,26,44,.45)';g.lineWidth=.03;for(const x of [-.3,-.2,-.1]){g.beginPath();g.moveTo(x,-.17);g.lineTo(x,.17);g.stroke()}
-    g.strokeStyle=INK;g.lineWidth=.045;g.fillStyle=RED;g.fillRect(.02,-.2,.07,.4);
-    const bl=.44*Math.abs(Math.cos(t*30))+.05;
-    if(o.on){g.beginPath();g.ellipse(.36,0,.05,.48,0,0,7);g.fillStyle='rgba(43,52,64,.18)';g.fill()}
-    g.beginPath();g.ellipse(.36,0,.06,bl,0,0,7);g.fillStyle=o.on?'rgba(43,52,64,.55)':DARK;g.fill();
-    g.beginPath();g.moveTo(.2,-.13);g.quadraticCurveTo(.46,-.1,.48,0);g.quadraticCurveTo(.46,.1,.2,.13);g.closePath();g.fillStyle=AMB;g.fill();g.stroke();
-  }else if(type==='rocket'){
-    if(o.on){const f=.6+Math.random()*.35;g.beginPath();g.moveTo(-.46,-.15);g.lineTo(-.46-f,0);g.lineTo(-.46,.15);g.closePath();g.fillStyle='#ff8a2a';g.fill();
-      g.beginPath();g.moveTo(-.46,-.08);g.lineTo(-.46-f*.55,0);g.lineTo(-.46,.08);g.closePath();g.fillStyle='#fff1c2';g.fill()}
-    g.beginPath();g.moveTo(-.2,-.18);g.lineTo(-.38,-.36);g.lineTo(-.38,-.14);g.closePath();g.moveTo(-.2,.18);g.lineTo(-.38,.36);g.lineTo(-.38,.14);g.closePath();g.fillStyle=RED;g.fill();g.stroke();
-    g.beginPath();g.moveTo(-.36,-.12);g.lineTo(-.48,-.17);g.lineTo(-.48,.17);g.lineTo(-.36,.12);g.closePath();g.fillStyle=DARK;g.fill();g.stroke();
-    g.beginPath();g.moveTo(-.36,-.19);g.lineTo(.18,-.19);g.quadraticCurveTo(.48,-.14,.5,0);g.quadraticCurveTo(.48,.14,.18,.19);g.lineTo(-.36,.19);g.closePath();
-    g.fillStyle='#eef2f5';g.fill();
-    g.save();g.clip();g.fillStyle=RED;g.fillRect(.2,-.3,.4,.6);g.fillStyle='rgba(12,26,44,.12)';g.fillRect(-.5,.08,1.1,.12);g.fillStyle=AMB;g.fillRect(-.12,-.2,.06,.4);g.restore();
-    g.stroke();
-  }else if(type==='balloon'){
-    g.strokeStyle='rgba(12,26,44,.7)';g.lineWidth=.03;g.beginPath();g.moveTo(0,.5);g.quadraticCurveTo(.05,.42,0,.32);g.stroke();g.strokeStyle=INK;g.lineWidth=.045;
-    g.beginPath();g.moveTo(0,.32);g.bezierCurveTo(-.5,.05,-.42,-.48,0,-.48);g.bezierCurveTo(.42,-.48,.5,.05,0,.32);g.closePath();g.fillStyle=RED;g.fill();
-    g.save();g.clip();g.fillStyle='rgba(12,26,44,.14)';g.beginPath();g.ellipse(.2,0,.28,.6,0,0,7);g.fill();g.restore();
-    g.beginPath();g.moveTo(0,.32);g.bezierCurveTo(-.5,.05,-.42,-.48,0,-.48);g.bezierCurveTo(.42,-.48,.5,.05,0,.32);g.closePath();g.stroke();
-    g.beginPath();g.moveTo(-.06,.36);g.lineTo(.06,.36);g.lineTo(0,.3);g.closePath();g.fillStyle='#c23a30';g.fill();
-    g.beginPath();g.ellipse(-.18,-.24,.05,.1,-.4,0,7);g.fillStyle='rgba(255,255,255,.6)';g.fill();
-  }
-}
+/* ================= part drawing (art.js) ================= */
 const ICON={};
-for(const t of Object.keys(PARTS)){const c=document.createElement('canvas');c.width=c.height=96;const g=c.getContext('2d');g.translate(48,48);g.scale(84,84);drawPart(g,t,.33,{frac:.7});ICON[t]=c.toDataURL()}
+for(const t of Object.keys(PARTS)){const c=document.createElement('canvas');c.width=c.height=96;const g=c.getContext('2d');g.translate(48,48);g.scale(96,96);drawPart(g,t,.33,{frac:.7,lw:.055});ICON[t]=c.toDataURL()}
 
 const $=id=>document.getElementById(id);
 const veil=$('veil'), sheet=$('sheet'), bench=$('bench');
@@ -427,7 +357,7 @@ function showBoons(){
 /* ================= parts packs ================= */
 // every contract starts with packs to open: shake, tear the top off, burst, the part pops out and flies to the tray
 const BIG={};
-function bigIcon(t){if(!BIG[t]){const c=document.createElement('canvas');c.width=c.height=240;const g=c.getContext('2d');g.translate(120,120);g.scale(210,210);drawPart(g,t,.33,{frac:1});BIG[t]=c.toDataURL()}return BIG[t]}
+function bigIcon(t){if(!BIG[t]){const c=document.createElement('canvas');c.width=c.height=240;const g=c.getContext('2d');g.translate(120,120);g.scale(210,210);drawPart(g,t,.33,{frac:1,lw:.035});BIG[t]=c.toDataURL()}return BIG[t]}
 const isEngine=t=>t==='prop'||t==='rocket';
 // the packet is two copies of one face: the cap above a jagged tear line and the body below it, so it looks whole until torn
 const PW=178,PH=164,CAP=34,TEAR=3;
@@ -665,10 +595,10 @@ function draw(now){
   const {S,st}=F,K=F.K, cam=F.cam;
   const v=Math.hypot(S.vx,S.vy);
   const pre=F.pre>0;
-  const viewH=pre?60:Math.max(36,S.y*1.25+18,v*1.3);
+  const viewH=pre?50:Math.max(30,S.y*1.25+16,v*1.3);
   cam.sc=Math.exp(lerp(Math.log(cam.sc),Math.log(vh/viewH),pre?.25:.08));
   const sc=cam.sc;
-  const tx=pre?-12:S.x+.16*vw/sc;
+  const tx=pre?-10:S.x+.16*vw/sc;
   cam.x=F.camSet?lerp(cam.x,tx,pre?1:Math.min(1,.06+S.t*.5)):tx;F.camSet=1;
   cam.y=Math.max(S.y+RES*.5/sc,.35*vh/sc);
   const X=wx=>vw/2+(wx-cam.x)*sc, Y=wy=>vh/2-(wy-cam.y)*sc;
@@ -737,7 +667,7 @@ function hud(dt){
 /* ================= results ================= */
 const reduceMotion=()=>window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
 // sound hook: the audio module plugs in here (audio.js); every call is optional so the game runs silent without it
-let AUDIO=audio, DECAL=null, ART=null;
+let AUDIO=audio, DECAL=null, ART={drawParachute};
 const sfx=(n,o)=>{try{AUDIO&&AUDIO.sfx(n,o)}catch(_){}};
 // haptics only after the player has really touched the page (browsers refuse vibration before that)
 const buzz=p=>{try{const ua=navigator.userActivation;if(navigator.vibrate&&(!ua||ua.hasBeenActive))navigator.vibrate(p)}catch(_){}};
