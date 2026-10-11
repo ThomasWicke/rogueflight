@@ -1,6 +1,6 @@
-# The rogueflight game server: live rooms (Durable Objects + WebSockets) and the daily leaderboard (D1).
+# The Wingnut Circus game server: live rooms (Durable Objects + WebSockets) and the daily leaderboard (D1).
 # Deploy: npx wrangler deploy --config server/wrangler.toml
-name = "rogueflight-server"
+name = "wingnutcircus-server"
 main = "worker.js"
 compatibility_date = "2026-09-01"
 

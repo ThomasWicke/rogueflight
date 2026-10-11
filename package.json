@@ -1,17 +1,17 @@
 {
-  "name": "rogueflight",
-  "version": "0.2.0",
+  "name": "wingnutcircus",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "description": "Roguelite flying-machine builder. Build a craft on a grid, fly it with real-ish physics, hit escalating score quotas.",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "build:itch": "vite build --mode itch --base ./ --outDir ../dist-itch && cd dist-itch && rm -f sw.js _headers && zip -qr ../rogueflight-itch.zip . && cd .. && echo rogueflight-itch.zip",
+    "build:itch": "vite build --mode itch --base ./ --outDir ../dist-itch && cd dist-itch && rm -f sw.js _headers && zip -qr ../wingnutcircus-itch.zip . && cd .. && echo rogueflight-itch.zip",
     "preview": "vite preview --host",
     "test": "node --test tests/*.test.js",
     "bot": "node tools/bot.js",
-    "itch:push": "npm run build:itch && butler push rogueflight-itch.zip $ITCH_USER/rogueflight:html5 --userversion $npm_package_version"
+    "itch:push": "npm run build:itch && butler push wingnutcircus-itch.zip $ITCH_USER/wingnut-circus:html5 --userversion $npm_package_version"
   },
   "dependencies": {
     "@fontsource/bowlby-one": "^5.3.0",

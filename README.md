@@ -1,6 +1,6 @@
-# rogueflight
+# Wingnut Circus
 
-A roguelite flying-machine builder for your phone. Buy parts, bolt them onto a grid, launch, and fly far enough to hit each contract's score quota. Eight contracts per run, three flights each.
+A roguelite flying-machine builder for your phone (formerly RogueFlight). Buy parts, bolt them onto a grid, launch, and fly far enough to hit each contract's score quota. Eight contracts per run, three flights each.
 
 ## Develop
 

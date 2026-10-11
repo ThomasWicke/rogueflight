@@ -1,4 +1,4 @@
-// rogueflight UI: hangar (build / shop / mods), flight rendering + input, results and run screens.
+// Wingnut Circus UI: hangar (build / shop / mods), flight rendering + input, results and run screens.
 import {
   GIMBAL, NEUT, PAR, VAC, VAC2, C_LIGHT, G0, COLS,
   ROWS, COCKPIT, MAXMODS, FLIGHTS, CONTRACTS, FLIGHT_TIME, clamp, PARTS, PALETTE,
@@ -24,9 +24,14 @@ import { townOf, showTitle, headline } from './fiction.js';
 import { initGuide, openGuide } from './guide.js';
 
 /* ================= persistence ================= */
-const KEY='rogueflight-1';
+const KEY='rogueflight-1'; // storage keys keep the game's original id (RogueFlight) so saves survive the rename
 const META0={runs:0,wins:0,bestStage:0,bestFlight:0,deepest:0,level:0};
 // save.run: the main run; save.daily: a daily or random puzzle in progress; save.online: the run of the live room save.room
+// arriving from the old address (see MOVED): take over the save it handed over in the URL fragment, unless this
+// browser already has one here. The fragment never reaches any server.
+{const m=location.hash.match(/^#move=(.+)$/);if(m){try{const d=JSON.parse(decodeURIComponent(escape(atob(m[1]))));
+  for(const [k,v] of [[KEY,d.save],['rogueflight-client',d.client],['rogueflight-audio',d.audio]])if(v&&!localStorage.getItem(k))localStorage.setItem(k,v)}catch(_){}
+  history.replaceState(null,'',location.pathname+location.search)}}
 let save=(()=>{try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s&&s.meta)return {meta:{...META0,...s.meta},run:s.run||null,daily:s.daily||null,online:s.online||null,room:s.room||null}}catch(e){}return {meta:{...META0},run:null,daily:null,online:null,room:null}})();
 if(save.daily&&save.daily.phase==='done')save.daily=null;
 function persist(){try{localStorage.setItem(KEY,JSON.stringify(save))}catch(e){}}
@@ -55,19 +60,21 @@ const metaOf=r=>r&&r.mode&&r.mode!=='run'?{bestStage:CONTRACTS,level:0}:save.met
 const esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let armAbandon=false;
 function runCode(r){if(!r)return '';const L=t=>t==='cockpit'?'c':t[0];
-  return 'ROGUEFLIGHT '+JSON.stringify({lvl:r.level,cleared:r.stage,boons:r.boons||{},endless:!!r.endless,coins:r.coins,mods:r.mods.map(id=>{const L=modLevels(r)[id];return L>1?id+':'+L:id}),tune:r.tune,inv:r.inv,
+  return JSON.stringify({lvl:r.level,cleared:r.stage,boons:r.boons||{},endless:!!r.endless,coins:r.coins,mods:r.mods.map(id=>{const L=modLevels(r)[id];return L>1?id+':'+L:id}),tune:r.tune,inv:r.inv,
     cells:r.cells.map(c=>L(c.type)+c.c+c.r).join(' '),log:r.log.map(l=>[l.stage+1,l.flight,l.score,l.d,l.x,l.s||null]),ev:r.ev||[]})}
 // telemetry: after every flight and when a run ends, the run goes to /api/run (a Pages Function storing it in D1, one row
 // per run, updated in place) for balancing. Each flight carries a snapshot (build, score lines, height, speed, how it
 // ended); ev lists purchases, sales, rerolls, packs and storm rewards. Anonymous: a random id per browser and the run code.
 // Production builds only.
 // the game's home: copies hosted elsewhere (itch.io, a future app) send telemetry and invite links here
-const HOME='https://rogueflight.pages.dev', ATHOME=/(^|\.)rogueflight\.pages\.dev$|^localhost$|^127\.0\.0\.1$/.test(location.hostname);
+// MOVED: once the new domain serves the game, set it here; the old address then sends players over with their save
+const HOME='https://rogueflight.pages.dev', MOVED=null,
+  ATHOME=/(^|\.)rogueflight\.pages\.dev$|(^|\.)wingnutcircus\.com$|^localhost$|^127\.0\.0\.1$/.test(location.hostname);
 const homeURL=p=>(ATHOME?location.origin:HOME)+p;
 function clientId(){try{let id=localStorage.getItem('rogueflight-client');if(!id){id=Math.random().toString(36).slice(2)+Date.now().toString(36);localStorage.setItem('rogueflight-client',id)}return id}catch(_){return ''}}
 function reportRun(r,finished){
   if(!import.meta.env.PROD||!r||!r.log.length)return;
-  try{const data={...JSON.parse(runCode(r).slice('ROGUEFLIGHT '.length)),weather:r.weather,seed:r.seed};const mode=r.mode||'run';
+  try{const data={...JSON.parse(runCode(r)),weather:r.weather,seed:r.seed};const mode=r.mode||'run';
     // beacons cap at 64 KB: very long endless runs keep snapshots for their last 100 flights only
     if(JSON.stringify(data).length>55000)data.log=data.log.map((l,i,a)=>i<a.length-100?l.slice(0,5):l);
     const body=JSON.stringify({client:clientId(),run_id:clientId()+':'+mode+':'+r.seed,mode,version:__VERSION__+'+'+__BUILD__,level:r.level,cleared:r.stage,endless:!!r.endless,
@@ -908,7 +915,7 @@ function completeDaily(r){
   const m=save.meta;
   if(r.ranked){m.daily=m.daily||{};m.daily[r.day]={score:r.total};m.dailyEver=true;
     const keys=Object.keys(m.daily).map(Number).sort((a,b)=>b-a);for(const k of keys.slice(7))delete m.daily[k];
-    m.dailyPending={day:r.day,score:r.total,data:JSON.parse(runCode(r).slice('ROGUEFLIGHT '.length))}}
+    m.dailyPending={day:r.day,score:r.total,data:JSON.parse(runCode(r))}}
   persist();
 }
 // a ranked score waits in meta.dailyPending until the server has it (offline phones send it later)
@@ -1037,7 +1044,7 @@ function showLobby(){
     <button class="ghost" id="rLeave" type="button">Leave</button>`;
   veil.hidden=false;
   $('rShare').onclick=()=>{const b=$('rShare');const done=()=>{b.textContent='Link copied'};
-    try{if(navigator.share)navigator.share({title:'RogueFlight',text:'Fly with me! Room '+R0.code,url:link}).catch(()=>{});else navigator.clipboard.writeText(link).then(done,()=>{b.textContent=link})}catch(_){b.textContent=link}};
+    try{if(navigator.share)navigator.share({title:'Wingnut Circus',text:'Fly with me! Room '+R0.code,url:link}).catch(()=>{});else navigator.clipboard.writeText(link).then(done,()=>{b.textContent=link})}catch(_){b.textContent=link}};
   $('rMode').onclick=e=>{const b=e.target.closest('button');if(b&&host)NET.send({t:'mode',mode:b.dataset.m})};
   const nm=$('rName');nm.onchange=()=>{const n=nm.value.trim().slice(0,16);if(!n)return;save.meta.name=n;persist();NET.send({t:'hello',id:clientId(),name:n})};
   if($('rBot'))$('rBot').onclick=()=>NET.send({t:'addbot'});
@@ -1196,6 +1203,9 @@ syncSound();
 if(import.meta.env.DEV)window.__rf={F:()=>F,R,frame:n=>frame(n)};
 
 /* ================= boot ================= */
+// moving house: the old address sends players to the new one, carrying their save in the URL fragment
+if(MOVED&&location.hostname==='rogueflight.pages.dev'){let p='';try{p=btoa(unescape(encodeURIComponent(JSON.stringify({save:localStorage.getItem(KEY),
+  client:localStorage.getItem('rogueflight-client'),audio:localStorage.getItem('rogueflight-audio')}))))}catch(_){}location.replace(MOVED+'/'+location.search+(p?'#move='+p:''))}
 show('title');renderTitle();
 // an invite link (?room=CODE) drops straight into that room's lobby
 {const q=new URLSearchParams(location.search).get('room');if(q&&/^[A-Za-z]{4}$/.test(q)){history.replaceState(null,'',location.pathname);joinRoom(q.toUpperCase())}}

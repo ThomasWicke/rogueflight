@@ -1,7 +1,7 @@
 {
-  "name": "RogueFlight",
-  "short_name": "RogueFlight",
-  "description": "Roguelite flying-machine builder: build, fly, hit the quota.",
+  "name": "Wingnut Circus",
+  "short_name": "Wingnut Circus",
+  "description": "Bolt together a junk plane, fly it, hit the target. A roguelite for phones.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -9,8 +9,23 @@
   "background_color": "#33200f",
   "theme_color": "#33200f",
   "icons": [
-    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ]
 }

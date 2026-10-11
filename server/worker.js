@@ -1,4 +1,4 @@
-// rogueflight game server (Cloudflare Worker).
+// Wingnut Circus game server (Cloudflare Worker).
 //   GET  /health                      liveness, checks the Room Durable Object and D1
 //   GET  /daily?day=N&client=ID       daily puzzle leaderboard: top 20, total entries, the caller's rank
 //   POST /daily {day,client,name,score,data}   submit a daily score; only the first submission per client and day counts
@@ -30,7 +30,7 @@ export default {
       if (req.headers.get('Upgrade') !== 'websocket') return json({ error: 'expected a websocket' }, 426);
       return env.ROOMS.get(env.ROOMS.idFromName(m[1])).fetch(new Request(`https://room/${m[1]}`, req));
     }
-    return json({ name: 'rogueflight server' });
+    return json({ name: 'wingnut circus server' });
   },
 };
 

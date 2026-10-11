@@ -1,4 +1,4 @@
-// RogueFlight sound: everything is synthesized with the Web Audio API (no samples, no libraries).
+// Wingnut Circus sound: everything is synthesized with the Web Audio API (no samples, no libraries).
 // Direction (docs/circus-style.md): a small swing/ragtime band, foley (wood, canvas, rope, tin, crowd),
 // a procedural engine and a three-note brass signature (G4 C5 E5, "ta-da-DAAH").
 //
@@ -9,7 +9,7 @@
 // Graph: voices -> sfx bus / music layers -> master (mute fader) -> headroom -> compressor -> limiter -> out.
 // The engine bus feeds the sfx bus. A short damped echo ("room slap") gives a little space; no reverb tail.
 
-const KEY = 'rogueflight-audio';
+const KEY = 'rogueflight-audio'; // storage keys keep the old project id so settings and saves survive the rename
 const DEV = !!(import.meta.env && import.meta.env.DEV);
 const W = typeof window !== 'undefined' ? window : null;
 const AC = W && (W.AudioContext || W.webkitAudioContext);

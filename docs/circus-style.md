@@ -1,6 +1,6 @@
 # The Flying Circus: style guide
 
-RogueFlight's world: a broke barnstorming troupe tours eight towns per season in a junk plane flown by a goat.
+Wingnut Circus's world: a broke barnstorming troupe tours eight towns per season in a junk plane flown by a goat.
 Every flight is a show. This guide is the rule set every screen, part, icon and sound follows.
 Design brief with the reasoning: https://claude.ai/artifact/Vcut2B3oqPzFQHH3y1YKEz
 

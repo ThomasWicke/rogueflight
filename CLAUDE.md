@@ -1,10 +1,12 @@
-# rogueflight
+# Wingnut Circus
 
 Roguelite flying-machine builder for phones. Build a craft on a 7×5 grid (Bad Piggies style), launch it, fly it with simple but honest physics, and hit escalating score quotas across 8 contracts per run (Slay the Spire / CloverPit structure). Plain JS + Vite, no framework. Installed and played as a PWA, deployed on Cloudflare Pages.
 
 Visual identity: **The Flying Circus**. A broke barnstorming troupe tours eight towns per season in a junk plane flown by a goat; every flight is a show and the score is the crowd. Read `docs/circus-style.md` before drawing or styling anything. Labels and rules use plain game terms (Run, Contract, Flight, Score, Target, Coins, Shop, Packs, Mods, Tuning, Storm reward, Difficulty, Endless); the fiction stays in visuals, town names and headlines.
 
-The game was prototyped as a single-file Claude artifact under the working title **Skyward** and ported here. Old run codes from the prototype start with `SKYWARD ` instead of `ROGUEFLIGHT `.
+The game was prototyped as a single-file Claude artifact under the working title **Skyward**, then shipped as **RogueFlight** and renamed **Wingnut Circus** on 2026-10-11 (an existing console game is called Rogue Flight). Technical ids still say `rogueflight` on purpose: the repo folder, localStorage keys (`rogueflight-1`, `rogueflight-client`, `rogueflight-audio`, so saves survive), the D1 database `rogueflight`, the Cloudflare Pages project `rogueflight` (rogueflight.pages.dev) and the old Worker `rogueflight-server` (kept running for installed copies of older builds). Player-facing text, the logo, page title, manifest, game server (`wingnutcircus-server`) and store assets use the new name.
+
+Moving to a new domain: set `MOVED` in ui.js to the new origin; rogueflight.pages.dev then redirects there with the save in the URL fragment (`#move=`), which the new origin imports if it has no save yet. Add the new host to `ATHOME` and `HOME`.
 
 ## Commands
 
@@ -16,7 +18,7 @@ npm run bot -- 20 climb --seed=1   # balance harness: 20 scripted runs (policies
                                    #   --storm=<weather id>|none forces one storm onto contracts 3, 6, 8; --ceiling=N)
 npm run build     # -> dist/
 npm run preview   # serve dist/ (service worker only registers in production builds)
-npm run build:itch   # itch.io HTML5 build -> rogueflight-itch.zip (relative paths, no service worker; telemetry and invite links point to rogueflight.pages.dev)
+npm run build:itch   # itch.io HTML5 build -> wingnutcircus-itch.zip (relative paths, no service worker; telemetry and invite links point to HOME in ui.js)
 ITCH_USER=<name> npm run itch:push   # build and upload to itch.io with butler (needs `butler login` once), tagged with package.json version
 npx wrangler deploy --config server/wrangler.toml   # deploy the game server (daily leaderboard + live rooms)
 ```
@@ -45,7 +47,7 @@ tests/sim.test.js        headless sim checks (no browser)
 functions/api/run.js     Pages Function storing finished runs in D1 (schema.sql)
 client/src/net.js        client side of the game server: daily leaderboard fetches, room WebSocket with auto-reconnect
 client/src/bots.js       pure: Elimination bots (craft, tunings, pilot) seeded by room seed, round and bot number
-server/worker.js         game server Worker (rogueflight-server.thomaswi1998.workers.dev): /daily leaderboard in D1, Room Durable Object for live rooms
+server/worker.js         game server Worker (wingnutcircus-server.thomaswi1998.workers.dev): /daily leaderboard in D1, Room Durable Object for live rooms
 server/wrangler.toml     its config: Durable Object ROOMS (class Room), D1 binding DB
 tools/bot.js             balance harness (scripted shopper, builder, pilot), prints contracts reached and per-contract score spread
 ```
@@ -100,7 +102,7 @@ Code style is dense (many one-line functions, short names: `S` flight state, `K`
 - **Fair randomness.** Bad luck is fine when it punishes a risk the player could see; it is unfair when hidden or unavoidable. Hence storms are revealed at run start. Ask "could the player have seen it and responded?" before adding random modifiers.
 - Mobile portrait, played one-handed in short sessions. Respect safe areas (`--reserve` = `env(safe-area-inset-top)`).
 - Telemetry: production builds POST the run to `/api/run` after every flight and when it ends (one row per run, upserted by `run_id` = client:mode:seed, with `mode`, `flights`, `finished`). Each log entry carries a snapshot `s` (mods with levels, tunings, cells, score lines, max height, top speed in km/h, how it ended, fuel, coins) and `run.ev` notes buys, sells, rerolls, packs and storm rewards as `[kind, contract, flight, ...]`. `functions/api/run.js` (a Pages Function) stores it in D1 (binding `DB`, schema in `schema.sql`; see README for setup). Anonymous: a random per-browser id plus the run code. Without the binding the endpoint accepts and drops runs. Set up on 2026-10-10 (D1 database `rogueflight`, binding `DB` on Production); row 1 is a `setup-test` row.
-- Balance feedback: every finished run is in D1 (`runs.data`, daily puzzles in `daily_scores.data`); the in-game "Copy run" buttons were removed. The run code (`runCode` in ui.js) is `ROGUEFLIGHT {json}` (prototype codes: `SKYWARD {json}`) with mods (`id:level` above Lv 1), tune, inv, a compact cells string (`c22 p32 …` = type initial + column + row), and a log of `[contract, flight, score, distance, mult]`.
+- Balance feedback: every finished run is in D1 (`runs.data`, daily puzzles in `daily_scores.data`); the in-game "Copy run" buttons were removed. The run code (`runCode` in ui.js) is JSON with mods (`id:level` above Lv 1), tune, inv, a compact cells string (`c22 p32 …` = type initial + column + row), and a log of `[contract, flight, score, distance, mult]`.
 
 ## Balance notes
 - The bot starts from the universal start, opens its packs and shops before every flight, and picks its layout by test-flying variants of its inventory in the forecast weather. Pilots press buttons like a player (pitch −1/0/+1, re-decided every 0.2 s). `climb` waits for flying speed, climbs at about 35° under power, then glides hands-off, using full or 60% throttle (whichever tested better for the build). That is how a good human flies. `hands` is the old weak baseline. `--seed=N` makes runs repeatable, so compare balance changes with the same seed.

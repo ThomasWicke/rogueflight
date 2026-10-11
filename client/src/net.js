@@ -1,5 +1,5 @@
 // Talking to the game server (server/worker.js): the daily puzzle leaderboard and live rooms over a WebSocket.
-const SERVER = (import.meta.env.VITE_SERVER || 'https://rogueflight-server.thomaswi1998.workers.dev').replace(/\/$/, '');
+const SERVER = (import.meta.env.VITE_SERVER || 'https://wingnutcircus-server.thomaswi1998.workers.dev').replace(/\/$/, '');
 
 async function api(path, body) {
   const res = await fetch(SERVER + path, body ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) } : {});

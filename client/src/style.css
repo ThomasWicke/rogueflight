@@ -454,8 +454,8 @@ button:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
 .titlebench{padding-top:calc(var(--reserve) + 18px)}
 .logo{display:grid;justify-items:center;transform:rotate(-3deg);margin:6px auto 0;position:relative}
 .logo .l1,.logo .l2{font-family:var(--display);line-height:.86;letter-spacing:.01em;-webkit-text-stroke:2px var(--ink)}
-.logo .l1{font-size:clamp(46px,15vw,72px);color:var(--paper);text-shadow:5px 5px 0 var(--ink)}
-.logo .l2{font-size:clamp(50px,16.5vw,80px);color:var(--brass);text-shadow:5px 5px 0 var(--ink);margin-top:-2px}
+.logo .l1{font-size:clamp(40px,12.6vw,62px);color:var(--paper);text-shadow:5px 5px 0 var(--ink)}
+.logo .l2{font-size:clamp(46px,14.8vw,72px);color:var(--brass);text-shadow:5px 5px 0 var(--ink);margin-top:-2px}
 .ribbon{margin-top:8px;font-family:var(--display);font-size:clamp(14px,4.4vw,19px);color:var(--paper);background:var(--red);border:var(--ol) solid var(--ink);padding:4px 26px 3px;
   clip-path:polygon(0 0,100% 0,94% 50%,100% 100%,0 100%,6% 50%);box-shadow:none;letter-spacing:.06em;text-shadow:2px 2px 0 rgba(34,40,58,.35)}
 .titlecv{width:100%;height:150px;display:block;margin:-6px auto -10px}

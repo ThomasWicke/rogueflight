@@ -1,4 +1,4 @@
-// rogueflight simulation core: pure game logic, no DOM.
+// Wingnut Circus simulation core: pure game logic, no DOM.
 // Physics (step), craft assembly (makeCraft), scoring (scoreFlight), economy and run state (newRun, settleFlight).
 // Imported by the browser UI (ui.js) and by the node tests/tools, so keep it free of window/document.
 const GIMBAL=.4, NEUT=.8, PAR=.0016, VAC=.002, VAC2=1.5e-4, C_LIGHT=299792458, G0=9.81, COLS=7, ROWS=5, COCKPIT={c:2,r:2};
