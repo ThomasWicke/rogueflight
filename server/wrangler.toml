@@ -1,0 +1,18 @@
+# The rogueflight game server: live rooms (Durable Objects + WebSockets) and the daily leaderboard (D1).
+# Deploy: npx wrangler deploy --config server/wrangler.toml
+name = "rogueflight-server"
+main = "worker.js"
+compatibility_date = "2026-09-01"
+
+[[durable_objects.bindings]]
+name = "ROOMS"
+class_name = "Room"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Room"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "rogueflight"
+database_id = "91145eab-74b6-4257-902a-65e56841b558"
