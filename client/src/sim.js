@@ -2,11 +2,19 @@
 // Physics (step), craft assembly (makeCraft), scoring (scoreFlight), economy and run state (newRun, settleFlight).
 // Imported by the browser UI (ui.js) and by the node tests/tools, so keep it free of window/document.
 const GIMBAL=.4, NEUT=.8, PAR=.0016, VAC=.002, VAC2=1.5e-4, C_LIGHT=299792458, G0=9.81, COLS=7, ROWS=5, COCKPIT={c:2,r:2};
-const MAXMODS=5, FLIGHTS=3, CONTRACTS=8, FLIGHT_TIME=300;
+const MAXMODS=5, FLIGHTS=3, CONTRACTS=8, FLIGHT_TIME=300, DAILY_COINS=100;
+// the physics step: callers advance step() in fixed 1/120 s steps so a flight is reproducible from its inputs
+const SIM_DT=1/120;
 // style goals a dedicated build can reach: Redline (500 km/h, needs a strong rocket build) and Cloud nine (5 km, balloons
 // with Weather Envelope Lv 2+, or balloons then rockets). The old sound barrier and 100 km were out of reach for any craft.
 const REDLINE=500/3.6, CLOUD9=5000;
 const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+// Gameplay randomness: each run carries its own seeded generator state (run.rs, mulberry32), so one seed fixes the shop,
+// packs, weather and storm rewards for everyone (daily puzzles, shared rooms, replays). Entry points that roll dice for a run
+// set it as the current run; with no current run (or an old save without rs) rolls fall back to Math.random.
+let CUR=null;
+function rnd(){if(CUR&&CUR.rs!=null){let t=(CUR.rs=(CUR.rs+0x6d2b79f5)>>>0);t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296}return Math.random()}
+const seeded=(run,fn)=>{const prev=CUR;CUR=run;try{return fn()}finally{CUR=prev}};
 
 /* ---------- parts ---------- */
 const PARTS={
@@ -117,11 +125,12 @@ const BOONS={
   land:{name:'Soft Landing',d:'Touchdown +0.25 mult.'},
 };
 const boonN=(run,id)=>(run.boons&&run.boons[id])||0;
-function rollBoons(run){
+function rollBoons(run){return seeded(run,()=>_rollBoons(run))}
+function _rollBoons(run){
   const lv=modLevels(run), canUp=run.mods.filter(id=>lv[id]<MODMAX);
   const pool=Object.keys(BOONS).filter(k=>!(BOONS[k].once&&boonN(run,k))&&!(BOONS[k].up&&!canUp.length));
-  for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]]}
-  return pool.slice(0,2).map(id=>id==='upgrade'?{id,mod:canUp[Math.floor(Math.random()*canUp.length)]}:{id})}
+  for(let i=pool.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]]}
+  return pool.slice(0,2).map(id=>id==='upgrade'?{id,mod:canUp[Math.floor(rnd()*canUp.length)]}:{id})}
 const boonDesc=o=>BOONS[o.id].d.replace('{mod}',o.mod?MODS[o.mod].name:'');
 function pickBoon(run,i){
   const o=run.boonOffer&&run.boonOffer[i];if(!o)return false;
@@ -150,8 +159,9 @@ const ceilingRules=level=>Object.keys(CEILING_RULES).filter(k=>+k<=(level||0)).m
 const isStorm=(i,level)=>i===CONTRACTS-1||i%3===2||((level||0)>=4&&i===4);
 // storm strength grows with the contract; from Ceiling 8 every storm counts as two contracts later
 const severity=(run,i)=>i+((run.level||0)>=8?2:0);
-function weatherOf(run,i){if(!isStorm(i,run.level))return null;
-  if(!run.weather[i]){const used=Object.values(run.weather);const ids=Object.keys(WEATHER).filter(k=>!used.includes(k));const pool=ids.length?ids:Object.keys(WEATHER);run.weather[i]=pool[Math.floor(Math.random()*pool.length)]}
+function weatherOf(run,i){return seeded(run,()=>_weatherOf(run,i))}
+function _weatherOf(run,i){if(run.mode==='daily'||!isStorm(i,run.level))return null;
+  if(!run.weather[i]){const used=Object.values(run.weather);const ids=Object.keys(WEATHER).filter(k=>!used.includes(k));const pool=ids.length?ids:Object.keys(WEATHER);run.weather[i]=pool[Math.floor(rnd()*pool.length)]}
   return run.weather[i]}
 
 /* ---------- physics stats ---------- */
@@ -409,21 +419,25 @@ function scoreFlight(f,ctx){
 }
 
 /* ---------- run ---------- */
-function wpick(obj){let s=0;for(const k in obj)s+=obj[k];let r=Math.random()*s;for(const k in obj){r-=obj[k];if(r<=0)return k}return Object.keys(obj)[0]}
+function wpick(obj){let s=0;for(const k in obj)s+=obj[k];let r=rnd()*s;for(const k in obj){r-=obj[k];if(r<=0)return k}return Object.keys(obj)[0]}
 const PART_W={frame:3,wing:3,tank:2.5,prop:2,rocket:1.5,balloon:1.5};
 // owned mods below MODMAX come back as upgrades, a bit less often than new mods
-function rollMods(run,meta,n,exclude){
+function rollMods(run,meta,n,exclude){return seeded(run,()=>_rollMods(run,meta,n,exclude))}
+function _rollMods(run,meta,n,exclude){
   const lv=modLevels(run);
   const pool=Object.keys(MODS).filter(k=>modUnlocked(k,meta)&&(!lv[k]||lv[k]<MODMAX)&&!exclude.includes(k)),out=[];
   while(out.length<n&&pool.length){const w={};for(const k of pool)w[k]=RARITY[MODS[k].r].w*(lv[k]?.7:1);const k=wpick(w);out.push(k);pool.splice(pool.indexOf(k),1)}
   return out}
-function rollTunes(run,n,exclude){
+function rollTunes(run,n,exclude){return seeded(run,()=>_rollTunes(run,n,exclude))}
+function _rollTunes(run,n,exclude){
   const pool=Object.keys(TUNES).filter(k=>(!TUNES[k].needs||(run.inv[TUNES[k].needs]||0)>0)&&!(TUNES[k].max&&(run.tune[k]||0)>=TUNES[k].max)&&!exclude.includes(k));
-  for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]]}
+  for(let i=pool.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]]}
   return pool.slice(0,n)}
-function genShop(run,meta){return {parts:[0,1,2].map(()=>({t:wpick(PART_W)})),tunes:rollTunes(run,2,[]).map(k=>({k})),mods:rollMods(run,meta,3,[]).map(id=>({id})),rerolls:0}}
+function genShop(run,meta){return seeded(run,()=>_genShop(run,meta))}
+function _genShop(run,meta){return {parts:[0,1,2].map(()=>({t:wpick(PART_W)})),tunes:rollTunes(run,2,[]).map(k=>({k})),mods:rollMods(run,meta,3,[]).map(id=>({id})),rerolls:0}}
 // a reroll is a whole new shop, sold slots included; only the mods on offer right now are kept out of the new picks
-function rerollShop(run,meta){
+function rerollShop(run,meta){return seeded(run,()=>_rerollShop(run,meta))}
+function _rerollShop(run,meta){
   const S=run.shop;
   S.parts=[0,1,2].map(()=>({t:wpick(PART_W)}));
   S.tunes=rollTunes(run,2,[]).map(k=>({k}));
@@ -450,10 +464,12 @@ function flightStats(run){const w=weatherOf(run,run.stage),fx=weatherFx(w,severi
   const st=stats(run.tune,modLevels(run),fx),b=k=>boonN(run,k);
   st.drag*=Math.pow(.92,b('drag'));st.grav*=Math.pow(.92,b('grav'));const fm=Math.pow(1.12,b('fuel'));st.tankFuel*=fm;st.reserve*=fm;
   return st}
-function newRun(level,meta){
-  // seed: cosmetic only (town names, headlines in fiction.js); gameplay randomness stays on Math.random
-  const run={seed:Math.floor(Math.random()*1e9),level:level||0,stage:0,flight:0,score:0,total:0,best:0,bestDist:0,coins:START.coins,inv:{...START.inv},
+// opts.seed fixes everything random in the run; opts.mode: 'run' (default), 'daily' (one contract, 100 coins, no storms), 'team'
+function newRun(level,meta,opts={}){
+  const seed=opts.seed!=null?opts.seed>>>0:Math.floor(Math.random()*4294967296);
+  const run={seed,rs:seed,mode:opts.mode||'run',level:level||0,stage:0,flight:0,score:0,total:0,best:0,bestDist:0,coins:START.coins,inv:{...START.inv},
     cells:[{...COCKPIT,type:'cockpit'}],mods:[],modLv:{},boons:{},boonOffer:null,tune:{},weather:{},shop:null,phase:'contract',log:[],endless:false,unlocks:[],packs:[]};
+  if(run.mode==='daily')run.coins=DAILY_COINS;
   run.shop=genShop(run,meta);
   grantPacks(run);
   for(let i=0;i<CONTRACTS;i++)weatherOf(run,i);
@@ -461,11 +477,16 @@ function newRun(level,meta){
 // parts packs: one random part each, handed out at the start of every contract (2, or 4 for the first).
 // The opening four always hold a tank, a wing and an engine, so every run can fly; the fourth is random.
 const PACKS=2, FIRST_PACKS=4;
+// daily puzzles: number N is the Nth UTC day since launch; its seed is a hash of N, the same for everyone
+const DAILY_EPOCH=Date.UTC(2026,9,11);
+const dailyNumber=(ms=Date.now())=>Math.floor((ms-DAILY_EPOCH)/86400000)+1;
+function dailySeed(n){let h=(n*2654435761)>>>0;h^=h>>>16;h=Math.imul(h,0x45d9f3b)>>>0;h^=h>>>16;return h>>>0}
 function rollPacks(first){
   const out=first?['tank','wing',wpick({prop:PART_W.prop,rocket:PART_W.rocket}),wpick(PART_W)]:Array.from({length:PACKS},()=>wpick(PART_W));
-  for(let i=out.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[out[i],out[j]]=[out[j],out[i]]}
+  for(let i=out.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[out[i],out[j]]=[out[j],out[i]]}
   return out}
-function grantPacks(run){const first=run.stage===0&&!run.endless;(run.packs=run.packs||[]).push(...rollPacks(first).slice(0,first||(run.level||0)<6?99:1))}
+function grantPacks(run){return seeded(run,()=>_grantPacks(run))}
+function _grantPacks(run){const first=run.stage===0&&!run.endless;(run.packs=run.packs||[]).push(...rollPacks(first).slice(0,first||(run.level||0)<6?99:1))}
 function openPack(run){const t=run.packs&&run.packs.shift();if(t)run.inv[t]=(run.inv[t]||0)+1;return t}
 function craftCounts(cells){const l=connected(cells);const n=t=>l.filter(c=>c.type===t).length;return {parts:l.length,wings:n('wing'),tanks:n('tank')}}
 function settleFlight(run,meta,f){
@@ -475,8 +496,10 @@ function settleFlight(run,meta,f){
   run.coins+=pay;run.score+=sc.total;run.total+=sc.total;run.flight++;run.best=Math.max(run.best,sc.total);run.bestDist=Math.max(run.bestDist||0,f.dist);
   run.log.push({stage:run.stage,flight:run.flight,score:sc.total,d:Math.round(f.dist),x:Math.round(sc.mult*sc.xm*100)/100});
   meta.bestFlight=Math.max(meta.bestFlight||0,sc.total);
-  const quota=quotaFor(run.stage,run.level);
+  const quota=run.mode==='daily'?Infinity:quotaFor(run.stage,run.level);
   const out={sc,pay,coinsPicked:f.coins,sponsor:has('sponsor'),quota,contractScore:run.score,prevScore:run.score-sc.total,stage:run.stage,flightNo:run.flight};
+  // daily puzzle: one contract, three flights, the score is the sum; no target, no clearing
+  if(run.mode==='daily'){if(run.flight>=FLIGHTS){run.phase='done';out.dailyDone=true}return out}
   if(run.score>=quota){
     const unused=FLIGHTS-run.flight, storm=isStorm(run.stage,run.level);
     const reward=6+2*unused+(storm?4:0);
@@ -506,4 +529,5 @@ export {
   MODMAX, modLevels, modVal, modDesc, modPrice, canBuy, applyPurchase, sellMod, flightStats, repeats, severity,
   MAX_CEILING, CEILING_RULES, ceilingRules, REDLINE, CLOUD9,
   BOONS, rollBoons, boonDesc, pickBoon, modSlots,
+  DAILY_COINS, dailyNumber, dailySeed, SIM_DT,
 };

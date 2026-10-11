@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {
   newRun, stats, weatherFx, makeCraft, newFlight, step, popBalloons, summaryOf, scoreFlight, settleFlight,
   quotaFor, openPack, PACKS, FIRST_PACKS, rollTunes, thermalSeg, G0, repeats, rerollShop, applyPurchase, offerPrice, rollMods,
-  isStorm, grantPacks, flightStats, MODMAX, pickBoon, rollBoons, modSlots,
+  isStorm, grantPacks, flightStats, MODMAX, pickBoon, rollBoons, modSlots, dailySeed,
 } from '../client/src/sim.js';
 
 // 'c22 p32 w21 t23' -> cockpit at (2,2), prop at (3,2), wing at (2,1), tank at (2,3)
@@ -152,4 +152,29 @@ test('clearing a storm contract offers 2 storm rewards; picks apply and the slot
   run.boonOffer = [{ id: 'drag' }, { id: 'coins' }];
   pickBoon(run, 0);
   assert.ok(Math.abs(flightStats(run).drag - 0.92) < 1e-9);
+});
+
+test('a seed fixes the run: same shop, packs and weather for everyone', () => {
+  const a = newRun(0, { bestStage: 8 }, { seed: 12345 }), b = newRun(0, { bestStage: 8 }, { seed: 12345 });
+  assert.deepEqual(a.shop, b.shop);
+  assert.deepEqual(a.packs, b.packs);
+  assert.deepEqual(a.weather, b.weather);
+  rerollShop(a, { bestStage: 8 }); rerollShop(b, { bestStage: 8 });
+  assert.deepEqual(a.shop, b.shop);
+  const c = newRun(0, { bestStage: 8 }, { seed: 54321 });
+  assert.notDeepEqual(a.packs.concat(a.shop.parts.map((o) => o.t)), c.packs.concat(c.shop.parts.map((o) => o.t)).concat(['x']));
+});
+
+test('daily puzzle: 100 coins, no storms, three flights then done', () => {
+  const meta = { bestStage: 0 };
+  const run = newRun(0, meta, { mode: 'daily', seed: dailySeed(1) });
+  assert.equal(run.coins, 100);
+  assert.deepEqual(Object.values(run.weather).filter(Boolean), []);
+  const f = { dist: 900, maxY: 50, maxV: 30, coins: 0, loops: 0, passes: 0, thermals: 0, landed: true, fuelFrac: 0 };
+  for (let i = 0; i < 2; i++) assert.ok(!settleFlight(run, meta, f).dailyDone);
+  const out = settleFlight(run, meta, f);
+  assert.ok(out.dailyDone && run.phase === 'done' && !out.cleared);
+  assert.equal(run.score, run.log.reduce((t, l) => t + l.score, 0));
+  assert.equal(dailySeed(5), dailySeed(5));
+  assert.notEqual(dailySeed(5), dailySeed(6));
 });

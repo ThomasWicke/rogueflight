@@ -10,7 +10,7 @@
 // so builds are sensible but not optimal. It opens its parts packs and shops before every flight.
 import {
   newRun, weatherOf, stats, weatherFx, makeCraft, newFlight, step, popBalloons, summaryOf, scoreFlight, settleFlight,
-  craftCounts, offerPrice, rerollCost, rerollShop, openPack, applyPurchase, canBuy, modLevels, flightStats, pickBoon, MAXMODS, COLS, ROWS, COCKPIT, quotaFor, isStorm, CONTRACTS, WEATHER,
+  craftCounts, offerPrice, rerollCost, rerollShop, openPack, applyPurchase, canBuy, modLevels, flightStats, pickBoon, MAXMODS, COLS, ROWS, COCKPIT, quotaFor, isStorm, CONTRACTS, WEATHER, SIM_DT,
 } from '../client/src/sim.js';
 
 const args = process.argv.slice(2);
@@ -51,10 +51,10 @@ const POLS = {
 const POL = POLS[PN];
 if (!POL) throw new Error('unknown policy ' + PN + ' (use: ' + Object.keys(POLS).join(', ') + ')');
 
-// mirrors the UI frame loop: 60 fps, substeps of at most 12 ms, fast-forward once hands-off for a second after 12 s
+// mirrors the UI frame loop: 60 fps, fixed SIM_DT physics steps, fast-forward once hands-off for a second after 12 s
 function fly(K, st, ctl) {
   const S = newFlight(K, st);
-  let ts = 1, idle = 0;
+  let ts = 1, idle = 0, acc = 0;
   const dt = 1 / 60;
   while (!S.done) {
     const c = ctl(S);
@@ -63,9 +63,9 @@ function fly(K, st, ctl) {
     if (idle > 1 && S.t > 12) tgt = Math.min(4, 1 + (S.t - 12) / 8);
     if (S.fuel <= 0 && !S.touch && S.y > 2000) tgt = Math.max(tgt, Math.min(idle > 1 ? 30 : 3, S.y / 600));
     ts += (tgt - ts) * Math.min(1, dt * (tgt < ts ? 5 : 1.2));
-    const total = dt * ts, v = Math.hypot(S.vx, S.vy);
-    const n = Math.min(80, Math.max(Math.ceil(total / 0.012), Math.ceil(v * total / 0.6)));
-    for (let i = 0; i < n && !S.done; i++) { step(S, K, st, total / n, c); if (S.burst && !S.popped) K = popBalloons(S, K, st); }
+    acc += dt * ts;
+    const n = Math.min(600, Math.floor(acc / SIM_DT)); acc -= n * SIM_DT;
+    for (let i = 0; i < n && !S.done; i++) { step(S, K, st, SIM_DT, c); if (S.burst && !S.popped) K = popBalloons(S, K, st); }
   }
   return { S, K };
 }

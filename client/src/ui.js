@@ -12,6 +12,7 @@ import {
   MODMAX, modLevels, modVal, modDesc, modPrice, canBuy, applyPurchase, sellMod, flightStats, repeats, severity,
   MAX_CEILING, CEILING_RULES, ceilingRules, REDLINE, CLOUD9,
   BOONS, rollBoons, boonDesc, pickBoon, modSlots,
+  DAILY_COINS, dailyNumber, dailySeed, SIM_DT,
 } from './sim.js';
 import { drawWorld, drawGrain, biomeOf } from './world.js';
 import { audio } from './audio.js';
@@ -512,9 +513,10 @@ function frame(now){
     if(free&&S.t>12)tgt=Math.min(4,1+(S.t-12)/8);
     if(S.fuel<=0&&!S.touch&&S.y>2000)tgt=Math.max(tgt,Math.min(free?30:3,S.y/600));
     F.ts+=(tgt-F.ts)*Math.min(1,dt*(tgt<F.ts?5:1.2));
-    const ts=F.ts,total=dt*ts, v=Math.hypot(S.vx,S.vy);
-    const n=Math.min(80,Math.max(Math.ceil(total/.012),Math.ceil(v*total/.6)));
-    for(let i=0;i<n&&!S.done;i++){step(S,F.K,st,total/n,ctl);
+    // fixed physics steps (SIM_DT) fed from an accumulator, so the same inputs give the same flight at any frame rate
+    const ts=F.ts;F.acc=(F.acc||0)+dt*ts;
+    let n=Math.min(600,Math.floor(F.acc/SIM_DT));F.acc-=n*SIM_DT;if(n===600)F.acc=0;
+    for(let i=0;i<n&&!S.done;i++){F.ticks=(F.ticks||0)+1;step(S,F.K,st,SIM_DT,ctl);
       if(S.burst&&!S.popped){const c=Math.cos(S.th),s=Math.sin(S.th);
         for(const p of F.K.parts)if(p.type==='balloon')for(let j=0;j<10;j++)F.parts.push({x:S.x+p.lx*c-p.ly*s,y:S.y+p.lx*s+p.ly*c,vx:S.vx*.5+(Math.random()-.5)*16,vy:S.vy*.5+(Math.random()-.5)*16,life:.8,r:.18,k:'pop'});
         F.K=popBalloons(S,F.K,st)}}
