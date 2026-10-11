@@ -92,14 +92,14 @@ function renderTitle(){
       <div style="margin-top:12px"><button class="big" id="start" type="button">Start run</button></div></div>`;
   }
   h+=dailyCard()+roomCard();
-  h+=`<div><button class="ghost howto${m.guideSeen?'':' new'}" id="howto" type="button">How to play</button></div>`;
+  h+=`<div class="row2"><button class="ghost howto${m.guideSeen?'':' new'}" id="howto" type="button">How to play</button><button class="ghost" id="libBtn" type="button">Mods library</button></div>`;
   h+=`<div class="card"><span class="label">Stats</span>
     <dl class="stats"><dt>Runs</dt><dd>${m.runs}</dd><dt>Wins</dt><dd>${m.wins}</dd><dt>Most contracts in a run</dt><dd>${m.deepest||m.bestStage}</dd><dt>Best score</dt><dd>${fmt(m.bestFlight)}</dd>${m.level?`<dt>Highest Ceiling</dt><dd>${m.level}</dd>`:''}</dl>
     <div class="row" style="margin-top:12px"><span class="label">Unlocks</span><span class="hint">contracts in one run</span></div>
     <ul class="unl">${UNLOCKS.map(u=>{const d=m.bestStage>=u.at;return `<li class="${d?'done':''}"><i>${d?'\u2713':u.at}</i><span>${u.text}</span></li>`}).join('')}</ul>${m.lastRun?'<div style="margin-top:12px"><button class="ghost" type="button" data-copyrun="last">Copy last run</button></div>':''}</div>`;
   $('titleBody').innerHTML=h;
   startTitleScene();
-  $('howto').onclick=openGuide;
+  $('howto').onclick=openGuide;$('libBtn').onclick=()=>openLibrary();
   bindModeCards();
   if(r){
     $('cont').onclick=()=>{armAbandon=false;slot='run';openHangar()};
@@ -300,7 +300,7 @@ function placeAt(c,y){
 
 // L: the level shown (description and pips); up: shown as an upgrade offer
 const pips=L=>`<span class="lvp" aria-label="Level ${L} of ${MODMAX}">${Array.from({length:MODMAX},(_,i)=>`<i class="${i<L?'on':''}"></i>`).join('')}</span>`;
-function modCard(id,btn,L,up){const M=MODS[id];L=L||1;return `<div class="offer ${M.r}">${DECAL?`<img class="decal" alt="" src="${DECAL(id,96,L)}">`:`<div class="glyph ${M.r}" aria-hidden="true">${M.name[0]}</div>`}<div><span class="rar r-${M.r}">${up?'<b class="upg">Upgrade</b> · ':''}${RARITY[M.r].name} · ${M.tag}</span><h3>${M.name} ${pips(L)}</h3><p>${modDesc(id,L)}</p></div>${btn}</div>`}
+function modCard(id,btn,L,up){const M=MODS[id];L=L||1;return `<div class="offer ${M.r}">${DECAL?`<img class="decal" alt="" src="${DECAL(id,96,L)}">`:`<div class="glyph ${M.r}" aria-hidden="true">${M.name[0]}</div>`}<div><span class="rar r-${M.r}">${up?'<b class="upg">Upgrade</b> · ':''}${RARITY[M.r].name} · ${M.tag}</span><h3>${M.name} ${pips(L)}<button class="qm" type="button" data-lib="${id}" aria-label="How ${M.name} works">?</button></h3><p>${modDesc(id,L)}</p></div>${btn}</div>`}
 function renderShop(){
   const r=R();
   if(!r.shop){r.shop=genShop(r,metaOf(r));persist()}
@@ -319,6 +319,7 @@ function renderShop(){
   <div class="card"><div class="row"><span class="label">Mods</span><span class="hint${full?' warn':''}">${r.mods.length}/${modSlots(r)}${full?' full':''}</span></div><div class="offers">${mods}</div></div>
   <div class="row" style="justify-content:flex-end"><button class="ghost" id="reroll" type="button" ${rc>r.coins?'disabled':''}>Reroll <i class="cn"></i>${rc}</button></div>`;
   dbody.onclick=e=>{
+    const q=e.target.closest('[data-lib]');if(q){openLibrary(q.dataset.lib);return}
     const b=e.target.closest('.buy[data-kind]');
     if(b){buy(b.dataset.kind,+b.dataset.i);return}
     if(e.target.closest('#reroll')){if(rc>r.coins)return;sfx('reroll');r.coins-=rc;rerollShop(r,metaOf(r));persist();renderHangar()}
@@ -343,8 +344,10 @@ function renderMods(){
   <div class="card"><span class="label">Tuning</span><p class="hint" style="margin-top:6px">${tl||'\u2014'}</p></div>
   ${bl?`<div class="card"><span class="label">Storm rewards</span><p class="hint" style="margin-top:6px">${bl}</p></div>`:''}
   <div class="card"><span class="label">Log</span><div class="log">${log||'<div>\u2014</div>'}</div></div>
-  <div class="card stack"><button class="ghost" type="button" data-copyrun="cur">Copy run</button><button class="ghost${armAbandon?' armed':''}" id="aband2" type="button">${armAbandon?'Tap again':slot==='online'?'Leave room':slot==='daily'?'End puzzle':'Abandon run'}</button></div>`;
+  <div class="card stack"><button class="ghost" id="libOpen" type="button">Mods library</button><button class="ghost" type="button" data-copyrun="cur">Copy run</button><button class="ghost${armAbandon?' armed':''}" id="aband2" type="button">${armAbandon?'Tap again':slot==='online'?'Leave room':slot==='daily'?'End puzzle':'Abandon run'}</button></div>`;
   dbody.onclick=e=>{
+    const q=e.target.closest('[data-lib]');if(q){openLibrary(q.dataset.lib);return}
+    if(e.target.closest('#libOpen')){openLibrary();return}
     const b=e.target.closest('[data-sell]');
     if(b){const id=b.dataset.sell;if(armSell!==id){armSell=id;renderMods();return}armSell=null;sfx('sell');sellMod(r,id);persist();renderHangar();return}
     if(e.target.closest('#aband2')){if(!armAbandon){armAbandon=true;renderMods();return}endRun()}
@@ -357,6 +360,36 @@ $('launch').onclick=()=>{const r=R();if(!r)return;
 
 initGuide(ICON,()=>{if(!save.meta.guideSeen){save.meta.guideSeen=true;persist();if(!$('title').hidden)renderTitle()}});
 $('hHelp').onclick=openGuide;
+
+/* ================= mods library ================= */
+// every mod with its values at each level and one plain line on how to trigger it, plus the tricks the score mods refer to
+const TRICKS=[['Loop','Turn a full circle in the air (hold NOSE UP over the top).','+0.5'],['Low pass','Fly under 4 m fast for a second, then climb above 8 m.','+0.25'],
+  ['Thermal','Fly through a rising air column.','+0.1'],['Coin','Fly through a gold coin.','+0.05'],['Touchdown','Land and roll to a stop without crashing.','+0.5'],
+  ['Redline','Reach 500 km/h.','+1'],['Cloud nine','Climb to 5 km.','+2']];
+const lib=$('library');let libTag='All';
+function descAll(id){const M=MODS[id],j=a=>a.map(x=>String(Math.round(x*100)/100)).join(' / ');
+  return M.d.replace('{v%}',M.v?M.v.map(x=>Math.round(x*100)).join(' / ')+'%':'').replace('{v}',M.v?j(M.v):'').replace('{w}',M.w?j(M.w):'')}
+function renderLibrary(focus){
+  const r=save[slot],lv=r?modLevels(r):{},meta=r?metaOf(r):save.meta;
+  const tags=['All',...new Set(Object.values(MODS).map(M=>M.tag))];
+  const ids=Object.keys(MODS).filter(id=>libTag==='All'||MODS[id].tag===libTag);
+  $('libBody').innerHTML=`<div class="libtags seg">${tags.map(t=>`<button type="button" data-t="${t}" aria-pressed="${t===libTag}">${t}</button>`).join('')}</div>
+    <p class="hint libnote">Numbers show levels 1 / 2 / 3.</p>
+    ${libTag==='All'||libTag==='Score'?`<details class="card tricks"><summary class="label">Tricks</summary><dl>${TRICKS.map(([n,d,v])=>`<dt>${n} <b>${v}</b></dt><dd>${d}</dd>`).join('')}</dl></details>`:''}
+    <div class="libmods">${ids.map(id=>{const M=MODS[id],L=lv[id],locked=!modUnlocked(id,meta);
+      return `<div class="libmod ${M.r}${id===focus?' focus':''}" id="lib-${id}"><img class="decal" alt="" src="${DECAL?DECAL(id,96,L||1):ICON.wing}">
+        <div><span class="rar r-${M.r}">${RARITY[M.r].name} · ${M.tag}${L?` · <b class="own">Yours, Lv ${L}</b>`:''}</span><h3>${M.name}</h3>
+        <p class="eff">${descAll(id)}</p><p class="how">${M.how}</p>${locked?`<p class="lock">Unlocks after clearing contract ${M.lock} in one run</p>`:''}</div></div>`}).join('')}</div>`;
+  const box=$('libBody');box.scrollTop=0;if(focus){const el=$('lib-'+focus);if(el)requestAnimationFrame(()=>{box.scrollTop=el.offsetTop-box.offsetTop-box.clientHeight/2+el.offsetHeight/2})}
+}
+function openLibrary(focus){
+  if(focus)libTag='All';renderLibrary(focus);
+  lib.hidden=false;requestAnimationFrame(()=>lib.classList.add('open'));
+}
+function closeLibrary(){lib.classList.remove('open');setTimeout(()=>{lib.hidden=true},260)}
+$('libX').onclick=$('libScrim').onclick=closeLibrary;
+$('libBody').onclick=e=>{const b=e.target.closest('.libtags button');if(b){libTag=b.dataset.t;renderLibrary()}};
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!lib.hidden)closeLibrary()});
 
 /* ================= storm rewards ================= */
 // after a cleared storm contract: pick 1 of 2 (rolled in sim and saved, so a reload shows the same pair)
@@ -515,6 +548,7 @@ const lerp=(a,b,t)=>a+(b-a)*t;
 function mixHex(a,b,t){const p=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));const A=p(a),B=p(b);return '#'+A.map((v,i)=>Math.round(v+(B[i]-v)*t).toString(16).padStart(2,'0')).join('')}
 function toast(title,sub){F.toasts.push({title,sub});if(F.toasts.length>4)F.toasts.shift()}
 function frame(now){
+  if(!F)return;
   const dt=Math.min(.05,(now-last)/1000);last=now;
   const {S,st}=F, lv=F.ctx.lv, has=k=>!!lv[k], mv=(k,key)=>modVal(lv,k,key);
   // what the n-th repeat of a trick adds, after the diminishing returns in scoreFlight

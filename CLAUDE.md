@@ -35,7 +35,7 @@ docs/circus-style.md     the style guide: palette, outline and shape rules, type
 client/src/guide.js      "How to play" drawer: swipeable slides with small HTML/SVG illustrations (opened from the title and the ? chip in the hangar)
 client/src/ui.js         everything DOM/canvas: part art, hangar (build/shop/mods), flight loop + HUD + input, result screens
 client/src/style.css     all styles; dark blueprint theme, tokens on :root
-client/public/           favicon.svg (source of the app icon), manifest.webmanifest, sw.js, _headers (Cloudflare), icons/ (PNGs rendered from favicon.svg)
+client/public/           manifest.webmanifest, sw.js, _headers (Cloudflare), icons/ (app icons and favicons, rendered by client/dev/icon.html: the goat on barn red)
 tests/sim.test.js        headless sim checks (no browser)
 functions/api/run.js     Pages Function storing finished runs in D1 (schema.sql)
 client/src/net.js        client side of the game server: daily leaderboard fetches, room WebSocket with auto-reconnect

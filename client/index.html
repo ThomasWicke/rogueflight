@@ -7,7 +7,8 @@
 <meta name="description" content="Roguelite flying-machine builder: build, fly, hit the quota.">
 <meta name="theme-color" content="#33200f">
 <link rel="manifest" href="/manifest.webmanifest">
-<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/icons/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="icon" href="/icons/favicon-48.png" type="image/png" sizes="48x48">
 <link rel="icon" href="/icons/icon-192.png" type="image/png" sizes="192x192">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -93,6 +94,16 @@
     <div class="dr-head"><span class="label">How to play · <span id="grCount"></span></span><button class="dr-x" id="grClose" type="button" aria-label="Close">×</button></div>
     <div class="gr-track" id="grTrack"></div>
     <div class="dr-foot"><button class="ghost" id="grPrev" type="button">Back</button><div class="gr-dots" id="grDots"></div><button class="big" id="grNext" type="button">Next</button></div>
+  </div>
+</div>
+
+<!-- ============ MODS LIBRARY ============ -->
+<div class="drawer" id="library" hidden role="dialog" aria-modal="true" aria-labelledby="libTitle">
+  <div class="dr-scrim" id="libScrim"></div>
+  <div class="dr-panel">
+    <div class="dr-grab" aria-hidden="true"></div>
+    <div class="dr-head"><span class="label" id="libTitle">Mods library</span><button class="dr-x" id="libX" type="button" aria-label="Close">&times;</button></div>
+    <div class="dr-body" id="libBody"></div>
   </div>
 </div>
 
