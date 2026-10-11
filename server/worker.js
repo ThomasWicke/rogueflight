@@ -156,8 +156,8 @@ export class Room {
       return;
     }
     if (m.t === 'pos' && r.phase === 'flight') {
-      // relay as-is to everyone else: {x, y, th, v, mood, on}
-      return this.broadcast({ t: 'pos', id, x: +m.x, y: +m.y, th: +m.th, v: +m.v || 0, mood: m.mood, on: !!m.on, k: m.k }, ws);
+      // relay to everyone else: position, velocity, live score, pilot mood, engine on, and now and then the craft
+      return this.broadcast({ t: 'pos', id, x: +m.x, y: +m.y, th: +m.th, vx: +m.vx || 0, vy: +m.vy || 0, s: Math.floor(+m.s || 0), mood: m.mood, on: !!m.on, k: m.k }, ws);
     }
     if (m.t === 'done' && r.phase === 'flight' && !p.done) {
       p.done = true; p.last = { score: Math.max(0, Math.floor(+m.score || 0)), dist: Math.floor(+m.dist || 0), crashed: !!m.crashed, landed: !!m.landed };

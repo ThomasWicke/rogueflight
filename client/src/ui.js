@@ -618,7 +618,7 @@ function drawDebris(X,Y,sc,now){
 }
 function draw(now){
   const {S,st}=F,K=F.K, cam=F.cam;
-  const list=F.online?flyers():null, fo=list&&(F.settled||F.watch)&&F.pre<=0?focusOf(list):null, T=fo||S;
+  const list=F.online?(F.fl=flyers()):null, fo=list&&(F.settled||F.watch)&&F.pre<=0?focusOf(list):null, T=fo||S;
   const v=Math.hypot(T.vx,T.vy);
   const pre=F.pre>0;
   const viewH=pre?50:Math.max(30,T.y*1.25+16,v*1.3);
@@ -672,33 +672,35 @@ function draw(now){
 // the others in the sky: translucent planes with a name tag, or a tag at the screen edge pointing to them
 function drawFlyers(list,X,Y,sc,now,fo){
   ctx.save();ctx.font='800 12px Nunito, system-ui, sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
-  const tag=(x,y,t,hot)=>{const w=ctx.measureText(t).width+14;ctx.fillStyle=hot?'#e9a93b':'#f3e7ce';ctx.strokeStyle='#22283a';ctx.lineWidth=2;ctx.beginPath();
+  const tag=(x,y,t,hot)=>{const w=ctx.measureText(t).width+14;x=clamp(x,w/2+4,vw-w/2-4);ctx.fillStyle=hot?'#e9a93b':'#f3e7ce';ctx.strokeStyle='#22283a';ctx.lineWidth=2;ctx.beginPath();
     if(ctx.roundRect)ctx.roundRect(x-w/2,y-10,w,20,10);else ctx.rect(x-w/2,y-10,w,20);ctx.fill();ctx.stroke();ctx.fillStyle='#22283a';ctx.fillText(t,x,y+.5)};
   for(const f of list){if(!f.K)continue;
     const px=X(f.x),py=Y(f.y);let ext=.7;for(const p of f.K.parts)ext=Math.max(ext,Math.hypot(p.lx,p.ly)+.7);
     const ds=Math.max(sc,12/ext),inView=px>-30&&px<vw+30&&py>RES+40&&py<vh+30;
     if(inView){ctx.save();ctx.globalAlpha=f.done?.35:.62;ctx.translate(px,py);ctx.scale(ds,ds);ctx.rotate(-f.th);
       for(const p of f.K.parts){ctx.save();ctx.translate(p.lx,-p.ly);drawPart(ctx,p.type,now/1000,{on:f.on,frac:.6,lw:clamp(ds*.06,.9,2.5)/ds,mood:f.mood});ctx.restore()}
-      ctx.restore();tag(px,py-ext*ds-14,f.name,fo&&fo.id===f.id)}
+      ctx.restore();tag(px,py-ext*ds-14,f.name+(f.s?' · '+fmt(f.s):''),fo&&fo.id===f.id)}
     else if(!f.done){const ex=clamp(px,44,vw-44),ey=clamp(py,RES+110,vh-150);tag(ex,ey,(px<0?'◂ ':'')+f.name+(px>vw?' ▸':'')+(py<RES+40&&px>=0&&px<=vw?' ▴':''),false)}}
   ctx.restore();
 }
 const elD=$('fDist'),elA=$('fAlt'),elV=$('fSpd'),elF=$('fFuel'),elT=$('toast'),elS=$('fScore'),elM=$('fMult'),elN=$('fNeed'),elFF=$('fTs'),elTm=$('fTime');
 function hud(dt){
   const {S}=F,K=F.K;
-  elD.textContent=fmtD(Math.max(0,S.x));
-  elA.textContent='ALT '+fmtD(Math.max(0,S.y));
-  elV.textContent=fmtV(Math.hypot(S.vx,S.vy));
+  // spectating: the distance, height and speed are the focused pilot's
+  const fo=F.online&&(F.settled||F.watch)&&F.fl?focusOf(F.fl):null,P=fo||S;
+  elD.textContent=fmtD(Math.max(0,P.x));
+  elA.textContent='ALT '+fmtD(Math.max(0,P.y));
+  elV.textContent=fmtV(Math.hypot(P.vx,P.vy));
   // flight clock: a flight ends at st.flightTime (5 min + Flight permits), so slow climbers can plan their descent
   {const rem=Math.max(0,Math.ceil(F.st.flightTime-S.t));elTm.lastChild.textContent=Math.floor(rem/60)+':'+String(rem%60).padStart(2,'0');elTm.className='ftime'+(rem<=20?' crit':rem<=60?' warn':'')}
   if(S.burst&&$('bPop').style.visibility!=='hidden')$('bPop').style.visibility='hidden';
   {const t=F.ts>1.15&&!S.done;elFF.hidden=!t;if(t)elFF.textContent='\u25b8\u25b8 '+(F.ts<9.95?F.ts.toFixed(1):Math.round(F.ts))+'\u00d7'}
-  const sc=scoreFlight(summaryOf(S,K),F.ctx);
+  const sc=scoreFlight(summaryOf(S,K),F.ctx);F.live=sc.total;
   F.hype=clamp((sc.mult*sc.xm-1)/4,0,1);audio.hype(F.hype);
   if(!S.done&&F.pre<=0){const fr=K.fuelMax?S.fuel/K.fuelMax:0;audio.engine({prop:S.propOn?ctl.throttle:0,rocket:S.rocketOn?ctl.throttle:0,speed:Math.hypot(S.vx,S.vy),fuel:fr,alt:S.y})}F.coinT=Math.max(0,(F.coinT||0)-dt);
   elS.textContent=fmt(sc.total);elM.textContent='×'+num(sc.mult*sc.xm);
   if(F.quota!=null){const need=F.quota-F.already-sc.total;elN.textContent=need>0?`${fmt(need)} to target`:'Target reached';elN.className='need'+(need>0?'':' ok')}
-  else if(F.online&&ROOM&&ROOM.mode==='team'){let got=sc.total;for(const [id,v] of Object.entries(F.roundScores||{}))if(id!==clientId())got+=v;const need=ROOM.target-ROOM.teamScore-got;
+  else if(F.online&&ROOM&&ROOM.mode==='team'){let got=sc.total;for(const f of F.fl||[])got+=f.s||0;const need=ROOM.target-ROOM.teamScore-got;
     elN.textContent=need>0?`${fmt(need)} to team target`:'Team target reached';elN.className='need'+(need>0?'':' ok')}
   else if(F.online){elN.textContent=ROOM?'Round '+(ROOM.round):'';elN.className='need'}
   else{elN.textContent='Total '+fmt(F.already+sc.total);elN.className='need'}
@@ -1024,7 +1026,7 @@ function toggleReady(){const m=me(),r=R();if(!m||!ROOM||ROOM.phase!=='build'||!m
 
 // position updates from the others: kept with their arrival time and extrapolated a little when drawn
 function onPos(m){let g=ghosts.get(m.id);if(!g){g={};ghosts.set(m.id,g)}
-  Object.assign(g,{x:m.x,y:m.y,th:m.th,vx:m.vx||0,vy:m.vy||0,on:m.on,mood:m.mood,at:performance.now(),round:ROOM?ROOM.round:0});
+  Object.assign(g,{x:m.x,y:m.y,th:m.th,vx:m.vx||0,vy:m.vy||0,s:m.s||0,on:m.on,mood:m.mood,at:performance.now(),round:ROOM?ROOM.round:0});
   if(g.dx==null){g.dx=m.x;g.dy=m.y;g.dth=m.th}
   if(m.k&&m.k!==g.code){g.code=m.k;try{g.K=makeCraft(cellsOf(m.k),ghostSt())}catch(_){g.K=null}}}
 function onGhostDone(m){const g=ghosts.get(m.id);if(g){g.done=true;g.last=m.last}
@@ -1060,7 +1062,7 @@ function stepBots(n){
 }
 function sendPos(dt){
   const S=F.S;if(S.done||F.pre>0)return;F.sendT-=dt;if(F.sendT>0)return;F.sendT=.1;F.sent++;
-  const m={t:'pos',x:+S.x.toFixed(2),y:+S.y.toFixed(2),th:+S.th.toFixed(3),vx:+S.vx.toFixed(2),vy:+S.vy.toFixed(2),on:!!(S.propOn||S.rocketOn),mood:pilotMood()};
+  const m={t:'pos',s:F.live||0,x:+S.x.toFixed(2),y:+S.y.toFixed(2),th:+S.th.toFixed(3),vx:+S.vx.toFixed(2),vy:+S.vy.toFixed(2),on:!!(S.propOn||S.rocketOn),mood:pilotMood()};
   if(F.sent%20===1)m.k=R().cells.map(c=>(c.type==='cockpit'?'c':c.type[0])+c.c+c.r).join(' ');
   NET.send(m);
 }
@@ -1070,19 +1072,19 @@ function flyers(){
   for(const [id,g] of ghosts){if(g.x==null||!g.K)continue;const p=ROOM&&ROOM.players.find(q=>q.id===id);if(!p)continue;
     const k=g.done?0:Math.min(.4,(now-g.at)/1000),tx=g.x+g.vx*k,ty=g.y+g.vy*k;
     g.dx+=(tx-g.dx)*.35;g.dy+=(ty-g.dy)*.35;g.dth+=(g.th-g.dth)*.35;
-    out.push({id,name:p.name,x:g.dx,y:Math.max(0,g.dy),th:g.dth,vx:g.vx,vy:g.vy,K:g.K,on:g.on&&!g.done,mood:g.mood||'idle',done:g.done})}
-  for(const b of F.bots||[])out.push({id:b.id,name:b.name,x:b.S.x,y:b.S.y,th:b.S.th,vx:b.S.vx,vy:b.S.vy,K:b.K,on:!b.S.done&&(b.S.propOn||b.S.rocketOn),mood:b.S.crashed?'crash':'focus',done:b.S.done,bot:true});
+    out.push({id,name:p.name,s:g.done&&g.last?g.last.score:g.s||0,x:g.dx,y:Math.max(0,g.dy),th:g.dth,vx:g.vx,vy:g.vy,K:g.K,on:g.on&&!g.done,mood:g.mood||'idle',done:g.done})}
+  for(const b of F.bots||[])out.push({id:b.id,name:b.name,s:b.score!=null?b.score:scoreFlight(summaryOf(b.S,b.K),b.ctx).total,x:b.S.x,y:b.S.y,th:b.S.th,vx:b.S.vx,vy:b.S.vy,K:b.K,on:!b.S.done&&(b.S.propOn||b.S.rocketOn),mood:b.S.crashed?'crash':'focus',done:b.S.done,bot:true});
   return out;
 }
 // who the camera follows once I'm down: the chosen pilot if still flying, else the one furthest along
 function focusOf(list){
   const live=list.filter(f=>!f.done);if(!live.length)return null;
-  return live.find(f=>f.id===F.focus)||live.sort((a,b)=>b.x-a.x)[0];
+  const f=live.find(f=>f.id===F.focus)||live.slice().sort((a,b)=>b.x-a.x)[0];F.focus=f.id;return f;
 }
 function updSpec(){
   const el=$('fSpec');if(!F||!F.online){el.hidden=true;return}
   if(!F.settled&&!F.watch){el.hidden=true;return}
-  const list=flyers(),fo=focusOf(list),mine=F.myOut?`Your score <b>${fmt(F.myOut.sc.total)}</b>`:'Watching';
+  const list=F.fl||flyers(),fo=focusOf(list),mine=F.myOut?`Your score <b>${fmt(F.myOut.sc.total)}</b>`:'Watching';
   el.hidden=false;
   el.innerHTML=`<span>${mine}</span>${fo?`<button type="button" id="specNext">${list.filter(f=>!f.done).length>1?'◂ ▸ ':''}${esc(fo.name)} · ${fmtD(Math.max(0,fo.x))}</button>`:'<span>Waiting for the others…</span>'}`;
   const b=$('specNext');if(b)b.onclick=()=>{const live=list.filter(f=>!f.done);if(live.length<2)return;const i=live.findIndex(f=>f.id===(fo&&fo.id));F.focus=live[(i+1)%live.length].id;updSpec()};
