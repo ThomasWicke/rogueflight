@@ -17,8 +17,12 @@ npm run bot -- 20 climb --seed=1   # balance harness: 20 scripted runs (policies
 npm run build     # -> dist/
 npm run preview   # serve dist/ (service worker only registers in production builds)
 npm run build:itch   # itch.io HTML5 build -> rogueflight-itch.zip (relative paths, no service worker; telemetry and invite links point to rogueflight.pages.dev)
+ITCH_USER=<name> npm run itch:push   # build and upload to itch.io with butler (needs `butler login` once), tagged with package.json version
 npx wrangler deploy --config server/wrangler.toml   # deploy the game server (daily leaderboard + live rooms)
 ```
+
+## Releases
+`package.json` "version" is the release number players see (title screen, bottom) and is sent with telemetry as `version` = `<release>+<commit>`. Bump it for each release that goes out (web and itch together): patch for fixes, minor for new features. Store assets live in `store/itch/` (cover rendered by `client/dev/cover.html`).
 
 ## Layout
 

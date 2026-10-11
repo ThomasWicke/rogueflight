@@ -1,11 +1,15 @@
 import { defineConfig } from 'vite';
+import { readFileSync } from 'node:fs';
+
+// the release number players see (bump "version" in package.json for each release)
+const VERSION = JSON.parse(readFileSync(new URL('./package.json', import.meta.url))).version;
 
 // build id sent with run telemetry: the commit on Cloudflare Pages, otherwise the build date
 const BUILD = (process.env.CF_PAGES_COMMIT_SHA || '').slice(0, 7) || new Date().toISOString().slice(0, 10);
 
 export default defineConfig({
   root: 'client',
-  define: { __BUILD__: JSON.stringify(BUILD) },
+  define: { __BUILD__: JSON.stringify(BUILD), __VERSION__: JSON.stringify(VERSION) },
   build: {
     outDir: '../dist',
     emptyOutDir: true,

@@ -70,7 +70,7 @@ function reportRun(r,finished){
   try{const data={...JSON.parse(runCode(r).slice('ROGUEFLIGHT '.length)),weather:r.weather,seed:r.seed};const mode=r.mode||'run';
     // beacons cap at 64 KB: very long endless runs keep snapshots for their last 100 flights only
     if(JSON.stringify(data).length>55000)data.log=data.log.map((l,i,a)=>i<a.length-100?l.slice(0,5):l);
-    const body=JSON.stringify({client:clientId(),run_id:clientId()+':'+mode+':'+r.seed,mode,version:__BUILD__,level:r.level,cleared:r.stage,endless:!!r.endless,
+    const body=JSON.stringify({client:clientId(),run_id:clientId()+':'+mode+':'+r.seed,mode,version:__VERSION__+'+'+__BUILD__,level:r.level,cleared:r.stage,endless:!!r.endless,
       won:mode==='run'||mode==='team'?r.stage>=CONTRACTS:false,host:import.meta.env.MODE==='itch'?'itch':location.hostname,flights:r.log.length,finished:!!finished,data});
     const url=homeURL('/api/run');if(!(navigator.sendBeacon&&navigator.sendBeacon(url,body)))fetch(url,{method:'POST',body,keepalive:true,mode:ATHOME?'same-origin':'no-cors'}).catch(()=>{})}catch(_){}
 }
@@ -100,6 +100,7 @@ function renderTitle(){
     <dl class="stats"><dt>Runs</dt><dd>${m.runs}</dd><dt>Wins</dt><dd>${m.wins}</dd><dt>Most contracts in a run</dt><dd>${m.deepest||m.bestStage}</dd><dt>Best score</dt><dd>${fmt(m.bestFlight)}</dd>${m.level?`<dt>Highest Difficulty</dt><dd>${m.level}</dd>`:''}</dl>
     <div class="row" style="margin-top:12px"><span class="label">Unlocks</span><span class="hint">contracts in one run</span></div>
     <ul class="unl">${UNLOCKS.map(u=>{const d=m.bestStage>=u.at;return `<li class="${d?'done':''}"><i>${d?'\u2713':u.at}</i><span>${u.text}</span></li>`}).join('')}</ul></div>`;
+  h+=`<p class="ver">v${__VERSION__}</p>`;
   $('titleBody').innerHTML=h;
   startTitleScene();
   $('howto').onclick=openGuide;$('libBtn').onclick=()=>openLibrary();

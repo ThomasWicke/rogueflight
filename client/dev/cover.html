@@ -1,0 +1,50 @@
+<!doctype html><meta charset="utf-8"><title>itch.io cover</title>
+<!-- The itch.io cover (630×500): logo over a sunburst sky, the goat's plane looping on a brass contrail.
+     Screenshot it at device scale 2 for a crisp 1260×1000 PNG. -->
+<style>
+  body{margin:0;background:#22283a}
+  #cover{position:relative;width:630px;height:500px;overflow:hidden}
+  canvas{position:absolute;inset:0;width:630px;height:500px}
+  .logo{position:absolute;left:34px;top:30px;display:grid;justify-items:center;transform:rotate(-4deg)}
+  .l1,.l2{font-family:'Bowlby One';line-height:.86;-webkit-text-stroke:3px #22283a}
+  .l1{font-size:78px;color:#f3e7ce;text-shadow:6px 6px 0 #22283a}
+  .l2{font-size:88px;color:#e9a93b;text-shadow:6px 6px 0 #22283a;margin-top:-2px}
+  .ribbon{margin-top:10px;font-family:'Bowlby One';font-size:21px;color:#f3e7ce;background:#d2402f;border:3px solid #22283a;padding:4px 26px 3px;box-shadow:4px 4px 0 #22283a;
+    clip-path:polygon(0 0,100% 0,96% 50%,100% 100%,0 100%,4% 50%)}
+  .tag{position:absolute;right:26px;bottom:24px;font-family:'Nunito';font-weight:900;font-size:19px;color:#22283a;background:#f3e7ce;border:3px solid #22283a;border-radius:8px;
+    padding:6px 14px;box-shadow:4px 4px 0 #22283a;transform:rotate(2deg)}
+</style>
+<div id="cover"><canvas id="c"></canvas>
+  <div class="logo"><span class="l1">ROGUE</span><span class="l2">FLIGHT</span><span class="ribbon">The Flying Circus</span></div>
+  <div class="tag">Build · Fly · Beat the target</div>
+</div>
+<script type="module">
+import '@fontsource/bowlby-one/400';
+import '@fontsource/nunito/900';
+import { drawPart } from '../src/art.js';
+const W=630,H=500,d=window.devicePixelRatio||1,c=document.getElementById('c');c.width=W*d;c.height=H*d;
+const g=c.getContext('2d');g.scale(d,d);
+const INK='#22283a';
+// sky with a sunburst behind the plane
+const sky=g.createLinearGradient(0,0,0,H);sky.addColorStop(0,'#7cc4dd');sky.addColorStop(.75,'#f3d9a4');sky.addColorStop(1,'#f0c98a');g.fillStyle=sky;g.fillRect(0,0,W,H);
+g.save();g.translate(430,250);for(let i=0;i<20;i++){g.rotate(Math.PI/10);g.fillStyle=i%2?'rgba(251,245,232,.22)':'rgba(255,255,255,0)';g.beginPath();g.moveTo(0,0);g.lineTo(-90,-700);g.lineTo(90,-700);g.closePath();g.fill()}g.restore();
+// clouds
+const cloud=(x,y,s)=>{const puffs=[[0,0,26],[30,-12,30],[62,0,24],[30,8,26]];g.fillStyle='#fbf5e8';g.strokeStyle=INK;g.lineWidth=3;
+  for(const [dx,dy,r] of puffs){g.beginPath();g.arc(x+dx*s,y+dy*s,r*s,0,7);g.stroke()}for(const [dx,dy,r] of puffs){g.beginPath();g.arc(x+dx*s,y+dy*s,r*s-1.5,0,7);g.fill()}};
+cloud(60,330,1);cloud(540,70,.75);cloud(230,410,.65);
+// rolling hills and a little grandstand
+g.fillStyle='#7faf55';g.strokeStyle=INK;g.lineWidth=3;g.beginPath();g.moveTo(0,H);g.lineTo(0,440);g.bezierCurveTo(140,410,260,455,400,430);g.bezierCurveTo(500,412,580,430,W,420);g.lineTo(W,H);g.closePath();g.fill();g.stroke();
+g.fillStyle='#5e8f43';g.beginPath();g.moveTo(0,H);g.lineTo(0,470);g.bezierCurveTo(200,452,380,480,W,458);g.lineTo(W,H);g.closePath();g.fill();
+// brass dashed loop-the-loop contrail
+g.strokeStyle='#e9a93b';g.lineWidth=7;g.lineCap='round';g.setLineDash([3,15]);g.beginPath();
+const pt=u=>{const a=u*Math.PI*2;return [480+Math.sin(a)*120,318-Math.cos(a)*92]};
+const U=.93;for(let i=0;i<=90;i++){const [x,y]=pt(U-.03-i/90*.8);i?g.lineTo(x,y):g.moveTo(x,y)}g.stroke();g.setLineDash([]);
+// the plane, nose up, climbing out of the loop
+const [x,y]=pt(U),[x2,y2]=pt(U+.005),ang=Math.atan2(y2-y,x2-x),s=50;
+g.save();g.translate(x,y);g.rotate(ang);g.scale(s,s);
+for(const [type,lx,ly] of [['cockpit',0,0],['frame',1,0],['prop',2,0],['wing',0,-1],['wing',1,-1],['tank',0,1],['rocket',-1,0]]){g.save();g.translate(lx-.6,ly);drawPart(g,type,1.3,{on:true,frac:.8,lw:3/s,mood:'grin'});g.restore()}
+g.restore();
+// a couple of coins on the route
+for(const [cx,cy] of [[515,150],[555,128],[595,108]]){g.fillStyle='#ffb020';g.strokeStyle='#b87300';g.lineWidth=3;g.beginPath();g.arc(cx,cy,10,0,7);g.fill();g.stroke()}
+await document.fonts.ready;document.body.dataset.ready='1';
+</script>

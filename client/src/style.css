@@ -592,3 +592,4 @@ body.offline::after{content:"Reconnecting…";position:fixed;left:50%;top:calc(v
 #library{position:fixed}
 #libBody{position:relative}
 .libnote{text-align:center;margin-top:-4px}
+.ver{margin:0;text-align:center;font-size:12px;color:var(--mutedD);opacity:.7}

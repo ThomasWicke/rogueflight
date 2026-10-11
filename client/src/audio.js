@@ -553,7 +553,7 @@ function engineSet(e, s, t, dt) {
   if (t - e.last < 0.05) return;     // params at ~20 Hz; setTargetAtTime smooths between updates
   e.last = t;
   const f = 26 + 50 * prop + 0.25 * Math.min(v, 120), air = Math.exp(-alt / 8500), w = Math.min(1, v / 90);
-  P(e.prop.gain, prop > 0.001 ? 0.06 + 0.1 * prop : 0, t, 0.15);
+  P(e.prop.gain, prop > 0.001 ? 0.035 + 0.06 * prop : 0, t, 0.15); // quieter since the first playtests: the drone sat on top of the music
   P(e.o1.frequency, f, t, 0.12); P(e.o2.frequency, f / 2, t, 0.12); P(e.blade.frequency, f / 4, t, 0.12);
   P(e.lp.frequency, 300 + 1500 * prop + 4 * Math.min(v, 150), t, 0.12);
   P(e.rock.gain, rocket > 0.001 ? 0.1 + 0.18 * rocket : 0, t, 0.1);
