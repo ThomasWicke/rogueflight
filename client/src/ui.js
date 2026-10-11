@@ -56,17 +56,22 @@ const esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;',
 let armAbandon=false;
 function runCode(r){if(!r)return '';const L=t=>t==='cockpit'?'c':t[0];
   return 'ROGUEFLIGHT '+JSON.stringify({lvl:r.level,cleared:r.stage,boons:r.boons||{},endless:!!r.endless,coins:r.coins,mods:r.mods.map(id=>{const L=modLevels(r)[id];return L>1?id+':'+L:id}),tune:r.tune,inv:r.inv,
-    cells:r.cells.map(c=>L(c.type)+c.c+c.r).join(' '),log:r.log.map(l=>[l.stage+1,l.flight,l.score,l.d,l.x])})}
-// telemetry: every finished or abandoned run goes to /api/run (a Pages Function storing it in D1) for balancing.
-// Anonymous: a random id per browser and the run code, nothing else. Production builds only.
+    cells:r.cells.map(c=>L(c.type)+c.c+c.r).join(' '),log:r.log.map(l=>[l.stage+1,l.flight,l.score,l.d,l.x,l.s||null]),ev:r.ev||[]})}
+// telemetry: after every flight and when a run ends, the run goes to /api/run (a Pages Function storing it in D1, one row
+// per run, updated in place) for balancing. Each flight carries a snapshot (build, score lines, height, speed, how it
+// ended); ev lists purchases, sales, rerolls, packs and storm rewards. Anonymous: a random id per browser and the run code.
+// Production builds only.
 function clientId(){try{let id=localStorage.getItem('rogueflight-client');if(!id){id=Math.random().toString(36).slice(2)+Date.now().toString(36);localStorage.setItem('rogueflight-client',id)}return id}catch(_){return ''}}
-function reportRun(r){
+function reportRun(r,finished){
   if(!import.meta.env.PROD||!r||!r.log.length)return;
-  try{const data={...JSON.parse(runCode(r).slice('ROGUEFLIGHT '.length)),weather:r.weather};
-    const body=JSON.stringify({client:clientId(),version:__BUILD__,level:r.level,cleared:r.stage,endless:!!r.endless,won:r.stage>=CONTRACTS,data});
+  try{const data={...JSON.parse(runCode(r).slice('ROGUEFLIGHT '.length)),weather:r.weather,seed:r.seed};const mode=r.mode||'run';
+    // beacons cap at 64 KB: very long endless runs keep snapshots for their last 100 flights only
+    if(JSON.stringify(data).length>55000)data.log=data.log.map((l,i,a)=>i<a.length-100?l.slice(0,5):l);
+    const body=JSON.stringify({client:clientId(),run_id:clientId()+':'+mode+':'+r.seed,mode,version:__BUILD__,level:r.level,cleared:r.stage,endless:!!r.endless,
+      won:mode==='run'||mode==='team'?r.stage>=CONTRACTS:false,flights:r.log.length,finished:!!finished,data});
     if(!(navigator.sendBeacon&&navigator.sendBeacon('/api/run',body)))fetch('/api/run',{method:'POST',body,keepalive:true}).catch(()=>{})}catch(_){}
 }
-function endRun(){if(slot!=='run'){leaveMode();return}reportRun(save.run);save.meta.runs=(save.meta.runs||0)+1;save.run=null;persist();veil.hidden=true;armAbandon=false;show('title');renderTitle()}
+function endRun(){if(slot!=='run'){leaveMode();return}reportRun(save.run,true);save.meta.runs=(save.meta.runs||0)+1;save.run=null;persist();veil.hidden=true;armAbandon=false;show('title');renderTitle()}
 
 /* ================= title ================= */
 let pickLevel=save.meta.level||0;
@@ -77,19 +82,19 @@ function renderTitle(){
   if(r){
     const tw=townOf(r.seed,r.stage);
     h+=`<div class="card stack"><span class="label">Current run</span>
-      <p class="hint">Contract ${r.stage+1}${r.endless?' (endless)':' of '+CONTRACTS}: <strong>${tw.town}</strong> · ${r.coins} coins · ${plural(r.mods.length,'mod')}${r.level?' · Ceiling '+r.level:''}</p>
+      <p class="hint">Contract ${r.stage+1}${r.endless?' (endless)':' of '+CONTRACTS}: <strong>${tw.town}</strong> · ${r.coins} coins · ${plural(r.mods.length,'mod')}${r.level?' · Difficulty '+r.level:''}</p>
       <button class="big" id="cont" type="button">Continue run</button>
       <button class="ghost${armAbandon?' armed':''}" id="aband" type="button">${armAbandon?'Tap again to abandon':'Abandon run'}</button></div>`;
   }else{
     h+=`<div class="card"><span class="label">New run</span>
-      ${m.level>0?`<div style="margin-top:12px"><div class="row" style="margin-bottom:6px"><span class="label">Ceiling</span></div><div class="seg" id="lvl">${Array.from({length:m.level+1},(_,i)=>`<button type="button" data-l="${i}" aria-pressed="${i===pickLevel}">${i}</button>`).join('')}</div>
+      ${m.level>0?`<div style="margin-top:12px"><div class="row" style="margin-bottom:6px"><span class="label">Difficulty</span></div><div class="seg" id="lvl">${Array.from({length:m.level+1},(_,i)=>`<button type="button" data-l="${i}" aria-pressed="${i===pickLevel}">${i}</button>`).join('')}</div>
         ${pickLevel?`<div class="crules"><span>+${pickLevel*25}% score targets</span>${ceilingRules(pickLevel).map(t=>`<span>${t}</span>`).join('')}</div>`:''}</div>`:''}
       <div style="margin-top:12px"><button class="big" id="start" type="button">Start run</button></div></div>`;
   }
   h+=dailyCard()+roomCard();
   h+=`<div class="row2"><button class="ghost howto${m.guideSeen?'':' new'}" id="howto" type="button">How to play</button><button class="ghost" id="libBtn" type="button">Mods library</button></div>`;
   h+=`<div class="card"><span class="label">Stats</span>
-    <dl class="stats"><dt>Runs</dt><dd>${m.runs}</dd><dt>Wins</dt><dd>${m.wins}</dd><dt>Most contracts in a run</dt><dd>${m.deepest||m.bestStage}</dd><dt>Best score</dt><dd>${fmt(m.bestFlight)}</dd>${m.level?`<dt>Highest Ceiling</dt><dd>${m.level}</dd>`:''}</dl>
+    <dl class="stats"><dt>Runs</dt><dd>${m.runs}</dd><dt>Wins</dt><dd>${m.wins}</dd><dt>Most contracts in a run</dt><dd>${m.deepest||m.bestStage}</dd><dt>Best score</dt><dd>${fmt(m.bestFlight)}</dd>${m.level?`<dt>Highest Difficulty</dt><dd>${m.level}</dd>`:''}</dl>
     <div class="row" style="margin-top:12px"><span class="label">Unlocks</span><span class="hint">contracts in one run</span></div>
     <ul class="unl">${UNLOCKS.map(u=>{const d=m.bestStage>=u.at;return `<li class="${d?'done':''}"><i>${d?'\u2713':u.at}</i><span>${u.text}</span></li>`}).join('')}</ul></div>`;
   $('titleBody').innerHTML=h;
@@ -185,7 +190,7 @@ function renderStrip(){
 }
 function renderHangar(){
   const r=R();if(!r)return;
-  $('hCeil').textContent='Ceiling '+r.level;$('hCeil').hidden=!r.level;
+  $('hCeil').textContent='Difficulty '+r.level;$('hCeil').hidden=!r.level;
   $('hCoins').textContent=fmt(r.coins);
   $('tShop').classList.toggle('fresh',r.phase==='shop');
   $('tModsL').textContent=`Mods ${r.mods.length}/${modSlots(r)}`;
@@ -752,7 +757,7 @@ function finish(){
   const f=summaryOf(S,K);
   const out=settleFlight(r,metaOf(r),f);
   if(out.dailyDone)completeDaily(r);
-  persist();
+  persist();reportRun(r,!!(out.dailyDone||out.failed));
   showResults(out,S,f);
   F=null;
 }
@@ -834,12 +839,12 @@ function runStats(r){return `<dl class="stats"><dt>Total score</dt><dd>${fmt(r.t
 function showVictory(){
   const r=R(),m=save.meta;
   sheet.className='sheet endsheet win';
-  sheet.innerHTML=`<span class="label">${r.level?'Ceiling '+r.level:'Run'}</span>
+  sheet.innerHTML=`<span class="label">${r.level?'Difficulty '+r.level:'Run'}</span>
     <h2>Run complete!</h2>
     <p class="note">All ${CONTRACTS} contracts cleared.</p>
     ${runStats(r)}
     ${r.unlocks.length?`<p class="note">Unlocked: <b>${r.unlocks.join(', ')}</b></p>`:''}
-    ${m.level>r.level?`<p class="note">Ceiling <b>${r.level+1}</b> unlocked</p>`:''}
+    ${m.level>r.level?`<p class="note">Difficulty <b>${r.level+1}</b> unlocked</p>`:''}
     <button class="big win" type="button" id="endless">Endless mode</button>
     <button class="big alt" type="button" id="retire">Retire</button>`;
   veil.hidden=false;sfx('fanfare');sfx('cheer',{intensity:1});confetti();
@@ -850,7 +855,7 @@ function showRunOver(){
   const r=R();
   const n=r.stage;
   sheet.className='sheet endsheet lose';
-  sheet.innerHTML=`<span class="label">${r.level?'Ceiling '+r.level:'Run'}</span>
+  sheet.innerHTML=`<span class="label">${r.level?'Difficulty '+r.level:'Run'}</span>
     <h2>${r.endless?'Endless run over':'Run over'}</h2>
     <p class="note">Contracts cleared: <b>${n}${r.endless?'':' / '+CONTRACTS}</b></p>
     ${runStats(r)}
@@ -941,7 +946,7 @@ function showDailyEnd(){
 }
 // leave a puzzle or a room's run and go back to the title (the main run stays untouched)
 function leaveMode(){
-  if(slot==='daily'){const r=save.daily;if(r&&r.ranked&&r.log.length&&r.phase!=='done'){r.phase='done';completeDaily(r)}save.daily=null}
+  if(slot==='daily'){const r=save.daily;if(r&&r.ranked&&r.log.length&&r.phase!=='done'){r.phase='done';completeDaily(r)}if(r&&r.phase!=='done')reportRun(r,true);save.daily=null}
   else if(slot==='online'){leaveRoom();return}
   slot='run';persist();veil.hidden=true;armAbandon=false;show('title');renderTitle();
 }
@@ -965,6 +970,7 @@ function joinRoom(code){
 }
 function leaveRoom(){
   if(NET){NET.close();NET=null}
+  reportRun(save.online,true);
   ROOM=null;ghosts.clear();save.room=null;save.online=null;slot='run';persist();
   if(F&&F.online){cancelAnimationFrame(raf);audio.stopEngine();F=null}
   document.body.classList.remove('offline');veil.hidden=true;sheet.className='sheet';show('title');renderTitle();
@@ -974,7 +980,7 @@ const roomName=p=>isBotP(p)?p.name+' (bot)':p.name;
 function onState(room){
   ROOM=room;
   if(room.phase==='lobby'){
-    if(save.online){save.online=null;persist()}
+    if(save.online){reportRun(save.online,true);save.online=null;persist()}
     if(F&&F.online){cancelAnimationFrame(raf);audio.stopEngine();F=null}
     show('title');showLobby();return;
   }
@@ -1076,7 +1082,7 @@ function startOnlineFlight(room){
 function finishOnline(){
   if(F.settled)return;F.settled=true;
   const r=R(),{S}=F,K=F.K,f=summaryOf(S,K);
-  const out=settleFlight(r,metaOf(r),f);persist();
+  const out=settleFlight(r,metaOf(r),f);persist();reportRun(r,false);
   F.myOut=out;F.myF=f;F.roundScores[clientId()]=out.sc.total;
   NET.send({t:'done',score:out.sc.total,dist:f.dist,crashed:!!S.crashed,landed:!!S.landed});
   $('flight').classList.add('watching');updSpec();

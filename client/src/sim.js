@@ -96,7 +96,7 @@ function modDesc(id,L){const M=MODS[id];L=L||1;
 /* ---------- weather on storm contracts ---------- */
 const WEATHER={
   headwind:{name:'Headwind',d:s=>`${Math.round((2+.8*s)*3.6)} km/h headwind`},
-  ceiling:{name:'Thunderheads',d:s=>`Ceiling at ${250+120*s} m`},
+  ceiling:{name:'Thunderheads',d:s=>`Cloud ceiling at ${250+120*s} m`},
   thin:{name:'Thin air',d:()=>'Half-density air'},
   gusts:{name:'Gusts',d:()=>'Vertical gusts'},
   cargo:{name:'Mail run',d:s=>`+${(1+.25*s).toFixed(2)} t cargo`},
@@ -132,8 +132,11 @@ function _rollBoons(run){
   for(let i=pool.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]]}
   return pool.slice(0,2).map(id=>id==='upgrade'?{id,mod:canUp[Math.floor(rnd()*canUp.length)]}:{id})}
 const boonDesc=o=>BOONS[o.id].d.replace('{mod}',o.mod?MODS[o.mod].name:'');
+// telemetry: what the player did and when, as compact arrays [kind, contract, flight, ...] in run.ev
+function note(run,...a){(run.ev=run.ev||[]).push([a[0],run.stage,run.flight,...a.slice(1)])}
+const cellCode=cells=>cells.map(c=>(c.type==='cockpit'?'c':c.type[0])+c.c+c.r).join(' ');
 function pickBoon(run,i){
-  const o=run.boonOffer&&run.boonOffer[i];if(!o)return false;
+  const o=run.boonOffer&&run.boonOffer[i];if(!o)return false;note(run,'boon',o.id,o.mod||'');
   run.boons=run.boons||{};run.boons[o.id]=(run.boons[o.id]||0)+1;
   if(o.id==='coins')run.coins+=15;
   if(o.id==='upgrade'&&run.mods.includes(o.mod)){run.modLv=run.modLv||{};run.modLv[o.mod]=Math.min(MODMAX,(run.modLv[o.mod]||1)+1)}
@@ -145,7 +148,7 @@ const START={coins:12,inv:{}};
 const UNLOCKS=[
   {at:4,text:'Afterburner, Ram Scoop'},
   {at:6,text:'Solar Wings, Antigravity Coil'},
-  {at:8,text:'4 rare mods, Ceiling 1'},
+  {at:8,text:'4 rare mods, Difficulty 1'},
 ];
 const modUnlocked=(id,meta)=>!MODS[id].lock||(meta.bestStage||0)>=MODS[id].lock;
 
@@ -394,7 +397,7 @@ function scoreFlight(f,ctx){
   let mult=1,xm=1;
   const addM=(label,v)=>{v=Math.round(v*100)/100;if(v>0){mult+=v;lines.push({t:'m',label,v})}};
   const addX=(label,v)=>{if(v>1){xm*=v;lines.push({t:'x',label,v})}};
-  const pl=(n,w)=>n+' '+w+(n===1?'':'s');
+  const pl=(n,w)=>n+' '+w+(n===1?'':/s$/.test(w)?'es':'s');
   if(f.landed){if(has('greaser'))addX('Greaser touchdown',mv('greaser'));else addM('Clean touchdown',.5);if(bn('land'))addM('Soft Landing',.25*bn('land'))}
   if(f.crashed&&has('crashtest'))addM('Crash Test',mv('crashtest'));
   if(f.loops)addM(pl(f.loops,'loop'),repeats(f.loops)*((has('stunt')?mv('stunt'):.5)+.1*bn('loop')));
@@ -437,7 +440,7 @@ function _rollTunes(run,n,exclude){
 function genShop(run,meta){return seeded(run,()=>_genShop(run,meta))}
 function _genShop(run,meta){return {parts:[0,1,2].map(()=>({t:wpick(PART_W)})),tunes:rollTunes(run,2,[]).map(k=>({k})),mods:rollMods(run,meta,3,[]).map(id=>({id})),rerolls:0}}
 // a reroll is a whole new shop, sold slots included; only the mods on offer right now are kept out of the new picks
-function rerollShop(run,meta){return seeded(run,()=>_rerollShop(run,meta))}
+function rerollShop(run,meta){note(run,'reroll',run.shop.rerolls);return seeded(run,()=>_rerollShop(run,meta))}
 function _rerollShop(run,meta){
   const S=run.shop;
   S.parts=[0,1,2].map(()=>({t:wpick(PART_W)}));
@@ -454,12 +457,12 @@ const sellValue=(id,L)=>Math.floor(RARITY[MODS[id].r].price/2)+2*((L||1)-1);
 function canBuy(run,kind,o){if(o.sold)return false;if(kind==='mod'){const L=modLevels(run)[o.id];return L?L<MODMAX:run.mods.length<modSlots(run)}return true}
 function applyPurchase(run,kind,o){
   const p=offerPrice(run,kind,o);if(!canBuy(run,kind,o)||p>run.coins)return false;
-  run.coins-=p;o.sold=true;
+  run.coins-=p;o.sold=true;note(run,'buy',kind,o.t||o.k||o.id,p);
   if(kind==='part')run.inv[o.t]=(run.inv[o.t]||0)+1;
   else if(kind==='tune')run.tune[o.k]=(run.tune[o.k]||0)+1;
   else{run.modLv=run.modLv||{};if(run.mods.includes(o.id))run.modLv[o.id]=Math.min(MODMAX,(run.modLv[o.id]||1)+1);else{run.mods.push(o.id);run.modLv[o.id]=1}}
   return true}
-function sellMod(run,id){const i=run.mods.indexOf(id);if(i<0)return 0;const v=sellValue(id,modLevels(run)[id]);run.mods.splice(i,1);if(run.modLv)delete run.modLv[id];run.coins+=v;return v}
+function sellMod(run,id){const i=run.mods.indexOf(id);if(i<0)return 0;const v=sellValue(id,modLevels(run)[id]);note(run,'sell',id,v);run.mods.splice(i,1);if(run.modLv)delete run.modLv[id];run.coins+=v;return v}
 // everything a flight of this run needs: tunings, mod levels, this contract's weather, the ceiling's clock
 function flightStats(run){const w=weatherOf(run,run.stage),fx=weatherFx(w,severity(run,run.stage));if((run.level||0)>=10)fx.clock=240;
   const st=stats(run.tune,modLevels(run),fx),b=k=>boonN(run,k);
@@ -495,14 +498,18 @@ function rollPacks(first){
   return out}
 function grantPacks(run){return seeded(run,()=>_grantPacks(run))}
 function _grantPacks(run){const first=run.stage===0&&!run.endless;(run.packs=run.packs||[]).push(...rollPacks(first).slice(0,first||(run.level||0)<6?99:1))}
-function openPack(run){const t=run.packs&&run.packs.shift();if(t)run.inv[t]=(run.inv[t]||0)+1;return t}
+function openPack(run){const t=run.packs&&run.packs.shift();if(t){run.inv[t]=(run.inv[t]||0)+1;note(run,'pack',t)}return t}
 function craftCounts(cells){const l=connected(cells);const n=t=>l.filter(c=>c.type===t).length;return {parts:l.length,wings:n('wing'),tanks:n('tank')}}
 function settleFlight(run,meta,f){
   const lv=modLevels(run), has=k=>!!lv[k];
   const sc=scoreFlight(f,{lv,boons:run.boons,flightIdx:run.flight,cleared:run.stage,coins:run.coins,...craftCounts(run.cells)});
   const pay=3+f.coins+modVal(lv,'sponsor');
   run.coins+=pay;run.score+=sc.total;run.total+=sc.total;run.flight++;run.best=Math.max(run.best,sc.total);run.bestDist=Math.max(run.bestDist||0,f.dist);
-  run.log.push({stage:run.stage,flight:run.flight,score:sc.total,d:Math.round(f.dist),x:Math.round(sc.mult*sc.xm*100)/100});
+  // s: the flight's snapshot for balancing: the build it flew with, where the score came from, how it went
+  const lvs=modLevels(run),r1=x=>Math.round(x*100)/100;
+  run.log.push({stage:run.stage,flight:run.flight,score:sc.total,d:Math.round(f.dist),x:r1(sc.mult*sc.xm),
+    s:{mods:run.mods.map(id=>lvs[id]>1?id+':'+lvs[id]:id),tune:{...run.tune},cells:cellCode(run.cells),lines:sc.lines.map(l=>[l.label,l.t,r1(l.v)]),
+      maxY:Math.round(f.maxY),maxV:Math.round(f.maxV*3.6),end:f.crashed?'crash':f.landed?'land':f.banked?'bank':'air',fuel:r1(f.fuelFrac||0),coinsPicked:f.coins,coins:run.coins}});
   meta.bestFlight=Math.max(meta.bestFlight||0,sc.total);
   const quota=run.mode==='daily'?Infinity:quotaFor(run.stage,run.level);
   const out={sc,pay,coinsPicked:f.coins,sponsor:has('sponsor'),quota,contractScore:run.score,prevScore:run.score-sc.total,stage:run.stage,flightNo:run.flight};

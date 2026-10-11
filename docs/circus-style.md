@@ -72,5 +72,5 @@ uncommon = tin plate (rounded rect with rivets), rare = enamel badge (shield/cir
 ## Words: plain game terms
 The circus lives in the art, the sound, town names and the Gazette headlines. Every label, button and rule uses plain game terms,
 the same everywhere: **Run**, **Contract** (shown with its town's name), **Flight**, **Score**, **Target**, **Coins**, **Shop**,
-**Packs**, **Mods** (the art draws them as decals), **Tuning**, **Storm**, **Storm reward**, **Ceiling**, **Endless**.
+**Packs**, **Mods** (the art draws them as decals), **Tuning**, **Storm**, **Storm reward**, **Difficulty**, **Endless**.
 Avoid synonyms (tour, season, show, crowd, cash, dealer, crate, gift, encore).

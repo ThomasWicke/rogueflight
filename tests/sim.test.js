@@ -210,3 +210,18 @@ test('daily shops never offer Logbook', () => {
   }
   assert.ok(rollMods(newRun(0, { bestStage: 8 }), { bestStage: 8 }, 40, []).includes('logbook'));
 });
+
+test('telemetry: every flight logs a snapshot, and purchases, packs and rerolls are noted', () => {
+  const meta = { bestStage: 8 }, run = newRun(0, meta, { seed: 4242 });
+  while (run.packs.length) openPack(run);
+  const o = run.shop.parts[0]; applyPurchase(run, 'part', o);
+  rerollShop(run, meta);
+  const f = { dist: 900, maxY: 60, maxV: 40, coins: 2, loops: 1, passes: 2, thermals: 0, landed: true, fuelFrac: 0.5 };
+  settleFlight(run, meta, f);
+  const s = run.log[0].s;
+  assert.equal(s.cells, 'c22'); assert.equal(s.end, 'land'); assert.equal(s.maxV, 144);
+  assert.ok(s.lines.some(([l]) => l === '2 low passes'));
+  const kinds = run.ev.map((e) => e[0]);
+  assert.deepEqual(kinds.filter((k) => k !== 'pack'), ['buy', 'reroll']);
+  assert.equal(kinds.filter((k) => k === 'pack').length, FIRST_PACKS);
+});
