@@ -525,10 +525,6 @@ button:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
 /* screens cover the whole viewport in the installed app (no band under the bottom bar) */
 .screen{position:fixed}
 html,body{height:100%;min-height:100dvh}
-.ricon .rbg{fill:var(--ink)}
-.ricon path,.ricon rect{fill:none;stroke:var(--paper);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-.ricon .f{fill:#8a96a6}
-.ricon .y{stroke:var(--brass)}
 .ptown small{font-family:var(--body);font-weight:900;font-size:12px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;margin-right:2px}
 .route{max-height:none;cursor:pointer}
 .pnext{margin-top:0;line-height:1.5}
