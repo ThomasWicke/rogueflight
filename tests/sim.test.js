@@ -202,3 +202,11 @@ test('bots: every build is whole, flights are reproducible and finish inside the
     assert.equal(x.sc, y.sc);
   }
 });
+
+test('daily shops never offer Logbook', () => {
+  for (let seed = 1; seed <= 300; seed++) {
+    const run = newRun(0, { bestStage: 8 }, { mode: 'daily', seed });
+    for (let i = 0; i < 3; i++) { assert.ok(!run.shop.mods.some((o) => o.id === 'logbook')); rerollShop(run, { bestStage: 8 }); }
+  }
+  assert.ok(rollMods(newRun(0, { bestStage: 8 }), { bestStage: 8 }, 40, []).includes('logbook'));
+});

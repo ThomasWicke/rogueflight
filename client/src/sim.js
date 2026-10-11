@@ -78,7 +78,7 @@ const MODS={
   escape:{name:'Escape Plan',r:'R',tag:'Score',d:'Cloud nine ×{v} instead of +2.',v:[2,2.5,3],lock:8,how:'Reach Cloud nine: climb to 5 km in one flight. Then the whole flight’s score is multiplied. Hard: think balloons with Weather Envelope, or Antigravity with lots of thrust.'},
   greaser:{name:'Greaser',r:'U',tag:'Score',d:'Touchdown ×{v} instead of +0.5.',v:[1.25,1.5,1.75],how:'Land without crashing: roll to a stop on the ground. The whole flight’s score is multiplied.'},
   crashtest:{name:'Crash Test',r:'U',tag:'Score',d:'Crash +{v} mult. Dive in hard.',v:[1,2,3],how:'Crash. When a flight is ending anyway, nose down and dive in.'},
-  logbook:{name:'Logbook',r:'R',tag:'Score',d:'×{v} more per contract cleared.',v:[.15,.25,.35],lock:8,how:'Grows with every contract cleared this run. Does nothing on contract 1 or in a daily puzzle.'},
+  logbook:{name:'Logbook',r:'R',tag:'Score',d:'×{v} more per contract cleared.',v:[.15,.25,.35],lock:8,how:'Grows with every contract cleared this run. Does nothing on contract 1, so daily puzzles never offer it.',noDaily:1},
   compound:{name:'Compound Interest',r:'R',tag:'Score',d:'×0.05 per coin held, up to ×{v}.',v:[2,3,4],lock:8,how:'Counts the coins you hold when the flight ends: 20 coins = ×2. Spend less, score more.'},
   piggy:{name:'Piggy Bank',r:'C',tag:'Coins',d:'+1 coin per 5 held after a contract, up to {v}.',v:[3,5,7],how:'When you clear a contract, you earn interest on the coins you hold.'},
   coupon:{name:'Coupon Book',r:'U',tag:'Coins',d:'Shop prices −{v}%.',v:[15,25,35],how:'Everything in the shop costs less.'},
@@ -425,7 +425,8 @@ const PART_W={frame:3,wing:3,tank:2.5,prop:2,rocket:1.5,balloon:1.5};
 function rollMods(run,meta,n,exclude){return seeded(run,()=>_rollMods(run,meta,n,exclude))}
 function _rollMods(run,meta,n,exclude){
   const lv=modLevels(run);
-  const pool=Object.keys(MODS).filter(k=>modUnlocked(k,meta)&&(!lv[k]||lv[k]<MODMAX)&&!exclude.includes(k)),out=[];
+  // noDaily: mods that cannot work in a one-contract daily puzzle stay out of its shop
+  const pool=Object.keys(MODS).filter(k=>modUnlocked(k,meta)&&!(run.mode==='daily'&&MODS[k].noDaily)&&(!lv[k]||lv[k]<MODMAX)&&!exclude.includes(k)),out=[];
   while(out.length<n&&pool.length){const w={};for(const k of pool)w[k]=RARITY[MODS[k].r].w*(lv[k]?.7:1);const k=wpick(w);out.push(k);pool.splice(pool.indexOf(k),1)}
   return out}
 function rollTunes(run,n,exclude){return seeded(run,()=>_rollTunes(run,n,exclude))}
