@@ -144,19 +144,30 @@ function setTab(t){tab=t;armSell=null;armAbandon=false;
 $('tShop').onclick=()=>setTab('shop');$('tMods').onclick=()=>setTab('mods');
 $('dealerX').onclick=$('dealerScrim').onclick=()=>setTab('build');
 function wxLine(id,s){return `<div class="wx"><b>${WEATHER[id].name}</b>${WEATHER[id].d(s)}</div>`}
+// one small icon per storm type, drawn over its town on the route (inside a 19px badge)
+const STORM_ICON={
+  headwind:'<path d="M-6-3h8a2 2 0 1 0-2-2M-6 1h10a2 2 0 1 1-2 2M-6 5h5"/>',
+  ceiling:'<path d="M-6 1a3 3 0 0 1 1-5a4 4 0 0 1 7-1a3 3 0 0 1 4 4a2 2 0 0 1-1 2z" class="f"/><path d="M0 2l-2 4h3l-2 4" class="y"/>',
+  thin:'<path d="M-7 5l5-9 3 5 2-3 4 7z" class="f"/><path d="M-6-6h3M2-7h4" />',
+  gusts:'<path d="M-4 6v-11M-7-2l3-3 3 3M4-6v11M1 2l3 3 3-3"/>',
+  cargo:'<rect x="-6" y="-4" width="12" height="9" rx="1" class="f"/><path d="M-6-4l6 5 6-5"/>',
+  ration:'<path d="M-4-5h7l2 2v9h-9z" class="f"/><path d="M-2 1h5"/>',
+  short:'<path d="M-6 4h12M-5 4l2-6 2 6 2-6 2 6"/>',
+};
 // the season's route: eight towns along a dashed road, storm clouds over stormy towns (all forecast from the start, so
 // builds can plan for them), done towns ticked, the plane over the current one
 function routeStrip(r){
   if(r.endless)return forecast(r);
-  const n=CONTRACTS,W=300,x=i=>14+i*(W-28)/(n-1),y=i=>24+Math.sin(i*1.3)*5;
+  const n=CONTRACTS,W=300,x=i=>14+i*(W-28)/(n-1),y=i=>24+Math.sin(i*1.3)*4;
   let road='';for(let i=0;i<n;i++)road+=(i?'L':'M')+x(i).toFixed(1)+' '+y(i).toFixed(1);
   let h=`<path d="${road}" class="rroad"/>`;
   for(let i=0;i<n;i++){const w=weatherOf(r,i),done=i<r.stage,cur=i===r.stage;
     h+=`<circle cx="${x(i)}" cy="${y(i)}" r="${cur?8:6}" class="rtown${done?' done':''}${cur?' cur':''}${w?' storm':''}"/>`;
     if(done)h+=`<path d="M${x(i)-3} ${y(i)}l2.4 2.6 4.4-5" class="rtick"/>`;
-    if(w)h+=`<g class="rcloud" transform="translate(${x(i)} ${y(i)-15})"><path d="M-8 3a4 4 0 0 1 2-7a5 5 0 0 1 9-1a4 4 0 0 1 5 5a3 3 0 0 1-1 3z"/><path d="M-1 4l-2 5 3-1-1 4" class="rbolt"/></g>`;}
-  const names=[];for(let i=r.stage+1;i<n;i++){const w=weatherOf(r,i);if(w)names.push(`<span title="${WEATHER[w].d(severity(r,i))}"><b>${i+1}</b>${WEATHER[w].name}</span>`)}
-  return `<svg class="route" viewBox="0 0 ${W} 46" role="img" aria-label="Route: contract ${r.stage+1} of ${n}">${h}</svg>${names.length?`<div class="fcast">${names.join('')}</div>`:''}`;
+    if(w)h+=`<g class="ricon" transform="translate(${x(i)} ${y(i)-18}) scale(1.25)"><title>${WEATHER[w].name}: ${WEATHER[w].d(severity(r,i))}</title><circle r="10" class="rbg"/>${STORM_ICON[w]||''}</g>`;}
+  // tap the route to see what the storms are (phones have no hover)
+  const names=[];for(let i=r.stage;i<n;i++){const w=weatherOf(r,i);if(w)names.push(`<b>${i+1}</b> ${WEATHER[w].name}: ${WEATHER[w].d(severity(r,i))}`)}
+  return `<svg class="route" viewBox="0 -10 ${W} 50" role="button" tabindex="0" aria-label="Route: contract ${r.stage+1} of ${n}. Tap for storms">${h}</svg>${names.length?`<div class="pnext" hidden>${names.join('<br>')}</div>`:''}`;
 }
 function forecast(r){const out=[];for(let i=r.stage+1;i<CONTRACTS;i++){const w=weatherOf(r,i);if(w)out.push(`<span title="${WEATHER[w].d(severity(r,i))}"><b>${i+1}</b>${WEATHER[w].name}</span>`)}
   return out.length?`<div class="fcast">${out.join('')}</div>`:''}
@@ -167,9 +178,9 @@ function renderStrip(){
   const stubs=`<span class="fpips" aria-label="${FLIGHTS-r.flight} flights left">${Array.from({length:FLIGHTS},(_,i)=>`<i class="${i<r.flight?'used':''}"></i>`).join('')}</span>`;
   const storm=w?`<div class="pstorm"><b>${WEATHER[w].name}</b>${WEATHER[w].d(severity(r,r.stage))}</div>`:'';
   const p=r.phase==='shop'?0:Math.min(1,r.score/q);
-  $('cstrip').innerHTML=`<div class="prow"><span class="psub">${r.phase==='shop'?'Next · ':''}${sub}</span>${r.phase==='shop'?'':stubs}</div>
-    <div class="ptown">${t.town}<small>${t.show==='Grand Finale'?'Grand Finale':t.show}</small></div>
+  $('cstrip').innerHTML=`<div class="prow"><div class="ptown">${r.phase==='shop'?'<small>Next</small>':''}${t.town}</div>${r.phase==='shop'?'':stubs}</div>
     <div class="cbar"><i style="transform:scaleX(${p})"></i><span>Score ${r.phase==='shop'?'target '+fmt(q):fmt(r.score)+' / '+fmt(q)}</span></div>${storm}${routeStrip(r)}`;
+  {const rt=$('cstrip').querySelector('.route'),pn=$('cstrip').querySelector('.pnext');if(rt&&pn)rt.onclick=()=>{pn.hidden=!pn.hidden}}
 }
 function renderHangar(){
   const r=R();if(!r)return;

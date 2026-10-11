@@ -511,3 +511,24 @@ button:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
 .hc.x{background:var(--canvas)}.hc.x b{color:var(--teal2)}
 .srow .m{color:var(--teal2)}
 .tl.x b{color:var(--teal2)}
+/* compact poster so the build area gets the room */
+.poster{padding:6px 12px 7px;gap:4px;margin-bottom:8px}
+.ptown{font-size:clamp(20px,6.2vw,26px);gap:0 8px}
+.ptown small{font-family:var(--body);font-weight:900;font-size:12px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+.poster .cbar{height:20px}
+.route{max-height:40px;margin-top:0}
+.pnext{font-size:11.5px;font-weight:800;color:var(--muted);text-align:center;margin-top:-4px}
+.pnext b{color:var(--red)}
+.pstorm{font-size:12px;padding:3px 8px}
+.bench{padding-top:8px;gap:12px}
+.grid{margin:6px 0 4px}
+/* screens cover the whole viewport in the installed app (no band under the bottom bar) */
+.screen{position:fixed}
+html,body{height:100%;min-height:100dvh}
+.ricon .rbg{fill:var(--ink)}
+.ricon path,.ricon rect{fill:none;stroke:var(--paper);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.ricon .f{fill:#8a96a6}
+.ricon .y{stroke:var(--brass)}
+.ptown small{font-family:var(--body);font-weight:900;font-size:12px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;margin-right:2px}
+.route{max-height:none;cursor:pointer}
+.pnext{margin-top:0;line-height:1.5}
