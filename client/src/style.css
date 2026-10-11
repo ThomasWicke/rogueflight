@@ -186,8 +186,6 @@ button:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
 .fuel i{position:absolute;inset:0;background:repeating-linear-gradient(-45deg,var(--brass) 0 6px,#f0b84f 6px 12px);transform-origin:left center}
 .fuelrow{display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:center;font-family:var(--display);font-size:12px;color:var(--ink)}
 .fuelrow>span{background:var(--paper);border:2px solid var(--ink);border-radius:4px;padding:1px 6px}
-.copybox{position:fixed;inset:0;z-index:50;background:rgba(34,40,58,.92);display:grid;grid-template-rows:1fr auto;gap:12px;padding:calc(var(--reserve) + 16px) 16px 24px}
-.copybox textarea{width:100%;height:100%;font:12px/1.4 ui-monospace,Menlo,monospace;background:var(--paper);color:var(--ink);border:var(--ol) solid var(--ink);border-radius:6px;padding:10px}
 .ffw{color:var(--red)}
 .wxhud{justify-self:start;font-family:var(--display);font-size:12px;color:var(--paper);background:var(--red);border:2px solid var(--ink);border-radius:4px;padding:2px 8px}
 .toast{position:absolute;left:16px;right:16px;top:calc(var(--reserve) + 150px);text-align:center;pointer-events:none;font-family:var(--display);font-size:30px;color:var(--paper);text-shadow:3px 3px 0 var(--ink),-1px -1px 0 var(--ink),1px -1px 0 var(--ink),-1px 1px 0 var(--ink);transition:opacity .4s}

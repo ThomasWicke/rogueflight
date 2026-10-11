@@ -57,11 +57,6 @@ let armAbandon=false;
 function runCode(r){if(!r)return '';const L=t=>t==='cockpit'?'c':t[0];
   return 'ROGUEFLIGHT '+JSON.stringify({lvl:r.level,cleared:r.stage,boons:r.boons||{},endless:!!r.endless,coins:r.coins,mods:r.mods.map(id=>{const L=modLevels(r)[id];return L>1?id+':'+L:id}),tune:r.tune,inv:r.inv,
     cells:r.cells.map(c=>L(c.type)+c.c+c.r).join(' '),log:r.log.map(l=>[l.stage+1,l.flight,l.score,l.d,l.x])})}
-function copyRun(r,btn){const txt=runCode(r);const ok=()=>{if(btn){btn.textContent='Copied';setTimeout(()=>{btn.textContent='Copy run'},1500)}};
-  const fall=()=>{const d=document.createElement('div');d.className='copybox';d.innerHTML='<textarea readonly></textarea><button class="big" type="button">Close</button>';
-    d.querySelector('textarea').value=txt;d.querySelector('button').onclick=()=>d.remove();document.body.appendChild(d);const t=d.querySelector('textarea');t.focus();t.select()};
-  try{navigator.clipboard.writeText(txt).then(ok,fall)}catch(_){fall()}}
-document.addEventListener('click',e=>{const b=e.target.closest('[data-copyrun]');if(!b)return;copyRun(b.dataset.copyrun==='last'?save.meta.lastRun:R(),b)});
 // telemetry: every finished or abandoned run goes to /api/run (a Pages Function storing it in D1) for balancing.
 // Anonymous: a random id per browser and the run code, nothing else. Production builds only.
 function clientId(){try{let id=localStorage.getItem('rogueflight-client');if(!id){id=Math.random().toString(36).slice(2)+Date.now().toString(36);localStorage.setItem('rogueflight-client',id)}return id}catch(_){return ''}}
@@ -71,7 +66,7 @@ function reportRun(r){
     const body=JSON.stringify({client:clientId(),version:__BUILD__,level:r.level,cleared:r.stage,endless:!!r.endless,won:r.stage>=CONTRACTS,data});
     if(!(navigator.sendBeacon&&navigator.sendBeacon('/api/run',body)))fetch('/api/run',{method:'POST',body,keepalive:true}).catch(()=>{})}catch(_){}
 }
-function endRun(){if(slot!=='run'){leaveMode();return}reportRun(save.run);if(save.run)save.meta.lastRun={...JSON.parse(JSON.stringify(save.run)),shop:null};save.meta.runs=(save.meta.runs||0)+1;save.run=null;persist();veil.hidden=true;armAbandon=false;show('title');renderTitle()}
+function endRun(){if(slot!=='run'){leaveMode();return}reportRun(save.run);save.meta.runs=(save.meta.runs||0)+1;save.run=null;persist();veil.hidden=true;armAbandon=false;show('title');renderTitle()}
 
 /* ================= title ================= */
 let pickLevel=save.meta.level||0;
@@ -96,7 +91,7 @@ function renderTitle(){
   h+=`<div class="card"><span class="label">Stats</span>
     <dl class="stats"><dt>Runs</dt><dd>${m.runs}</dd><dt>Wins</dt><dd>${m.wins}</dd><dt>Most contracts in a run</dt><dd>${m.deepest||m.bestStage}</dd><dt>Best score</dt><dd>${fmt(m.bestFlight)}</dd>${m.level?`<dt>Highest Ceiling</dt><dd>${m.level}</dd>`:''}</dl>
     <div class="row" style="margin-top:12px"><span class="label">Unlocks</span><span class="hint">contracts in one run</span></div>
-    <ul class="unl">${UNLOCKS.map(u=>{const d=m.bestStage>=u.at;return `<li class="${d?'done':''}"><i>${d?'\u2713':u.at}</i><span>${u.text}</span></li>`}).join('')}</ul>${m.lastRun?'<div style="margin-top:12px"><button class="ghost" type="button" data-copyrun="last">Copy last run</button></div>':''}</div>`;
+    <ul class="unl">${UNLOCKS.map(u=>{const d=m.bestStage>=u.at;return `<li class="${d?'done':''}"><i>${d?'\u2713':u.at}</i><span>${u.text}</span></li>`}).join('')}</ul></div>`;
   $('titleBody').innerHTML=h;
   startTitleScene();
   $('howto').onclick=openGuide;$('libBtn').onclick=()=>openLibrary();
@@ -344,7 +339,7 @@ function renderMods(){
   <div class="card"><span class="label">Tuning</span><p class="hint" style="margin-top:6px">${tl||'\u2014'}</p></div>
   ${bl?`<div class="card"><span class="label">Storm rewards</span><p class="hint" style="margin-top:6px">${bl}</p></div>`:''}
   <div class="card"><span class="label">Log</span><div class="log">${log||'<div>\u2014</div>'}</div></div>
-  <div class="card stack"><button class="ghost" id="libOpen" type="button">Mods library</button><button class="ghost" type="button" data-copyrun="cur">Copy run</button><button class="ghost${armAbandon?' armed':''}" id="aband2" type="button">${armAbandon?'Tap again':slot==='online'?'Leave room':slot==='daily'?'End puzzle':'Abandon run'}</button></div>`;
+  <div class="card stack"><button class="ghost" id="libOpen" type="button">Mods library</button><button class="ghost${armAbandon?' armed':''}" id="aband2" type="button">${armAbandon?'Tap again':slot==='online'?'Leave room':slot==='daily'?'End puzzle':'Abandon run'}</button></div>`;
   dbody.onclick=e=>{
     const q=e.target.closest('[data-lib]');if(q){openLibrary(q.dataset.lib);return}
     if(e.target.closest('#libOpen')){openLibrary();return}
@@ -846,7 +841,7 @@ function showVictory(){
     ${r.unlocks.length?`<p class="note">Unlocked: <b>${r.unlocks.join(', ')}</b></p>`:''}
     ${m.level>r.level?`<p class="note">Ceiling <b>${r.level+1}</b> unlocked</p>`:''}
     <button class="big win" type="button" id="endless">Endless mode</button>
-    <button class="big alt" type="button" id="retire">Retire</button><button class="ghost" type="button" data-copyrun="cur">Copy run</button>`;
+    <button class="big alt" type="button" id="retire">Retire</button>`;
   veil.hidden=false;sfx('fanfare');sfx('cheer',{intensity:1});confetti();
   $('endless').onclick=()=>{sheet.className='sheet';r.endless=true;r.phase='shop';r.shop=genShop(r,m);weatherOf(r,r.stage);grantPacks(r);persist();veil.hidden=true;show('hangar');setTab('build')};
   $('retire').onclick=()=>{sheet.className='sheet';endRun()};
@@ -860,7 +855,7 @@ function showRunOver(){
     <p class="note">Contracts cleared: <b>${n}${r.endless?'':' / '+CONTRACTS}</b></p>
     ${runStats(r)}
     ${r.unlocks.length?`<p class="note">Unlocked: <b>${r.unlocks.join(', ')}</b></p>`:''}
-    <button class="big" type="button" id="again">New run</button><button class="ghost" type="button" data-copyrun="cur">Copy run</button>`;
+    <button class="big" type="button" id="again">New run</button>`;
   veil.hidden=false;sfx('sad');
   $('again').onclick=()=>{sheet.className='sheet';endRun()};
 }
@@ -936,8 +931,7 @@ function showDailyEnd(){
   sheet.innerHTML=`<span class="label">${r.ranked?'Daily puzzle #'+r.day:'Random puzzle'}</span>
     <h2>${fmt(r.total)}</h2><p class="note">Total of ${FLIGHTS} flights</p>${runStats(r)}
     ${r.ranked?`<div class="namerow"${named?' hidden':''}><input id="dName" maxlength="16" placeholder="Your name" autocomplete="nickname" value="${esc(save.meta.name||'')}"><button class="big" id="dSend" type="button">Submit</button></div><div id="bBox">${named?'<p class="hint">Sending…</p>':''}</div>`:''}
-    <button class="${r.ranked?'ghost':'big'}" id="dDone" type="button">Done</button>${r.ranked?'':'<button class="ghost" id="dAgain" type="button">Another random puzzle</button>'}
-    <button class="ghost" type="button" data-copyrun="cur">Copy run</button>`;
+    <button class="${r.ranked?'ghost':'big'}" id="dDone" type="button">Done</button>${r.ranked?'':'<button class="ghost" id="dAgain" type="button">Another random puzzle</button>'}`;
   veil.hidden=false;sfx('fanfare');confetti();
   const send=async()=>{const res=await retryDaily();if(!$('bBox'))return;$('bBox').innerHTML=res?boardHTML(res):'<p class="hint warn">Offline: your score is sent next time.</p>'};
   if(r.ranked&&named)send();
