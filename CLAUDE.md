@@ -16,6 +16,7 @@ npm run bot -- 20 climb --seed=1   # balance harness: 20 scripted runs (policies
                                    #   --storm=<weather id>|none forces one storm onto contracts 3, 6, 8; --ceiling=N)
 npm run build     # -> dist/
 npm run preview   # serve dist/ (service worker only registers in production builds)
+npx wrangler deploy --config server/wrangler.toml   # deploy the game server (daily leaderboard + live rooms)
 ```
 
 ## Layout
@@ -37,6 +38,10 @@ client/src/style.css     all styles; dark blueprint theme, tokens on :root
 client/public/           favicon.svg (source of the app icon), manifest.webmanifest, sw.js, _headers (Cloudflare), icons/ (PNGs rendered from favicon.svg)
 tests/sim.test.js        headless sim checks (no browser)
 functions/api/run.js     Pages Function storing finished runs in D1 (schema.sql)
+client/src/net.js        client side of the game server: daily leaderboard fetches, room WebSocket with auto-reconnect
+client/src/bots.js       pure: Elimination bots (craft, tunings, pilot) seeded by room seed, round and bot number
+server/worker.js         game server Worker (rogueflight-server.thomaswi1998.workers.dev): /daily leaderboard in D1, Room Durable Object for live rooms
+server/wrangler.toml     its config: Durable Object ROOMS (class Room), D1 binding DB
 tools/bot.js             balance harness (scripted shopper, builder, pilot), prints contracts reached and per-contract score spread
 ```
 
@@ -103,7 +108,17 @@ Code style is dense (many one-line functions, short names: `S` flight state, `K`
 - One human data point: the player won all 8 contracts on their first serious run with a light, strong-prop glider (before quotas 6–8 were raised by about 20%). A balloon-heavy build later died to thin air on contract 6; that loss motivated revealing storms early.
 - Additive per-part mods (Wingman +0.3 per wing, Fuel Hauler +0.4 per tank) stack strongly with big builds.
 
+## Modes
+- **Run** (`save.run`): the main 8-contract run, unchanged.
+- **Daily puzzle** (`save.daily`, mode `'daily'`): one contract, 3 flights, 100 coins, no storms, seed `dailySeed(dailyNumber())` (day 1 = 2026-10-11 UTC). The score is the sum of the 3 flights. Ranked on the first try: the result is stored in `meta.daily[day]` and `meta.dailyPending` until the server has it, with the nickname `meta.name`. After the first finished daily, **Random puzzle** (unranked, any seed) appears.
+- **Live rooms** (`save.room` = 4-letter code, `save.online` = the room's run, modes `'team'` and `'elim'`). The Room Durable Object holds the shared state: lobby → build (everyone taps READY) → countdown → flight (all launch at `launchAt`) → round results → build. Each phone simulates its own flight and streams `pos` at 10 Hz; others are drawn as translucent ghosts with name tags (edge tags when off-screen). After landing you spectate whoever is still flying. No fast-forward; flights are 2 min (+20 s per Flight permit).
+  - Team: a normal run where the team's flight scores add up toward `quota × players`; the server decides clear/fail, clients apply it with `clearContract`.
+  - Elimination: one flight per round, the bottom third (at least one, ties survive) is out each round; survivors get the clear reward, a new shop and packs. Bots (host adds them in the lobby) fly deterministically on every phone from `botFlight(seed, stage, i)`; the first phone to finish a bot's flight reports its score. When no humans are left, the best bot wins.
+  - Puzzles and rooms use a fixed meta (all unlocks) so everyone gets the same shop pool, and never touch the player's records or telemetry.
+  - Invite links: `/?room=CODE`. Friends-only beta: the server trusts client scores.
+
 ## Open items / ideas
+- Multiplayer follow-ups: a public Elimination queue with bots topping up rooms, chat/emotes, showing ghosts' scores live, a proper HUD while spectating (the focused pilot's numbers), server-side validation (replay inputs) once strangers play.
 - Circus rework follow-ups: season postcards to share (render the craft at its best moment), decals stuck on the plane itself, liveries unlocked by milestones, a decal album. Tune the procedural audio by ear on a phone.
 - Consider a browser smoke test (Playwright) for the main flow: start → buy → build → launch → results.
 - Deploy: Cloudflare Pages, build `npm run build`, output `dist`. `_headers` keeps `sw.js` and HTML uncached. Bump `CACHE` in `client/public/sw.js` if cached files ever need a hard reset.

@@ -12,3 +12,15 @@ CREATE TABLE IF NOT EXISTS runs (
   data TEXT NOT NULL        -- the run code as JSON: mods with levels, tunings, inventory, craft, weather, flight log
 );
 CREATE INDEX IF NOT EXISTS runs_created ON runs (created_at);
+
+-- daily puzzle leaderboard (server/worker.js): one row per browser and day; only the first submission counts
+CREATE TABLE IF NOT EXISTS daily_scores (
+  day INTEGER NOT NULL,     -- puzzle number (dailyNumber in sim.js)
+  client TEXT NOT NULL,     -- random id per browser
+  name TEXT,                -- nickname the player typed
+  score INTEGER NOT NULL,
+  data TEXT,                -- the run code as JSON
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (day, client)
+);
+CREATE INDEX IF NOT EXISTS daily_rank ON daily_scores (day, score DESC);

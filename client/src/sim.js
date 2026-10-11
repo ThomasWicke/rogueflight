@@ -462,17 +462,24 @@ function sellMod(run,id){const i=run.mods.indexOf(id);if(i<0)return 0;const v=se
 // everything a flight of this run needs: tunings, mod levels, this contract's weather, the ceiling's clock
 function flightStats(run){const w=weatherOf(run,run.stage),fx=weatherFx(w,severity(run,run.stage));if((run.level||0)>=10)fx.clock=240;
   const st=stats(run.tune,modLevels(run),fx),b=k=>boonN(run,k);
+  // live rooms fly together, so their flights are short: 2 minutes, +20 s per Flight permit
+  if(isOnline(run))st.flightTime=ONLINE_TIME+20*Math.min(run.tune.time||0,TUNES.time.max);
   st.drag*=Math.pow(.92,b('drag'));st.grav*=Math.pow(.92,b('grav'));const fm=Math.pow(1.12,b('fuel'));st.tankFuel*=fm;st.reserve*=fm;
   return st}
-// opts.seed fixes everything random in the run; opts.mode: 'run' (default), 'daily' (one contract, 100 coins, no storms), 'team'
+// opts.seed fixes everything random in the run; opts.mode: 'run' (default), 'daily' (one contract, 100 coins, no storms),
+// 'team' (a live room: the team's flights add up toward the target, the room decides clears) or 'elim' (a live room: one
+// flight per round, the room knocks out the lowest scores)
+const isOnline=run=>run.mode==='team'||run.mode==='elim';
+const ONLINE_TIME=120;
 function newRun(level,meta,opts={}){
   const seed=opts.seed!=null?opts.seed>>>0:Math.floor(Math.random()*4294967296);
   const run={seed,rs:seed,mode:opts.mode||'run',level:level||0,stage:0,flight:0,score:0,total:0,best:0,bestDist:0,coins:START.coins,inv:{...START.inv},
     cells:[{...COCKPIT,type:'cockpit'}],mods:[],modLv:{},boons:{},boonOffer:null,tune:{},weather:{},shop:null,phase:'contract',log:[],endless:false,unlocks:[],packs:[]};
   if(run.mode==='daily')run.coins=DAILY_COINS;
+  // the weather comes first, so it depends on the seed alone (players in a room share it whatever their shops do)
+  for(let i=0;i<CONTRACTS;i++)weatherOf(run,i);
   run.shop=genShop(run,meta);
   grantPacks(run);
-  for(let i=0;i<CONTRACTS;i++)weatherOf(run,i);
   return run}
 // parts packs: one random part each, handed out at the start of every contract (2, or 4 for the first).
 // The opening four always hold a tank, a wing and an engine, so every run can fly; the fourth is random.
@@ -500,20 +507,26 @@ function settleFlight(run,meta,f){
   const out={sc,pay,coinsPicked:f.coins,sponsor:has('sponsor'),quota,contractScore:run.score,prevScore:run.score-sc.total,stage:run.stage,flightNo:run.flight};
   // daily puzzle: one contract, three flights, the score is the sum; no target, no clearing
   if(run.mode==='daily'){if(run.flight>=FLIGHTS){run.phase='done';out.dailyDone=true}return out}
-  if(run.score>=quota){
-    const unused=FLIGHTS-run.flight, storm=isStorm(run.stage,run.level);
-    const reward=6+2*unused+(storm?4:0);
-    const interest=has('piggy')?Math.min(modVal(lv,'piggy'),Math.floor((run.coins+reward)/5)):0;
-    run.coins+=reward+interest;
-    Object.assign(out,{cleared:true,reward,unused,storm,interest});
-    run.stage++;run.flight=0;run.score=0;
-    const before=meta.bestStage||0;meta.bestStage=Math.max(before,run.stage);meta.deepest=Math.max(meta.deepest||0,run.stage);
-    out.unlocks=UNLOCKS.filter(u=>u.at>before&&u.at<=meta.bestStage).map(u=>u.text);
-    run.unlocks.push(...out.unlocks);
-    if(run.stage===CONTRACTS&&!run.endless){run.phase='won';meta.wins=(meta.wins||0)+1;
-      if(run.level>=(meta.level||0)&&run.level<MAX_CEILING){meta.level=run.level+1;out.newLevel=meta.level}out.won=true}
-    else{run.phase='shop';run.shop=genShop(run,meta);weatherOf(run,run.stage);grantPacks(run);if(storm){run.boonOffer=rollBoons(run);out.boons=true}}
-  }else if(run.flight>=FLIGHTS){run.phase='over';out.failed=true}
+  // live rooms: the room adds everyone's flights up and says when a contract is cleared (clearContract) or lost
+  if(isOnline(run)){out.quota=Infinity;return out}
+  if(run.score>=quota)clearContract(run,meta,out);
+  else if(run.flight>=FLIGHTS){run.phase='over';out.failed=true}
+  return out}
+// a cleared contract: the reward (more for unused flights and storms), the next town's shop and packs, a storm reward
+function clearContract(run,meta,out={}){
+  const lv=modLevels(run), has=k=>!!lv[k];
+  const unused=Math.max(0,FLIGHTS-run.flight), storm=isStorm(run.stage,run.level);
+  const reward=6+2*unused+(storm?4:0);
+  const interest=has('piggy')?Math.min(modVal(lv,'piggy'),Math.floor((run.coins+reward)/5)):0;
+  run.coins+=reward+interest;
+  Object.assign(out,{cleared:true,reward,unused,storm,interest});
+  run.stage++;run.flight=0;run.score=0;
+  const before=meta.bestStage||0;meta.bestStage=Math.max(before,run.stage);meta.deepest=Math.max(meta.deepest||0,run.stage);
+  out.unlocks=isOnline(run)?[]:UNLOCKS.filter(u=>u.at>before&&u.at<=meta.bestStage).map(u=>u.text);
+  run.unlocks.push(...out.unlocks);
+  if(run.stage>=CONTRACTS&&!run.endless){run.phase='won';out.won=true;
+    if(!isOnline(run)){meta.wins=(meta.wins||0)+1;if(run.level>=(meta.level||0)&&run.level<MAX_CEILING){meta.level=run.level+1;out.newLevel=meta.level}}}
+  else{run.phase=isOnline(run)?'contract':'shop';run.shop=genShop(run,meta);weatherOf(run,run.stage);grantPacks(run);if(storm){run.boonOffer=rollBoons(run);out.boons=true}}
   return out}
 
 export {
@@ -529,5 +542,5 @@ export {
   MODMAX, modLevels, modVal, modDesc, modPrice, canBuy, applyPurchase, sellMod, flightStats, repeats, severity,
   MAX_CEILING, CEILING_RULES, ceilingRules, REDLINE, CLOUD9,
   BOONS, rollBoons, boonDesc, pickBoon, modSlots,
-  DAILY_COINS, dailyNumber, dailySeed, SIM_DT,
+  DAILY_COINS, dailyNumber, dailySeed, SIM_DT, isOnline, ONLINE_TIME, clearContract,
 };

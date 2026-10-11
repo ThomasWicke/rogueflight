@@ -528,3 +528,42 @@ html,body{height:100%;min-height:100dvh}
 .ptown small{font-family:var(--body);font-weight:900;font-size:12px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;margin-right:2px}
 .route{max-height:none;cursor:pointer}
 .pnext{margin-top:0;line-height:1.5}
+
+/* ---------- daily puzzle and live rooms ---------- */
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.joinrow,.namerow{display:flex;gap:8px;align-items:stretch}
+.joinrow input,.namerow input{flex:1;min-width:0;font:inherit;font-weight:900;font-size:16px;color:var(--ink);background:var(--canvas);border:2px solid var(--ink);border-radius:6px;padding:8px 10px;box-shadow:inset 2px 2px 0 rgba(34,40,58,.12);-webkit-user-select:text;user-select:text}
+.joinrow input{text-transform:uppercase;letter-spacing:.3em;text-align:center;font-family:var(--display)}
+.namerow .big{width:auto;padding-left:18px;padding-right:18px}
+.board{list-style:none;margin:8px 0;padding:0;display:grid;gap:3px;font-variant-numeric:tabular-nums}
+.board li{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:5px;background:var(--paper2);font-size:14px}
+.board li i{font-style:normal;font-weight:900;color:var(--muted);min-width:1.4em}
+.board li span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.board li b{font-weight:900}
+.board li.me{background:var(--brass);box-shadow:inset 0 0 0 2px var(--ink)}
+.board li.out{opacity:.6}
+.board li.out span{text-decoration:line-through}
+.board li em{font-style:normal;font-size:11px;font-weight:900;color:var(--paper);background:var(--red);border-radius:999px;padding:1px 7px}
+.lobby{display:grid;gap:10px;text-align:center;justify-items:center}
+.lobby>*{width:100%}
+.lobby .seg{width:auto;justify-content:center}
+.rcode{font-family:var(--display);font-size:44px;letter-spacing:.18em;margin:0;color:var(--red)}
+.plist{list-style:none;margin:0;padding:0;display:grid;gap:4px;text-align:left}
+.plist li{display:flex;gap:8px;align-items:center;background:var(--paper2);border-radius:5px;padding:6px 10px;font-size:14px}
+.plist li span{flex:1}
+.plist li b{font-size:11px;color:var(--paper);background:var(--ink);border-radius:999px;padding:1px 7px}
+.plist li i{font-style:normal;font-size:11px;color:var(--muted)}
+.plist li.off{opacity:.5}
+.rchips{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.rchip{font-size:12px;font-weight:900;padding:2px 9px;border-radius:999px;border:2px solid var(--ink);background:var(--canvas);color:var(--muted)}
+.rchip.ready{background:var(--good);color:var(--paper)}
+.rchip.me{box-shadow:2px 2px 0 var(--ink)}
+.rchip.off{opacity:.45;border-style:dashed}
+.roundsheet{text-align:center}
+.eqn.small{font-size:22px;margin:4px 0}
+.spec{position:absolute;left:12px;right:12px;bottom:calc(18px + env(safe-area-inset-bottom,0px));display:flex;gap:8px;align-items:center;justify-content:space-between;background:var(--paper);border:var(--ol) solid var(--ink);border-radius:8px;box-shadow:var(--shadow);padding:8px 10px;font-size:14px}
+.spec button{background:var(--brass);border:2px solid var(--ink);border-radius:6px;padding:6px 10px;font:inherit;font-weight:900;color:var(--ink);max-width:62%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#flight.watching .ctrl{display:none}
+body.offline::after{content:"Reconnecting…";position:fixed;left:50%;top:calc(var(--reserve) + 6px);transform:translateX(-50%);z-index:99;background:var(--red);color:var(--paper);font-size:12px;font-weight:900;padding:3px 10px;border-radius:999px;border:2px solid var(--ink)}
+.tbody{grid-template-columns:minmax(0,1fr)}
+.joinrow input,.namerow input{width:0}

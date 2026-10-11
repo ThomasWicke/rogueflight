@@ -4,8 +4,9 @@ import assert from 'node:assert/strict';
 import {
   newRun, stats, weatherFx, makeCraft, newFlight, step, popBalloons, summaryOf, scoreFlight, settleFlight,
   quotaFor, openPack, PACKS, FIRST_PACKS, rollTunes, thermalSeg, G0, repeats, rerollShop, applyPurchase, offerPrice, rollMods,
-  isStorm, grantPacks, flightStats, MODMAX, pickBoon, rollBoons, modSlots, dailySeed,
+  isStorm, grantPacks, flightStats, MODMAX, pickBoon, rollBoons, modSlots, dailySeed, clearContract, ONLINE_TIME, SIM_DT,
 } from '../client/src/sim.js';
+import { botFlight } from '../client/src/bots.js';
 
 // 'c22 p32 w21 t23' -> cockpit at (2,2), prop at (3,2), wing at (2,1), tank at (2,3)
 const T = { c: 'cockpit', p: 'prop', r: 'rocket', t: 'tank', w: 'wing', b: 'balloon', f: 'frame' };
@@ -177,4 +178,27 @@ test('daily puzzle: 100 coins, no storms, three flights then done', () => {
   assert.equal(run.score, run.log.reduce((t, l) => t + l.score, 0));
   assert.equal(dailySeed(5), dailySeed(5));
   assert.notEqual(dailySeed(5), dailySeed(6));
+});
+
+test('live rooms: the weather depends on the seed alone, the room clears contracts, flights are short', () => {
+  const a = newRun(0, { bestStage: 0 }, { mode: 'team', seed: 777 }), b = newRun(0, { bestStage: 8 }, { mode: 'team', seed: 777 });
+  assert.deepEqual(a.weather, b.weather);
+  assert.equal(flightStats(a).flightTime, ONLINE_TIME);
+  const f = { dist: 5000, maxY: 50, maxV: 30, coins: 0, loops: 0, passes: 0, thermals: 0, landed: true, fuelFrac: 0 };
+  const out = settleFlight(a, {}, f);
+  assert.ok(!out.cleared && a.stage === 0 && a.flight === 1, 'a big flight alone does not clear: the room decides');
+  const coins = a.coins, c = clearContract(a, {}, {});
+  assert.ok(c.cleared && a.stage === 1 && a.flight === 0 && a.phase === 'contract' && a.coins > coins && a.packs.length);
+});
+
+test('bots: every build is whole, flights are reproducible and finish inside the clock', () => {
+  for (let round = 0; round < 6; round++) for (let i = 0; i < 4; i++) {
+    const once = () => { const b = botFlight(99, round, i, ONLINE_TIME); const S = newFlight(b.K, b.st); let n = 0;
+      while (!S.done && n < 200000) { step(S, b.K, b.st, SIM_DT, b.ctl(S)); n++; }
+      return { b, S, sc: scoreFlight(summaryOf(S, b.K), b.ctx).total }; };
+    const x = once(), y = once();
+    assert.equal(x.b.K.loose, 0); assert.equal(x.b.K.blocked, 0);
+    assert.ok(x.S.done && x.S.t <= ONLINE_TIME + 1);
+    assert.equal(x.sc, y.sc);
+  }
 });
