@@ -61,6 +61,9 @@ function runCode(r){if(!r)return '';const L=t=>t==='cockpit'?'c':t[0];
 // per run, updated in place) for balancing. Each flight carries a snapshot (build, score lines, height, speed, how it
 // ended); ev lists purchases, sales, rerolls, packs and storm rewards. Anonymous: a random id per browser and the run code.
 // Production builds only.
+// the game's home: copies hosted elsewhere (itch.io, a future app) send telemetry and invite links here
+const HOME='https://rogueflight.pages.dev', ATHOME=/(^|\.)rogueflight\.pages\.dev$|^localhost$|^127\.0\.0\.1$/.test(location.hostname);
+const homeURL=p=>(ATHOME?location.origin:HOME)+p;
 function clientId(){try{let id=localStorage.getItem('rogueflight-client');if(!id){id=Math.random().toString(36).slice(2)+Date.now().toString(36);localStorage.setItem('rogueflight-client',id)}return id}catch(_){return ''}}
 function reportRun(r,finished){
   if(!import.meta.env.PROD||!r||!r.log.length)return;
@@ -68,8 +71,8 @@ function reportRun(r,finished){
     // beacons cap at 64 KB: very long endless runs keep snapshots for their last 100 flights only
     if(JSON.stringify(data).length>55000)data.log=data.log.map((l,i,a)=>i<a.length-100?l.slice(0,5):l);
     const body=JSON.stringify({client:clientId(),run_id:clientId()+':'+mode+':'+r.seed,mode,version:__BUILD__,level:r.level,cleared:r.stage,endless:!!r.endless,
-      won:mode==='run'||mode==='team'?r.stage>=CONTRACTS:false,flights:r.log.length,finished:!!finished,data});
-    if(!(navigator.sendBeacon&&navigator.sendBeacon('/api/run',body)))fetch('/api/run',{method:'POST',body,keepalive:true}).catch(()=>{})}catch(_){}
+      won:mode==='run'||mode==='team'?r.stage>=CONTRACTS:false,host:import.meta.env.MODE==='itch'?'itch':location.hostname,flights:r.log.length,finished:!!finished,data});
+    const url=homeURL('/api/run');if(!(navigator.sendBeacon&&navigator.sendBeacon(url,body)))fetch(url,{method:'POST',body,keepalive:true,mode:ATHOME?'same-origin':'no-cors'}).catch(()=>{})}catch(_){}
 }
 function endRun(){if(slot!=='run'){leaveMode();return}reportRun(save.run,true);save.meta.runs=(save.meta.runs||0)+1;save.run=null;persist();veil.hidden=true;armAbandon=false;show('title');renderTitle()}
 
@@ -1020,7 +1023,7 @@ function applyRound(r,res){
 }
 function showLobby(){
   const R0=ROOM,mine=me(),host=R0.host===clientId(),elim=R0.mode==='elim';
-  const link=location.origin+'/?room='+R0.code;
+  const link=homeURL('/?room='+R0.code);
   sheet.className='sheet lobby';
   sheet.innerHTML=`<span class="label">Room</span><h2 class="rcode">${esc(R0.code)}</h2>
     <button class="ghost" id="rShare" type="button">Invite friends</button>

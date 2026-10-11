@@ -8,7 +8,8 @@ import '@fontsource/caveat/600';
 import './style.css';
 import './ui.js';
 
-if ('serviceWorker' in navigator && import.meta.env.PROD) {
+// not in the itch.io build: itch runs the game in a frame from its own servers, where a service worker cannot help
+if ('serviceWorker' in navigator && import.meta.env.PROD && import.meta.env.MODE !== 'itch') {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').catch(() => {});
   });

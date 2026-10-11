@@ -16,6 +16,7 @@ npm run bot -- 20 climb --seed=1   # balance harness: 20 scripted runs (policies
                                    #   --storm=<weather id>|none forces one storm onto contracts 3, 6, 8; --ceiling=N)
 npm run build     # -> dist/
 npm run preview   # serve dist/ (service worker only registers in production builds)
+npm run build:itch   # itch.io HTML5 build -> rogueflight-itch.zip (relative paths, no service worker; telemetry and invite links point to rogueflight.pages.dev)
 npx wrangler deploy --config server/wrangler.toml   # deploy the game server (daily leaderboard + live rooms)
 ```
 
