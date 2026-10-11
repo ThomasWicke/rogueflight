@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "build:itch": "vite build --mode itch --base ./ --outDir ../dist-itch && cd dist-itch && rm -f sw.js _headers && zip -qr ../wingnutcircus-itch.zip . && cd .. && echo rogueflight-itch.zip",
+    "build:itch": "vite build --mode itch --base ./ --outDir ../dist-itch && cd dist-itch && rm -f sw.js _headers ../wingnutcircus-itch.zip && zip -qr ../wingnutcircus-itch.zip . && cd .. && echo wingnutcircus-itch.zip",
     "preview": "vite preview --host",
     "test": "node --test tests/*.test.js",
     "bot": "node tools/bot.js",
