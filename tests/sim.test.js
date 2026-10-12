@@ -221,6 +221,9 @@ test('telemetry: every flight logs a snapshot, and purchases, packs and rerolls 
   settleFlight(run, meta, f);
   const s = run.log[0].s;
   assert.equal(s.cells, 'c22'); assert.equal(s.end, 'land'); assert.equal(s.maxV, 144);
+  assert.equal(s.clock, 120); assert.equal(s.t, 0);
+  settleFlight(run, meta, { ...f, landed: false, timeout: true, t: 120.4 });
+  assert.equal(run.log[1].s.end, 'time'); assert.equal(run.log[1].s.t, 120);
   assert.ok(s.lines.some(([l]) => l === '2 low passes'));
   const kinds = run.ev.map((e) => e[0]);
   assert.deepEqual(kinds.filter((k) => k !== 'pack'), ['buy', 'reroll']);

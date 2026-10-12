@@ -433,7 +433,7 @@ function popBalloons(S,K,st){
 }
 function summaryOf(S,K){return {dist:Math.max(0,S.maxX),maxY:S.maxY,maxV:S.maxV,coins:S.coins,loops:S.loops,passes:S.passes,thermals:S.thermals,
   bounces:S.bounces,mach:!!S.flags.mach,space:!!S.flags.karman,crashed:S.crashed,landed:!!S.landed,banked:!!S.banked,fuelFrac:K.fuelMax?S.fuel/K.fuelMax:0,
-  touchgos:S.touchgos||0,combos:S.combos||0,landX:S.x}}
+  touchgos:S.touchgos||0,combos:S.combos||0,landX:S.x,t:S.t,timeout:!!S.timeout,becalmed:!!S.becalmed}}
 // Bullseye: landing targets every 100 m, hit within 6 m (world.js draws them when the mod is owned)
 const TARGET_EVERY=100, TARGET_R=6;
 const onTarget=x=>x>TARGET_EVERY/2&&Math.abs(x-Math.round(x/TARGET_EVERY)*TARGET_EVERY)<=TARGET_R;
@@ -581,7 +581,9 @@ function settleFlight(run,meta,f){
   const lvs=modLevels(run),r1=x=>Math.round(x*100)/100;
   run.log.push({stage:run.stage,flight:run.flight,score:sc.total,d:Math.round(f.dist),x:r1(sc.mult*sc.xm),
     s:{mods:run.mods.map(id=>lvs[id]>1?id+':'+lvs[id]:id),tune:{...run.tune},cells:cellCode(run.cells),lines:sc.lines.map(l=>[l.label,l.t,r1(l.v)]),
-      maxY:Math.round(f.maxY),maxV:Math.round(f.maxV*3.6),end:f.crashed?'crash':f.landed?'land':f.banked?'bank':'air',fuel:r1(f.fuelFrac||0),coinsPicked:f.coins,coins:run.coins}});
+      maxY:Math.round(f.maxY),maxV:Math.round(f.maxV*3.6),end:f.crashed?'crash':f.landed?'land':f.banked?'bank':f.timeout?'time':f.becalmed?'calm':'air',
+      // how long the flight lasted against the clock it had (seconds), to see how often flights run out of time
+      t:Math.round(f.t||0),clock:Math.round(flightStats(run).flightTime),fuel:r1(f.fuelFrac||0),coinsPicked:f.coins,coins:run.coins}});
   meta.bestFlight=Math.max(meta.bestFlight||0,sc.total);
   const quota=run.mode==='daily'?Infinity:quotaFor(run.stage,run.level);
   const out={sc,pay,coinsPicked:f.coins,sponsor:has('sponsor'),quota,contractScore:run.score,prevScore:run.score-sc.total,stage:run.stage,flightNo:run.flight};
