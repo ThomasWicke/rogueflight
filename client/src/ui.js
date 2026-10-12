@@ -108,10 +108,15 @@ function renderTitle(){
     <dl class="stats"><dt>Runs</dt><dd>${m.runs}</dd><dt>Wins</dt><dd>${m.wins}</dd><dt>Most contracts in a run</dt><dd>${m.deepest||m.bestStage}</dd><dt>Best score</dt><dd>${fmt(m.bestFlight)}</dd>${m.level?`<dt>Highest Difficulty</dt><dd>${m.level}</dd>`:''}</dl>
     <div class="row" style="margin-top:12px"><span class="label">Unlocks</span><span class="hint">contracts in one run</span></div>
     <ul class="unl">${UNLOCKS.map(u=>{const d=m.bestStage>=u.at;return `<li class="${d?'done':''}"><i>${d?'\u2713':u.at}</i><span>${u.text}</span></li>`}).join('')}</ul></div>`;
-  h+=`<p class="ver">v${__VERSION__}</p>`;
+  h+=`<p class="ver" id="ver">v${__VERSION__}</p>`;
   $('titleBody').innerHTML=h;
   startTitleScene();
-  $('howto').onclick=openGuide;$('libBtn').onclick=()=>openLibrary();
+  $('howto').onclick=openGuide;
+  // tap the version for screen measurements (helps debug layouts on phones we cannot test on)
+  $('ver').onclick=()=>{const probe=k=>{const p=document.createElement('div');p.style.cssText=`position:fixed;visibility:hidden;padding-top:env(safe-area-inset-${k},0px)`;document.body.appendChild(p);const v=parseFloat(getComputedStyle(p).paddingTop)||0;p.remove();return Math.round(v)};
+    const sc=$('title').getBoundingClientRect(),tb=document.querySelector('.titlebench'),lg=document.querySelector('.logo').getBoundingClientRect();
+    $('ver').textContent=`v${__VERSION__} · inner ${innerWidth}×${innerHeight} · screen ${screen.width}×${screen.height} · html ${document.documentElement.clientHeight} · title ${Math.round(sc.top)}–${Math.round(sc.bottom)} · safe top ${probe('top')} bottom ${probe('bottom')} · standalone ${matchMedia('(display-mode: standalone)').matches?'css':'-'}/${navigator.standalone?'ios':'-'} · bench pad ${getComputedStyle(tb).paddingTop} scroll ${tb.scrollTop} · logo top ${Math.round(lg.top)} · vv ${window.visualViewport?Math.round(visualViewport.height)+'@'+Math.round(visualViewport.offsetTop):'-'}`};
+  $('libBtn').onclick=()=>openLibrary();
   bindModeCards();
   if(r){
     $('cont').onclick=()=>{armAbandon=false;slot='run';openHangar()};
