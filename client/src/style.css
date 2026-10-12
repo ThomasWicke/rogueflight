@@ -181,6 +181,7 @@ button:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
 .srow{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px;font-weight:900;font-variant-numeric:tabular-nums;color:var(--ink);background:var(--paper);border:2px solid var(--ink);border-radius:6px;padding:4px 10px;box-shadow:2px 2px 0 var(--ink)}
 .srow b{font-family:var(--display);font-weight:400;font-size:18px;color:var(--ink)}
 .srow .m{color:var(--red);font-family:var(--display);font-size:16px}
+.srow .lb{font-style:normal;color:var(--brass2)}
 .srow .need.ok{color:var(--good)}
 .fuel{height:12px;border-radius:3px;background:var(--paper2);border:2px solid var(--ink);overflow:hidden;position:relative}
 .fuel i{position:absolute;inset:0;background:repeating-linear-gradient(-45deg,var(--brass) 0 6px,#f0b84f 6px 12px);transform-origin:left center}
@@ -197,6 +198,9 @@ button:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
 .ctrl button.held{background:var(--brass);transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
 .rpad{display:grid;gap:10px;justify-items:center;pointer-events:none}
 #bPop{background:rgba(243,231,206,.88);color:var(--red2)}
+.ctrl #bFF{height:48px}
+.ctrl #bFF svg{width:26px;height:26px}
+.ctrl #bFF.on{background:var(--brass);color:var(--ink)}
 #bPop.held{background:var(--red);color:var(--paper)}
 #thr{pointer-events:auto;touch-action:none;position:relative;width:78px;height:170px;border-radius:12px;border:var(--ol) solid var(--ink);background:rgba(243,231,206,.88);overflow:hidden;box-shadow:0 4px 0 var(--ink)}
 #thrFill{position:absolute;left:0;right:0;bottom:0;height:100%;background:repeating-linear-gradient(-45deg,rgba(233,169,59,.9) 0 8px,rgba(240,184,79,.9) 8px 16px)}
@@ -593,3 +597,5 @@ body.offline::after{content:"Reconnecting…";position:fixed;left:50%;top:calc(v
 #libBody{position:relative}
 .libnote{text-align:center;margin-top:-4px}
 .ver{margin:0;text-align:center;font-size:12px;color:var(--mutedD);opacity:.7}
+.hc.b{background:var(--paper2)}.hc.b b{color:var(--ink)}
+.hype.bpts{margin-bottom:-4px}

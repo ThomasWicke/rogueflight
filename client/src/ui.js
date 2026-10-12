@@ -7,10 +7,10 @@ import {
   SOCK, STRUCT, linkage, connected, balanceOf, makeCraft, hs, groundY,
   COINSEG, COINR, thermalSeg, coinAt, newFlight, segDist, flag, step,
   popBalloons, summaryOf, scoreFlight, wpick, PART_W, rollMods, rollTunes, genShop,
-  rerollShop, priceOf, offerPrice, rerollCost, sellValue, newRun, craftCounts, settleFlight,
+  rerollShop, priceOf, offerPrice, rerollCost, sellValue, newRun, craftCounts, flightCtx, onTarget, TARGET_EVERY, settleFlight,
   PACKS, FIRST_PACKS, rollPacks, grantPacks, openPack,
   MODMAX, modLevels, modVal, modDesc, modPrice, canBuy, applyPurchase, sellMod, flightStats, repeats, severity,
-  MAX_CEILING, CEILING_RULES, ceilingRules, REDLINE, CLOUD9,
+  MAX_CEILING, CEILING_RULES, ceilingRules, REDLINE, CLOUD9, ALT_STEP, altBonus, altMilestones, altReached,
   BOONS, rollBoons, boonDesc, pickBoon, modSlots,
   DAILY_COINS, dailyNumber, dailySeed, SIM_DT, isOnline, ONLINE_TIME, clearContract,
 } from './sim.js';
@@ -377,7 +377,7 @@ $('hHelp').onclick=openGuide;
 // every mod with its values at each level and one plain line on how to trigger it, plus the tricks the score mods refer to
 const TRICKS=[['Loop','Turn a full circle in the air (hold NOSE UP over the top).','+0.5'],['Low pass','Fly under 4 m fast for a second, then climb above 8 m.','+0.25'],
   ['Thermal','Fly through a rising air column.','+0.1'],['Coin','Fly through a gold coin.','+0.05'],['Touchdown','Land and roll to a stop without crashing.','+0.5'],
-  ['Redline','Reach 500 km/h.','+1'],['Cloud nine','Climb to 5 km.','+2']];
+  ['Altitude','Reach 100, 250, 500, 750, 1000 m … Land afterwards and each height adds to the distance score (a landing bonus).','+200 … +1000'],['Redline','Reach 500 km/h.','+1'],['Cloud nine','Climb to 5 km.','+2']];
 const lib=$('library');let libTag='All';
 function descAll(id){const M=MODS[id],j=a=>a.map(x=>String(Math.round(x*100)/100)).join(' / ');
   return M.d.replace('{v%}',M.v?M.v.map(x=>Math.round(x*100)).join(' / ')+'%':'').replace('{v}',M.v?j(M.v):'').replace('{w}',M.w?j(M.w):'')}
@@ -535,6 +535,10 @@ function setThr(v){ctl.throttle=clamp(Math.round(v*100)/100,0,1);const p=Math.ro
   T.addEventListener('pointermove',e=>{if(T.dragging)at(e)});
   ['pointerup','pointercancel','lostpointercapture'].forEach(t=>T.addEventListener(t,()=>{T.dragging=false}));
   T.addEventListener('keydown',e=>{if(e.key==='ArrowUp'||e.key==='ArrowRight'){setThr(ctl.throttle+.1);e.preventDefault()}if(e.key==='ArrowDown'||e.key==='ArrowLeft'){setThr(ctl.throttle-.1);e.preventDefault()}})}
+// fast-forward: one tap on, one tap off; remembered between flights so players can simply leave it on
+const FF_SPEED=2, FF_PITCH=.5, ffOn=()=>!!(save.meta.ff&&F&&!F.online);
+function syncFF(){const b=$('bFF');b.classList.toggle('on',!!save.meta.ff);b.setAttribute('aria-pressed',String(!!save.meta.ff));b.style.visibility=F&&F.online?'hidden':'visible'}
+$('bFF').addEventListener('click',()=>{save.meta.ff=!save.meta.ff;persist();syncFF();buzz(10)});
 hold('bPop',()=>{if(F&&!F.S.burst&&F.K.counts.balloon){F.S.burst=true;F.S.events.push('burst')}},()=>{});
 const keys={};
 window.addEventListener('keydown',e=>{if(!F)return;keys[e.key]=1;sync(e)});
@@ -545,11 +549,11 @@ function sync(e){if(!F)return;const up=keys.ArrowUp||keys.w||keys.W,dn=keys.Arro
 function startFlight(o={}){
   const r=R(),w=curWx(),st=curStats(),K=makeCraft(r.cells,st);
   F={st,K,S:newFlight(K,st),ts:1,online:!!o.online,watch:!!o.watch,flyCoins:[],pre:reduceMotion()?.3:1.1,stretch:0,debris:null,chute:null,idle:0,wx:w,cam:{x:0,y:20,sc:20},trail:[],parts:[],toasts:[],toastT:0,boom:-1,ended:false,coinFlash:0,endT:0,
-    ctx:{mods:r.mods.slice(),lv:modLevels(r),flightIdx:r.flight,cleared:r.stage,coins:r.coins,...craftCounts(r.cells)},quota:r.mode==='daily'||o.online?null:quotaFor(r.stage,r.level),already:r.score,bestDist:r.bestDist||0};
+    ctx:flightCtx(r),quota:r.mode==='daily'||o.online?null:quotaFor(r.stage,r.level),already:r.score,bestDist:r.bestDist||0};
   $('flight').classList.remove('watching');$('fSpec').hidden=true;
   ctl.pitch=0;ctl.boost=false;
   show('flight');setThr(1);$('thr').style.visibility=(K.counts.rocket||K.counts.prop)?'visible':'hidden';$('bPop').style.visibility=K.counts.balloon?'visible':'hidden';
-  $('toast').innerHTML='';$('toast').style.opacity=0;
+  $('toast').innerHTML='';$('toast').style.opacity=0;syncFF();
   const fw=$('fWx');fw.hidden=!w;if(w)fw.textContent='Storm · '+WEATHER[w].name;
   resize();F.cam.sc=vh/40;
   try{navigator.wakeLock&&navigator.wakeLock.request('screen').catch(()=>{})}catch(_){}
@@ -574,18 +578,14 @@ function frame(now){
   F.stretch=Math.max(0,F.stretch-dt*5);
   if(F.debris)updDebris(dt);
   if(!S.done){
-    // fast-forward only while hands-off; touching a control drops back to real time at once
-    F.idle=ctl.pitch?0:F.idle+dt;
-    const free=F.idle>1;
-    let tgt=1;
-    if(free&&S.t>12)tgt=Math.min(4,1+(S.t-12)/8);
-    if(S.fuel<=0&&!S.touch&&S.y>2000)tgt=Math.max(tgt,Math.min(free?30:3,S.y/600));
-    if(F.online)tgt=1;
-    F.ts+=(tgt-F.ts)*Math.min(1,dt*(tgt<F.ts?5:1.2));
+    // fast-forward is the player's toggle (2x, off in live rooms); the nose buttons are gentler while it is on, so
+    // the craft turns about as fast on screen as at normal speed
+    const ff=ffOn();F.ts=ff?FF_SPEED:1;
+    const c=ff&&ctl.pitch?{...ctl,pitch:ctl.pitch*FF_PITCH}:ctl;
     // fixed physics steps (SIM_DT) fed from an accumulator, so the same inputs give the same flight at any frame rate
     const ts=F.ts;F.acc=(F.acc||0)+dt*ts;
     let n=Math.min(600,Math.floor(F.acc/SIM_DT));F.acc-=n*SIM_DT;if(n===600)F.acc=0;
-    for(let i=0;i<n&&!S.done;i++){F.ticks=(F.ticks||0)+1;step(S,F.K,st,SIM_DT,ctl);
+    for(let i=0;i<n&&!S.done;i++){F.ticks=(F.ticks||0)+1;step(S,F.K,st,SIM_DT,c);
       if(S.burst&&!S.popped){const c=Math.cos(S.th),s=Math.sin(S.th);
         for(const p of F.K.parts)if(p.type==='balloon')for(let j=0;j<10;j++)F.parts.push({x:S.x+p.lx*c-p.ly*s,y:S.y+p.lx*s+p.ly*c,vx:S.vx*.5+(Math.random()-.5)*16,vy:S.vy*.5+(Math.random()-.5)*16,life:.8,r:.18,k:'pop'});
         F.K=popBalloons(S,F.K,st)}}
@@ -600,6 +600,9 @@ function frame(now){
       else if(e==='Redline'){F.boom=0;F.cheer=1;sfx('redline');sfx('cheer',{intensity:.9});buzz(40);toast('Redline',has('sonic')?`×${num(mv('sonic'))} score`:'+1 mult')}
       else if(e==='Cloud nine')F.cheer=1,sfx('cheer',{intensity:.9}),toast('Cloud nine',has('escape')?`×${num(mv('escape'))} score`:'+2 mult');
       else if(e==='Downdraft!')toast('Downdraft','The storm pushes you down');
+      else if(e==='altitude'){const y=altReached(S.y);F.cheer=.7;sfx('pass');toast(`${y} m`,`+${fmt(altBonus(S.y))} landing bonus`)}
+      else if(e==='touchgo'){if(has('touchgo'))F.cheer=.8,sfx('pass'),toast('Touch and go',nth(S.touchgos,mv('touchgo')))}
+      else if(e==='combo'){if(has('showboat'))F.cheer=1,sfx('cheer',{intensity:.5}),toast('Combo',nth(S.combos,mv('showboat')))}
       else toast(e,'');
     }
     S.events.length=0;
@@ -612,6 +615,7 @@ function frame(now){
     F.ended=true;audio.stopEngine();F.endT=now;F.toasts.length=0;F.toastT=0;
     if(S.crashed){breakApart();sfx('crash');sfx('ooh');buzz([60,40,80]);toast('Crashed',has('crashtest')?`+${num(mv('crashtest'))} mult`:'');dust(S.x,S.y,30,true)}
     else if(S.landed)sfx('touchdown'),sfx('cheer',{intensity:.6}),buzz(25),toast('Touchdown',has('greaser')?`×${num(mv('greaser'))} score`:'+0.5 mult');
+    if(S.landed&&has('bullseye')&&onTarget(S.x))F.cheer=1,sfx('cheer',{intensity:.9}),toast('Bullseye',`×${num(mv('bullseye'))} score`);
   }
   updParts(dt);draw(now);hud(dt);
   if(F.ended&&now-F.endT>(S.crashed?2600:1300)){if(F.online){if(!F.settled)finishOnline()}else{finish();return}}
@@ -678,7 +682,7 @@ function draw(now){
   const left=cam.x-vw/2/sc, right=cam.x+vw/2/sc;
   // the crowd cheers for tricks and records and gets livelier as the flight's hype builds
   F.cheer=Math.max(0,(F.cheer||0)-1/60*1.5);
-  drawWorld(ctx,{vw,vh,sc,X,Y,camX:cam.x,camY:cam.y,left,right,now,RES,stage:R()?R().stage:0,town:R()?townOf(R().seed,R().stage).town:'',wx:F.wx,st,best:F.bestDist,hype:F.hype||0,cheer:F.cheer});
+  drawWorld(ctx,{targets:F.ctx.lv.bullseye?TARGET_EVERY:0,vw,vh,sc,X,Y,camX:cam.x,camY:cam.y,left,right,now,RES,stage:R()?R().stage:0,town:R()?townOf(R().seed,R().stage).town:'',wx:F.wx,st,best:F.bestDist,hype:F.hype||0,cheer:F.cheer});
   const mag=st.magnetR>1;
   if(mag&&!S.done){const R0=COINR*st.magnetR*sc;ctx.save();ctx.strokeStyle='rgba(255,196,60,.45)';ctx.lineWidth=1.5;ctx.setLineDash([5,6]);ctx.lineDashOffset=-now/40;
     ctx.beginPath();ctx.arc(X(S.x),Y(S.y),R0,0,7);ctx.stroke();ctx.restore()}
@@ -740,11 +744,14 @@ function hud(dt){
   // flight clock: a flight ends at st.flightTime (5 min + Flight permits), so slow climbers can plan their descent
   {const rem=Math.max(0,Math.ceil(F.st.flightTime-S.t));elTm.lastChild.textContent=Math.floor(rem/60)+':'+String(rem%60).padStart(2,'0');elTm.className='ftime'+(rem<=20?' crit':rem<=60?' warn':'')}
   if(S.burst&&$('bPop').style.visibility!=='hidden')$('bPop').style.visibility='hidden';
-  {const t=F.ts>1.15&&!S.done;elFF.hidden=!t;if(t)elFF.textContent='\u25b8\u25b8 '+(F.ts<9.95?F.ts.toFixed(1):Math.round(F.ts))+'\u00d7'}
+  elFF.hidden=true;
   const sc=scoreFlight(summaryOf(S,K),F.ctx);F.live=sc.total;
   F.hype=clamp((sc.mult*sc.xm-1)/4,0,1);audio.hype(F.hype);
   if(!S.done&&F.pre<=0){const fr=K.fuelMax?S.fuel/K.fuelMax:0;audio.engine({prop:S.propOn?ctl.throttle:0,rocket:S.rocketOn?ctl.throttle:0,speed:Math.hypot(S.vx,S.vy),fuel:fr,alt:S.y})}F.coinT=Math.max(0,(F.coinT||0)-dt);
-  elS.textContent=fmt(sc.total);elM.textContent='×'+num(sc.mult*sc.xm);
+  // the score as its sum: distance points (+ the altitude landing bonus waiting for a landing) times the multiplier
+  {const pend=!S.landed&&!S.done?altBonus(S.maxY):0,key=sc.base+'|'+pend;if(key!==F.scoreKey){F.scoreKey=key;
+    elS.innerHTML=pend?`(${fmt(sc.base)} <i class="lb">+ ${fmt(pend)}</i>)`:fmt(sc.base)}}
+  elM.textContent='×'+num(sc.mult*sc.xm);
   if(F.quota!=null){const need=F.quota-F.already-sc.total;elN.textContent=need>0?`${fmt(need)} to target`:'Target reached';elN.className='need'+(need>0?'':' ok')}
   else if(F.online&&ROOM&&ROOM.mode==='team'){let got=sc.total;for(const f of F.fl||[])got+=f.s||0;const need=ROOM.target-ROOM.teamScore-got;
     elN.textContent=need>0?`${fmt(need)} to team target`:'Team target reached';elN.className='need'+(need>0?'':' ok')}
@@ -782,7 +789,7 @@ function showResults(out,S,f){
   const r=R(),sc=out.sc,town=townOf(r.seed,out.stage);
   const title=S.crashed?'Crashed':S.banked?'Landed early':S.landed?'Touchdown':S.becalmed?'Becalmed':'Out of time';
   const kind=S.crashed?'bad':S.landed?'good':'meh';
-  const base=sc.lines.filter(l=>l.t==='b'), hype=sc.lines.filter(l=>l.t!=='b');
+  const base=sc.lines.filter(l=>l.t==='b'), hype=sc.lines.filter(l=>l.t!=='b'), extra=base.filter(l=>!l.dist);
   const q=out.quota, p0=Math.min(1,out.prevScore/q), p1=Math.min(1,out.contractScore/q);
   const barT=v=>isFinite(q)?`Score ${fmt(v)} / ${fmt(q)}`:`Total ${fmt(v)}`;
   let btn='',next='',result='';
@@ -797,6 +804,7 @@ function showResults(out,S,f){
   sheet.innerHTML=`<div class="stamp ${kind}">${title}</div>
     <span class="label">${town.town} · flight ${out.flightNo} of ${FLIGHTS}</span>
     <div class="eqn"><span class="drum" id="tyBase">0</span><i>×</i><span id="tyM">1</span><i>=</i><b id="tyT">0</b></div>
+    ${extra.length?`<div class="hype bpts">${extra.map(l=>`<span class="hc b in">${l.label}<b>+${fmt(l.v)}</b></span>`).join('')}</div>`:''}
     <div class="hype" id="tyHype">${hype.map((l,k)=>{const m=lineMod(l.label);return `<span class="hc ${l.t}" data-k="${k}">${m&&DECAL?`<img alt="" src="${DECAL(m,48,modLevels(r)[m]||1)}">`:''}${l.label}<b>${l.t==='x'?'×':'+'}${num(l.v)}</b></span>`}).join('')||'<span class="hc none">No stunts this time</span>'}</div>
     <div class="cbar${out.cleared?' done':''}"><i id="rbar" style="transform:scaleX(${p0})"></i><span id="rbarT">${barT(out.prevScore)}</span></div>
     ${result}

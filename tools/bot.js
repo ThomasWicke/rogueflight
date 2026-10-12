@@ -51,20 +51,15 @@ const POLS = {
 const POL = POLS[PN];
 if (!POL) throw new Error('unknown policy ' + PN + ' (use: ' + Object.keys(POLS).join(', ') + ')');
 
-// mirrors the UI frame loop: 60 fps, fixed SIM_DT physics steps, fast-forward once hands-off for a second after 12 s
+// mirrors the UI frame loop: 60 fps, fixed SIM_DT physics steps (fast-forward only changes how fast that runs, not the flight)
 function fly(K, st, ctl) {
   const S = newFlight(K, st);
-  let ts = 1, idle = 0, acc = 0;
+  let acc = 0;
   const dt = 1 / 60;
   while (!S.done) {
     const c = ctl(S);
-    idle = c.pitch ? 0 : idle + dt;
-    let tgt = 1;
-    if (idle > 1 && S.t > 12) tgt = Math.min(4, 1 + (S.t - 12) / 8);
-    if (S.fuel <= 0 && !S.touch && S.y > 2000) tgt = Math.max(tgt, Math.min(idle > 1 ? 30 : 3, S.y / 600));
-    ts += (tgt - ts) * Math.min(1, dt * (tgt < ts ? 5 : 1.2));
-    acc += dt * ts;
-    const n = Math.min(600, Math.floor(acc / SIM_DT)); acc -= n * SIM_DT;
+    acc += dt;
+    const n = Math.floor(acc / SIM_DT); acc -= n * SIM_DT;
     for (let i = 0; i < n && !S.done; i++) { step(S, K, st, SIM_DT, c); if (S.burst && !S.popped) K = popBalloons(S, K, st); }
   }
   return { S, K };
@@ -159,6 +154,8 @@ const MOD_VALUE = {
   third: 9, opening: 8, greaser: 8, frugal: 6, logbook: 9, compound: 7, wingman: 8, hauler: 7, odometer: 7, collector: 5,
   altimeter: 5, speedtrap: 4, slipstream: 7, overclock: 6, burnoff: 6, secondwind: 6, sponsor: 6, coupon: 5, piggy: 5,
   sling: 4, thermal: 3, gyro: 3, magnet: 3, solar: 5, afterburner: 4, ramscoop: 4, recycler: 4, antigrav: 6,
+  // 0.4 mods this pilot can use (it never builds balloon or engine-less craft, dives, or chains tricks)
+  supercharge: 7, sailplane: 5, flyer: 5, carpenter: 4, understudy: 3, booster: 2,
 };
 function offerValue(run, kind, o) {
   const inv = (t) => run.inv[t] || 0, engine = inv('prop') + inv('rocket');

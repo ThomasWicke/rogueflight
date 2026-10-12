@@ -192,6 +192,17 @@ function signposts(ctx,v,best){
     ctx.fillStyle=PAPER;ctx.font='400 9px "Bowlby One", Impact, sans-serif';ctx.fillText('BEST',px+12,gy-41)}}
 }
 
+/* ---------- Bullseye landing targets: red and white rings flat on the ground ---------- */
+function targets(ctx,v){
+  const {X,Y,sc,left,right}=v, gy=Y(0), sp=v.targets;
+  if((right-left)/sp>60)return;
+  // painted flat on the grass: as wide as the 6 m hit zone each side, but thin, so it reads as a marking, not an object
+  ctx.save();ctx.globalAlpha=.8;
+  for(let k=Math.max(1,Math.floor(left/sp));k<=Math.ceil(right/sp);k++){const px=X(k*sp),rx=Math.max(8,6*sc),ry=Math.max(2,Math.min(9,rx*.08));
+    for(const [f,col] of [[1,RED],[.66,PAPER],[.33,RED]]){ctx.fillStyle=col;ctx.beginPath();ctx.ellipse(px,gy+ry*.6,rx*f,ry*f,0,0,7);ctx.fill()}}
+  ctx.restore();
+}
+
 /* ---------- clouds: flat poster clouds with a shade band ---------- */
 function clouds(ctx,v,b,night){
   const {X,Y,sc,left,right,vw,vh}=v;
@@ -280,6 +291,7 @@ function drawWorld(ctx,v){
         ctx.save();ctx.translate(px,gy);ctx.scale(v.sc,v.sc);drawProp(ctx,type,lw/v.sc,v.now/1000,k,night);ctx.restore()}}
     launchSite(ctx,v,b);
     signposts(ctx,v,v.best);
+    if(v.targets)targets(ctx,v);
   }
   thermals(ctx,v,v.st);
 }
