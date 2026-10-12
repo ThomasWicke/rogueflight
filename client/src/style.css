@@ -212,7 +212,7 @@ button:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
 .ftime.crit{color:var(--red);animation:pulse 1s ease-in-out infinite}
 
 /* sheets */
-.veil{position:absolute;inset:0;background:rgba(34,40,58,.55);display:flex;align-items:flex-end;justify-content:center;padding:calc(var(--reserve) + 16px) 16px calc(16px + env(safe-area-inset-bottom,0px));z-index:5}
+.veil{position:fixed;inset:0;background:rgba(34,40,58,.55);display:flex;align-items:flex-end;justify-content:center;padding:calc(var(--reserve) + 16px) 16px calc(16px + env(safe-area-inset-bottom,0px));z-index:5}
 .sheet{width:100%;max-width:460px;border:var(--ol) solid var(--ink);border-radius:8px;padding:16px 16px 16px;display:grid;gap:12px;max-height:100%;overflow:auto;box-shadow:6px 6px 0 var(--ink);
   background-color:var(--paper);background-image:var(--grain),var(--halftone);background-size:160px 160px,6px 6px}
 .sheet h2{font-family:var(--display);font-weight:400;font-size:36px;line-height:1;margin:0;color:var(--ink)}
@@ -294,7 +294,9 @@ button:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
 /* ---------- how to play: bottom drawer with swipeable slides ---------- */
 .howto{width:100%;position:relative}
 .howto.new::after{content:"";position:absolute;top:-6px;right:-6px;width:14px;height:14px;border-radius:50%;background:var(--red);border:2px solid var(--ink);animation:pulse 1.6s ease-in-out infinite}
-.drawer{position:absolute;inset:0;z-index:12;display:flex;align-items:flex-end;justify-content:center}
+/* fixed to the screen, not the page: on iPhones the page can be shorter than the screen, and an absolute drawer left
+   the hangar's bottom bar showing underneath it */
+.drawer{position:fixed;inset:0;z-index:12;display:flex;align-items:flex-end;justify-content:center}
 .dr-scrim{position:absolute;inset:0;background:rgba(34,40,58,.6);opacity:0;transition:opacity .25s}
 .dr-panel{position:relative;width:100%;max-width:520px;height:min(88%,700px);border:var(--ol) solid var(--ink);border-bottom:0;border-radius:10px 10px 0 0;
   display:flex;flex-direction:column;padding:6px 0 calc(14px + env(safe-area-inset-bottom,0px));transform:translateY(100%);transition:transform .28s cubic-bezier(.2,.8,.2,1);
@@ -593,7 +595,6 @@ body.offline::after{content:"Reconnecting…";position:fixed;left:50%;top:calc(v
 .libmod .own{color:var(--good)}
 .libmod.focus{background:#fff4d6;box-shadow:0 0 0 3px var(--brass),2px 2px 0 var(--ink)}
 .qm{margin-left:6px;width:20px;height:20px;border-radius:50%;border:2px solid var(--ink);background:var(--paper);color:var(--ink);font:900 12px/1 var(--body);padding:0;vertical-align:2px}
-#library{position:fixed}
 #libBody{position:relative}
 .libnote{text-align:center;margin-top:-4px}
 .ver{margin:0;text-align:center;font-size:12px;color:var(--mutedD);opacity:.7}
