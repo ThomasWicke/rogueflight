@@ -87,7 +87,7 @@ Code style is dense (many one-line functions, short names: `S` flight state, `K`
 - A flight ends after `st.flightTime`: `FLIGHT_TIME` (120 s of sim time since 0.4, "Out of time"; it was 300 s) plus 60 s per Flight permit tuning, capped at 3 permits (5 min). The cap matters: the clock is what bounds fuel-free thrust (Solar Wings, Ram Scoop), so never let it grow without limit. The HUD shows the time left under the speed, amber from 60 s, red and pulsing from 20 s.
 - Crash if a touchdown impact exceeds 15 m/s, or exceeds 5 m/s nose-down past 45°. Rubber Hull bounces instead.
 - Far zoomed out, the craft keeps a minimum on-screen size (about 32 px across) with a soft halo, instead of shrinking to nothing.
-- Fast-forward is a manual toggle (the ▸▸ button above the throttle, `save.meta.ff`, remembered between flights): 2× speed (`FF_SPEED`), inputs do not cancel it, and the nose buttons act at half strength (`FF_PITCH`) so the craft turns about as fast on screen. Off in live rooms. It replaced an automatic fast-forward (up to 4×, cancelled by any input) that players found fiddly.
+- Fast-forward is a manual toggle (the ▸▸ button above NOSE UP, `save.meta.ff`, remembered between flights): 2× speed (`FF_SPEED`), inputs do not cancel it, and the nose buttons act at half strength (`FF_PITCH`) so the craft turns about as fast on screen. Off in live rooms. It replaced an automatic fast-forward (up to 4×, cancelled by any input) that players found fiddly.
 
 ### Scoring (`scoreFlight`)
 `score = (distance + flat) × (1 + Σ additive mult) × Π xmult`.
