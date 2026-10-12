@@ -1,5 +1,5 @@
--- D1 schema for run telemetry. Apply once: in the Cloudflare dashboard (D1 -> rogueflight -> Console), or
---   npx wrangler d1 execute rogueflight --remote --file=schema.sql
+-- D1 schema for run telemetry. Apply once: in the Cloudflare dashboard (D1 -> wingnut-circus -> Console), or
+--   npx wrangler d1 execute wingnut-circus --remote --file=schema.sql
 CREATE TABLE IF NOT EXISTS runs (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),

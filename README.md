@@ -22,16 +22,16 @@ Or deploy from the command line:
 
 ```bash
 npm run build
-npx wrangler pages deploy dist --project-name rogueflight
+npx wrangler pages deploy dist --project-name wingnut-circus
 ```
 
 ### Run telemetry (optional)
 
 Finished runs are posted to `/api/run` and stored in a D1 database for balancing. Until D1 is set up, the endpoint accepts and drops them.
 
-1. Cloudflare dashboard → Storage & databases → D1 → Create database `rogueflight`.
+1. Cloudflare dashboard → Storage & databases → D1 → Create database `wingnut-circus`.
 2. Open its Console and run the contents of `schema.sql`.
-3. Workers & Pages → rogueflight → Settings → Bindings → Add → D1 database: variable name `DB`, database `rogueflight`. Redeploy.
+3. Workers & Pages → wingnut-circus → Settings → Bindings → Add → D1 database: variable name `DB`, database `wingnut-circus`, for Production and Preview. Redeploy.
 
 Query it from the D1 console, for example `SELECT level, cleared, won, data FROM runs ORDER BY id DESC LIMIT 20;`.
 
