@@ -14,5 +14,5 @@ new_sqlite_classes = ["Room"]
 
 [[d1_databases]]
 binding = "DB"
-database_name = "rogueflight"
-database_id = "91145eab-74b6-4257-902a-65e56841b558"
+database_name = "wingnut-circus"
+database_id = "6a7f1504-86ef-4849-95bb-05b7bad59027"
