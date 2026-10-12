@@ -304,3 +304,10 @@ test('touch-and-gos and combos are detected in flight, and Fan Club counts at mo
   const lab = Object.fromEntries(scoreFlight(f, { lv: { fanclub: 1, showboat: 1 }, loopsRun: 10 }).lines.map((l) => [l.label, l.v]));
   assert.equal(lab['Fan Club'], 0.39); assert.equal(lab['2 combos'], 0.33);
 });
+
+test('altitude milestones: landing keeps the bonus, a crash half, ending in the air a quarter', () => {
+  const f = (o) => ({ dist: 100, maxY: 520, maxV: 30, coins: 0, loops: 0, passes: 0, thermals: 0, landed: false, fuelFrac: 0, ...o });
+  const alt = (o) => scoreFlight(f(o), { lv: {} }).lines.find((l) => l.label.startsWith('Altitude'));
+  assert.equal(alt({ landed: true }).v, 1000); assert.equal(alt({ crashed: true }).v, 500); assert.equal(alt({}).v, 250);
+  assert.equal(alt({ landed: true, maxY: 90 }), undefined);
+});

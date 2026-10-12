@@ -10,8 +10,10 @@ const SIM_DT=1/120;
 const REDLINE=500/3.6, CLOUD9=5000;
 // altitude milestones: peak height pays flat bonuses added to the base (so multipliers apply). ALT_AT are the heights,
 // ALT_PAY what each adds; past the table a milestone every ALT_STEP m adds ALT_MORE more than the one before.
-// They only count when the flight ends in a landing: climb high, but bring it down safely before the clock runs out.
-// (Crashes counted at first: a 3-balloon craft popped at 1 km and dived into the ground for ~2,700 points a flight.)
+// A landing keeps all of it; a crash keeps ALT_CRASH, and a flight that ends in the air (out of time, becalmed) keeps
+// ALT_AIR, so climbing with no plan to come down again pays little (4 balloons just floating up to 1.7 km would
+// otherwise score about as much as a well-flown propeller plane).
+const ALT_CRASH=.5, ALT_AIR=.25;
 const ALT_AT=[100,250,500,750,1000], ALT_PAY=[200,300,500,750,1000], ALT_STEP=250, ALT_MORE=250;
 const altHeight=k=>k<ALT_AT.length?ALT_AT[k]:ALT_AT[ALT_AT.length-1]+(k-ALT_AT.length+1)*ALT_STEP;
 function altMilestones(y){let k=0;while(y>=altHeight(k))k++;return k}
@@ -442,7 +444,8 @@ function scoreFlight(f,ctx){
   const lv=ctx.lv||modLevels(ctx.mods||[]), has=k=>!!lv[k], mv=(k,key)=>modVal(lv,k,key), bn=k=>(ctx.boons&&ctx.boons[k])||0, lines=[];
   let base=Math.floor(f.dist);lines.push({t:'b',label:'Distance',v:base,dist:true});
   if(has('odometer')){base+=mv('odometer');lines.push({t:'b',label:'Odometer',v:mv('odometer')})}
-  {const ab=f.landed?altBonus(f.maxY):0;if(ab){base+=ab;lines.push({t:'b',label:`Altitude ${altReached(f.maxY)} m`,v:ab})}}
+  {const k=f.landed?1:f.crashed?ALT_CRASH:ALT_AIR,ab=Math.round(altBonus(f.maxY)*k);
+   if(ab){base+=ab;lines.push({t:'b',label:`Altitude ${altReached(f.maxY)} m${k<1?' ×'+k:''}`,v:ab})}}
   let mult=1,xm=1;
   const addM=(label,v)=>{v=Math.round(v*100)/100;if(v>0){mult+=v;lines.push({t:'m',label,v})}};
   const addX=(label,v)=>{if(v>1){xm*=v;lines.push({t:'x',label,v})}};
