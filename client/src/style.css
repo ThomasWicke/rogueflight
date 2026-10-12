@@ -612,5 +612,8 @@ body.offline::after{content:"Reconnecting…";position:fixed;left:50%;top:calc(v
    fitApp() in ui.js measures the real screen height into --app-h; only in the installed app (in Safari the toolbar
    really does take that space). */
 html.app .screen,html.app .drawer,html.app .veil{bottom:auto;height:var(--app-h,100vh)}
+/* ...and the page must not clip them at the short window edge (measured on an iPhone: window 793, screen 852, the screens
+   laid out 852 tall but cut at 793 by body{overflow:hidden}). Fixed screens add no scrolling, so nothing else changes. */
+html.app,html.app body{overflow:visible}
 #measure{position:fixed;left:12px;right:12px;top:calc(var(--reserve) + 8px);z-index:200;background:var(--paper);color:var(--ink);border:2px solid var(--ink);border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.5;box-shadow:var(--shadow)}
 .ver{pointer-events:auto;cursor:pointer;padding:6px 0 10px}

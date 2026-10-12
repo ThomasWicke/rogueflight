@@ -1220,7 +1220,7 @@ function showMeasure(){
   const rows=[['version',__VERSION__],['window',innerWidth+'×'+innerHeight],['screen',screen.width+'×'+screen.height],['html',document.documentElement.clientWidth+'×'+document.documentElement.clientHeight],
     ['body',Math.round(document.body.getBoundingClientRect().height)],['fixed box',Math.round(fr.top)+'–'+Math.round(fr.bottom)],['title screen',Math.round(sc.top)+'–'+Math.round(sc.bottom)],
     ['safe top/bottom',probe('top')+' / '+probe('bottom')],['app mode',(matchMedia('(display-mode: standalone)').matches?'css ':'')+(navigator.standalone?'ios ':'')+(document.documentElement.classList.contains('app')?'class':'')||'none'],
-    ['--app-h',getComputedStyle(document.documentElement).getPropertyValue('--app-h')||'-'],['visual vp',window.visualViewport?Math.round(visualViewport.width)+'×'+Math.round(visualViewport.height)+' @'+Math.round(visualViewport.offsetTop):'-'],['dpr',devicePixelRatio]];
+    ['--app-h',getComputedStyle(document.documentElement).getPropertyValue('--app-h')||'-'],['visual vp',window.visualViewport?Math.round(visualViewport.width)+'×'+Math.round(visualViewport.height)+' @'+Math.round(visualViewport.offsetTop):'-'],['dpr',devicePixelRatio],['overflow',getComputedStyle(document.body).overflow],['scroll',Math.round(document.scrollingElement.scrollHeight)+' / '+scrollY]];
   let box=$('measure');if(!box){box=document.createElement('div');box.id='measure';document.body.appendChild(box);box.onclick=()=>box.remove()}
   box.innerHTML='<b>Screen measurements</b> (tap to close)<br>'+rows.map(([k,v])=>`${k}: <b>${v}</b>`).join('<br>');
 }
