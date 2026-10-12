@@ -112,10 +112,8 @@ function renderTitle(){
   $('titleBody').innerHTML=h;
   startTitleScene();
   $('howto').onclick=openGuide;
-  // tap the version for screen measurements (helps debug layouts on phones we cannot test on)
-  $('ver').onclick=()=>{const probe=k=>{const p=document.createElement('div');p.style.cssText=`position:fixed;visibility:hidden;padding-top:env(safe-area-inset-${k},0px)`;document.body.appendChild(p);const v=parseFloat(getComputedStyle(p).paddingTop)||0;p.remove();return Math.round(v)};
-    const sc=$('title').getBoundingClientRect(),tb=document.querySelector('.titlebench'),lg=document.querySelector('.logo').getBoundingClientRect();
-    $('ver').textContent=`v${__VERSION__} · inner ${innerWidth}×${innerHeight} · screen ${screen.width}×${screen.height} · html ${document.documentElement.clientHeight} · title ${Math.round(sc.top)}–${Math.round(sc.bottom)} · safe top ${probe('top')} bottom ${probe('bottom')} · standalone ${matchMedia('(display-mode: standalone)').matches?'css':'-'}/${navigator.standalone?'ios':'-'} · bench pad ${getComputedStyle(tb).paddingTop} scroll ${tb.scrollTop} · logo top ${Math.round(lg.top)} · app-h ${getComputedStyle(document.documentElement).getPropertyValue('--app-h')||'-'} · vv ${window.visualViewport?Math.round(visualViewport.height)+'@'+Math.round(visualViewport.offsetTop):'-'}`};
+  // tap the version, or the logo three times, for screen measurements (to debug layouts on phones we cannot test on)
+  $('ver').onclick=showMeasure;{let n=0,t=0;document.querySelector('#title .logo').onclick=()=>{const now=Date.now();n=now-t<600?n+1:1;t=now;if(n>=3){n=0;showMeasure()}}}
   $('libBtn').onclick=()=>openLibrary();
   bindModeCards();
   if(r){
@@ -1216,11 +1214,22 @@ syncSound();
 // dev only: inspect the running flight from the console (stripped from production builds)
 if(import.meta.env.DEV)window.__rf={F:()=>F,R,frame:n=>frame(n)};
 
+function showMeasure(){
+  const probe=k=>{const p=document.createElement('div');p.style.cssText=`position:fixed;visibility:hidden;padding-top:env(safe-area-inset-${k},0px)`;document.body.appendChild(p);const v=parseFloat(getComputedStyle(p).paddingTop)||0;p.remove();return Math.round(v)};
+  const sc=$('title').getBoundingClientRect(),fx=document.createElement('div');fx.style.cssText='position:fixed;left:0;right:0;top:0;bottom:0;visibility:hidden';document.body.appendChild(fx);const fr=fx.getBoundingClientRect();fx.remove();
+  const rows=[['version',__VERSION__],['window',innerWidth+'×'+innerHeight],['screen',screen.width+'×'+screen.height],['html',document.documentElement.clientWidth+'×'+document.documentElement.clientHeight],
+    ['body',Math.round(document.body.getBoundingClientRect().height)],['fixed box',Math.round(fr.top)+'–'+Math.round(fr.bottom)],['title screen',Math.round(sc.top)+'–'+Math.round(sc.bottom)],
+    ['safe top/bottom',probe('top')+' / '+probe('bottom')],['app mode',(matchMedia('(display-mode: standalone)').matches?'css ':'')+(navigator.standalone?'ios ':'')+(document.documentElement.classList.contains('app')?'class':'')||'none'],
+    ['--app-h',getComputedStyle(document.documentElement).getPropertyValue('--app-h')||'-'],['visual vp',window.visualViewport?Math.round(visualViewport.width)+'×'+Math.round(visualViewport.height)+' @'+Math.round(visualViewport.offsetTop):'-'],['dpr',devicePixelRatio]];
+  let box=$('measure');if(!box){box=document.createElement('div');box.id='measure';document.body.appendChild(box);box.onclick=()=>box.remove()}
+  box.innerHTML='<b>Screen measurements</b> (tap to close)<br>'+rows.map(([k,v])=>`${k}: <b>${v}</b>`).join('<br>');
+}
 /* ================= boot ================= */
 // installed iPhone app: the window can be a status bar shorter than the screen it fills (an iOS bug), which left a strip
 // at the bottom. Size the screens to the physical screen when the shortfall is about a status bar.
 function fitApp(){
   const app=navigator.standalone||matchMedia('(display-mode: standalone)').matches;if(!app)return;
+  document.documentElement.classList.add('app');
   const gap=screen.height-innerHeight;
   document.documentElement.style.setProperty('--app-h',(gap>0&&gap<=80?screen.height:innerHeight)+'px');
 }
