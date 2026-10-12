@@ -1219,21 +1219,11 @@ function showMeasure(){
   const sc=$('title').getBoundingClientRect(),fx=document.createElement('div');fx.style.cssText='position:fixed;left:0;right:0;top:0;bottom:0;visibility:hidden';document.body.appendChild(fx);const fr=fx.getBoundingClientRect();fx.remove();
   const rows=[['version',__VERSION__],['window',innerWidth+'×'+innerHeight],['screen',screen.width+'×'+screen.height],['html',document.documentElement.clientWidth+'×'+document.documentElement.clientHeight],
     ['body',Math.round(document.body.getBoundingClientRect().height)],['fixed box',Math.round(fr.top)+'–'+Math.round(fr.bottom)],['title screen',Math.round(sc.top)+'–'+Math.round(sc.bottom)],
-    ['safe top/bottom',probe('top')+' / '+probe('bottom')],['app mode',(matchMedia('(display-mode: standalone)').matches?'css ':'')+(navigator.standalone?'ios ':'')+(document.documentElement.classList.contains('app')?'class':'')||'none'],
-    ['--app-h',getComputedStyle(document.documentElement).getPropertyValue('--app-h')||'-'],['visual vp',window.visualViewport?Math.round(visualViewport.width)+'×'+Math.round(visualViewport.height)+' @'+Math.round(visualViewport.offsetTop):'-'],['dpr',devicePixelRatio],['overflow',getComputedStyle(document.body).overflow],['scroll',Math.round(document.scrollingElement.scrollHeight)+' / '+scrollY]];
+    ['safe top/bottom',probe('top')+' / '+probe('bottom')],['app mode',((matchMedia('(display-mode: standalone)').matches?'css ':'')+(navigator.standalone?'ios':''))||'none'],['visual vp',window.visualViewport?Math.round(visualViewport.width)+'×'+Math.round(visualViewport.height)+' @'+Math.round(visualViewport.offsetTop):'-'],['dpr',devicePixelRatio],['overflow',getComputedStyle(document.body).overflow],['scroll',Math.round(document.scrollingElement.scrollHeight)+' / '+scrollY]];
   let box=$('measure');if(!box){box=document.createElement('div');box.id='measure';document.body.appendChild(box);box.onclick=()=>box.remove()}
   box.innerHTML='<b>Screen measurements</b> (tap to close)<br>'+rows.map(([k,v])=>`${k}: <b>${v}</b>`).join('<br>');
 }
 /* ================= boot ================= */
-// installed iPhone app: the window can be a status bar shorter than the screen it fills (an iOS bug), which left a strip
-// at the bottom. Size the screens to the physical screen when the shortfall is about a status bar.
-function fitApp(){
-  const app=navigator.standalone||matchMedia('(display-mode: standalone)').matches;if(!app)return;
-  document.documentElement.classList.add('app');
-  const gap=screen.height-innerHeight;
-  document.documentElement.style.setProperty('--app-h',(gap>0&&gap<=80?screen.height:innerHeight)+'px');
-}
-fitApp();window.addEventListener('resize',fitApp);
 // moving house: the old address sends players to the new one, carrying their save in the URL fragment
 if(MOVED&&OLD_HOSTS.includes(location.hostname)&&location.hostname!==new URL(MOVED).hostname){let p='';try{p=btoa(unescape(encodeURIComponent(JSON.stringify({save:localStorage.getItem(KEY),
   client:localStorage.getItem('rogueflight-client'),audio:localStorage.getItem('rogueflight-audio')}))))}catch(_){}location.replace(MOVED+'/'+location.search+(p?'#move='+p:''))}

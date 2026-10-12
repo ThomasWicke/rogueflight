@@ -607,13 +607,9 @@ body.offline::after{content:"Reconnecting…";position:fixed;left:50%;top:calc(v
 /* scrolling barn screens slide under the status bar on iPhones: a wood strip behind the clock keeps it readable */
 .barn::before{content:"";position:fixed;left:0;right:0;top:0;height:var(--reserve);z-index:6;pointer-events:none;
   background:linear-gradient(var(--barn2) 70%,rgba(0,0,0,0))}
-/* installed on an iPhone home screen (black-translucent status bar), the page height (and 100vh) leaves out the status
-   bar although the content starts behind it, so screens sized to the page stop one status bar short of the bottom.
-   fitApp() in ui.js measures the real screen height into --app-h; only in the installed app (in Safari the toolbar
-   really does take that space). */
-html.app .screen,html.app .drawer,html.app .veil{bottom:auto;height:var(--app-h,100vh)}
-/* ...and the page must not clip them at the short window edge (measured on an iPhone: window 793, screen 852, the screens
-   laid out 852 tall but cut at 793 by body{overflow:hidden}). Fixed screens add no scrolling, so nothing else changes. */
-html.app,html.app body{overflow:visible}
+/* Installed on an iPhone, the app uses a solid black status bar (apple-mobile-web-app-status-bar-style: black) and the game
+   starts below it. With "black-translucent" (drawing behind the status bar) iOS made the page a status bar shorter than
+   the screen yet started it at the very top, leaving a strip at the bottom no page code can reach (measured: window 793,
+   screen 852, safe top 59; 0.4.2 to 0.4.7 tried CSS and JS workarounds, none worked). */
 #measure{position:fixed;left:12px;right:12px;top:calc(var(--reserve) + 8px);z-index:200;background:var(--paper);color:var(--ink);border:2px solid var(--ink);border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.5;box-shadow:var(--shadow)}
 .ver{pointer-events:auto;cursor:pointer;padding:6px 0 10px}
