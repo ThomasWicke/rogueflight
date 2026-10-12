@@ -7,7 +7,7 @@ import {
   isStorm, grantPacks, flightStats, MODMAX, pickBoon, rollBoons, modSlots, dailySeed, clearContract, ONLINE_TIME, SIM_DT,
   craftCounts, flightCtx, onTarget, MODS,
 } from '../client/src/sim.js';
-import { botFlight } from '../client/src/bots.js';
+import { botFlight, planBot, BUILDS, cellsOf } from '../client/src/bots.js';
 
 // 'c22 p32 w21 t23' -> cockpit at (2,2), prop at (3,2), wing at (2,1), tank at (2,3)
 const T = { c: 'cockpit', p: 'prop', r: 'rocket', t: 'tank', w: 'wing', b: 'balloon', f: 'frame' };
@@ -193,15 +193,14 @@ test('live rooms: the weather depends on the seed alone, the room clears contrac
   assert.ok(c.cleared && a.stage === 1 && a.flight === 0 && a.phase === 'contract' && a.coins > coins && a.packs.length);
 });
 
-test('bots: every build is whole, flights are reproducible and finish inside the clock', () => {
+test('bots: every build is whole, a planned bot flight is reproducible and finishes inside the clock', () => {
+  for (const [style, list] of Object.entries(BUILDS)) for (const code of list) { const K = makeCraft(cellsOf(code), stats({}, {}, weatherFx(null, 0))); assert.ok(!K.loose && !K.blocked, `${style} ${code}`); }
   for (let round = 0; round < 6; round++) for (let i = 0; i < 4; i++) {
-    const once = () => { const b = botFlight(99, round, i, ONLINE_TIME); const S = newFlight(b.K, b.st); let n = 0;
-      while (!S.done && n < 200000) { step(S, b.K, b.st, SIM_DT, b.ctl(S)); n++; }
-      return { b, S, sc: scoreFlight(summaryOf(S, b.K), b.ctx).total }; };
+    const once = () => { const b = planBot(botFlight(99, round, i, ONLINE_TIME)); let K = b.K; const S = newFlight(K, b.st); let n = 0;
+      while (!S.done && n < 200000) { step(S, K, b.st, SIM_DT, b.ctl(S)); if (S.burst && !S.popped) K = popBalloons(S, K, b.st); n++; }
+      return { b, S, sc: scoreFlight(summaryOf(S, K), b.ctx).total }; };
     const x = once(), y = once();
-    assert.equal(x.b.K.loose, 0); assert.equal(x.b.K.blocked, 0);
-    assert.ok(x.S.done && x.S.t <= ONLINE_TIME + 1);
-    assert.equal(x.sc, y.sc);
+    assert.ok(x.S.done && x.S.t <= ONLINE_TIME + 1); assert.equal(x.sc, y.sc); assert.deepEqual(x.b.P, y.b.P);
   }
 });
 

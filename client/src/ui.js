@@ -15,7 +15,7 @@ import {
   DAILY_COINS, dailyNumber, dailySeed, SIM_DT, isOnline, ONLINE_TIME, clearContract,
 } from './sim.js';
 import { getDaily, postDaily, newRoomCode, connectRoom } from './net.js';
-import { botFlight, cellsOf } from './bots.js';
+import { botFlight, planBot, cellsOf } from './bots.js';
 import { drawWorld, drawGrain, biomeOf } from './world.js';
 import { audio } from './audio.js';
 import { drawPart, drawPilot, drawParachute } from './art.js';
@@ -1106,6 +1106,9 @@ function startOnlineFlight(room){
   for(const p of room.players)if(p.id!==clientId()&&!isBotP(p)){const g=ghosts.get(p.id)||{};ghosts.set(p.id,g);g.done=!p.alive;g.x=null;g.dx=null;g.name=p.name;if(p.cells){const code=cellCodeOf(p.cells);if(code!==g.code){g.code=code;try{g.K=makeCraft(p.cells,ghostSt())}catch(_){g.K=null}}}}
   // bots fly here too, from the room's seed, so every phone sees the same bot flight
   F.bots=room.players.filter(p=>isBotP(p)&&p.alive).map(p=>{const b=botFlight(room.seed,room.stage,p.bot,ONLINE_TIME);return {...b,id:p.id,name:roomName(p),S:newFlight(b.K,b.st)}});
+  // each bot test-flies its pilot candidates first: one bot per tick during the countdown, so the phone never stalls.
+  // A bot that finishes planning after launch catches up in stepBots, so every phone still flies the same bot flight.
+  F.botT=0;{const round=F.round;let qi=0;const plan=()=>{if(!F||!F.online||F.round!==round)return;const b=F.bots[qi++];if(!b)return;planBot(b);b.S=newFlight(b.K,b.st);setTimeout(plan,0)};setTimeout(plan,0)}
   if(watch){F.S.done=true;F.ended=true;F.settled=true;F.pre=0;$('flight').classList.add('watching');F.focus=null;updSpec()}
 }
 // my flight is over: settle it locally, tell the room, and start watching whoever is still flying
@@ -1118,9 +1121,10 @@ function finishOnline(){
   $('flight').classList.add('watching');updSpec();
 }
 function stepBots(n){
-  if(!F.bots)return;
-  for(const b of F.bots){if(b.S.done)continue;
-    for(let i=0;i<n&&!b.S.done;i++){const c=b.ctl(b.S);step(b.S,b.K,b.st,SIM_DT,c)}
+  if(!F.bots)return;F.botT+=n*SIM_DT;
+  for(const b of F.bots){if(!b.ctl||b.S.done)continue;
+    // fly the bot up to the room's flight time (more steps than n if it was planned late)
+    for(let k=0;k<2400&&!b.S.done&&b.S.t<F.botT;k++){step(b.S,b.K,b.st,SIM_DT,b.ctl(b.S));if(b.S.burst&&!b.S.popped)b.K=popBalloons(b.S,b.K,b.st)}
     if(b.S.done){const sc=scoreFlight(summaryOf(b.S,b.K),b.ctx).total;b.score=sc;F.roundScores[b.id]=sc;
       NET.send({t:'bot',id:b.id,round:F.round,score:sc,dist:b.S.x,crashed:!!b.S.crashed,landed:!!b.S.landed});updSpec()}}
 }

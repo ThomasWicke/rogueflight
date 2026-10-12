@@ -12,7 +12,7 @@ const artRun = () => `<div class="gr-run">
 const artPacks = () => `<div class="gr-packs"><div class="gr-pack"><div class="pk-face"><div class="pk-brace"></div><div class="pk-mark">?</div><div class="pk-band">PARTS</div></div></div>
   <svg class="gr-arrow" viewBox="0 0 40 20" aria-hidden="true"><path d="M2 10h30M26 4l8 6-8 6"/></svg>
   <div class="gr-four">${img('tank')}${img('wing')}${img('prop')}<span>?</span></div></div>
-  <div class="gr-row"><span class="label">Contract 1</span><b>4 packs</b><span class="label">Then</span><b>2 per contract</b></div>`;
+  <div class="gr-row"><span class="label">Contract 1</span><b>4 packs</b><span class="label">Then</span><b>1 per contract</b></div>`;
 // a small bench: amber bolts where parts connect, and a balloon that touches nothing structural (loose, so it stays behind)
 function artBuild() {
   const L = { '1,0': 'wing', '2,0': 'wing', '0,1': 'rocket', '1,1': 'cockpit', '2,1': 'frame', '3,1': 'prop', '1,2': 'tank', '4,0': 'balloon' };
@@ -53,7 +53,7 @@ const SLIDES = [
     '8 contracts, 3 flights each. Your flights add up: reach the target or the run ends.',
     'Storm clouds on the route mark storm contracts, known from the start. Build for them early.'] },
   { t: 'Packs & shop', art: artPacks, p: [
-    'Each contract starts with packs of parts: 4 in the first (tank, wing, engine + 1), then 2.',
+    'Each contract starts with packs of parts: 4 in the first (tank, wing, engine + 1), then 1, which can hold a rare part with a brass star. The shop sometimes sells a rare parts pack.',
     'The shop is always open, but new stock only arrives after you clear a contract.'] },
   { t: 'Building', art: artBuild, p: [
     'Everything connects to the cockpit through frames and tanks. Hold a part to move it.',

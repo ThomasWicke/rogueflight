@@ -12,6 +12,7 @@ import {
   newRun, weatherOf, stats, weatherFx, makeCraft, newFlight, step, popBalloons, summaryOf, scoreFlight, settleFlight,
   craftCounts, offerPrice, rerollCost, rerollShop, openPack, applyPurchase, canBuy, modLevels, flightStats, pickBoon, MAXMODS, COLS, ROWS, COCKPIT, quotaFor, isStorm, CONTRACTS, WEATHER, SIM_DT,
 } from '../client/src/sim.js';
+import { tunePilot, makePilot, flyWith } from '../client/src/pilot.js';
 
 const args = process.argv.slice(2);
 const pos = args.filter((a) => !a.startsWith('--'));
@@ -48,6 +49,9 @@ const POLS = {
     },
   },
 };
+// smart: lays out the craft with the climb pilot, then test-flies 24 pilot settings on that craft (climb angle, level-off
+// height for an altitude milestone, throttle, flare to land, loops, balloon pop height) and flies the best (pilot.js)
+POLS.smart = { throttles: [1, 0.6], make: POLS.climb.make, smart: true };
 const POL = POLS[PN];
 if (!POL) throw new Error('unknown policy ' + PN + ' (use: ' + Object.keys(POLS).join(', ') + ')');
 
@@ -164,7 +168,28 @@ const MOD_VALUE = {
   supercharge: 7, sailplane: 5, flyer: 5, carpenter: 4, understudy: 3, booster: 2,
   investor: 6, overachiever: 5, longhaul: 3, magpie: 5,
 };
+// smart shopper: try before you buy. A mod or tuning is valued by flying the current craft with and without it
+// (the gain in score, relative to the current score, scaled to the 0-10 range of MOD_VALUE). Coins, run-long and
+// flight-order mods do nothing in one test flight, so they keep their fixed value.
+const FIXED = new Set(['opening', 'third', 'logbook', 'sponsor', 'investor', 'overachiever', 'piggy', 'coupon', 'compound', 'magpie', 'flyer', 'fanclub', 'secondwind']);
+let SHOP_CRAFT = null;
+function testScore(run) {
+  const st = flightStats(run), K = makeCraft(SHOP_CRAFT.cells, st);
+  if (K.loose || K.blocked) return 0;
+  return flyWith(K, st, SHOP_CRAFT.pilot || {}, { lv: modLevels(run), boons: run.boons, flightIdx: 1, cleared: run.stage, coins: run.coins, ...craftCounts(SHOP_CRAFT.cells) }).score;
+}
+function simValue(run, kind, o) {
+  const base = testScore(run);
+  const r2 = { ...run, mods: run.mods.slice(), modLv: { ...(run.modLv || {}) }, tune: { ...run.tune }, inv: { ...run.inv }, ev: [], coins: 999 };
+  applyPurchase(r2, kind, { ...o });
+  return Math.max(0, (testScore(r2) - base) / Math.max(200, base)) * 30;
+}
 function offerValue(run, kind, o) {
+  if (POL.smart && SHOP_CRAFT && (kind === 'mod' || kind === 'tune') && canBuy(run, kind, o) && !(kind === 'mod' && FIXED.has(o.id))) {
+    const v = simValue(run, kind, o);
+    if (kind === 'tune' && o.k === 'time') return v; // a permit only helps flights that hit the clock, which the test shows
+    return Math.max(v, kind === 'mod' ? (MOD_VALUE[o.id] || 0) * 0.3 : 0);
+  }
   const inv = (t) => (run.inv[t] || 0) + (run.inv[t + '+'] || 0), engine = inv('prop') + inv('rocket');
   if (kind === 'pack') return 6;
   if (kind === 'part') {
@@ -213,15 +238,19 @@ for (let n = 0; n < RUNS; n++) {
   let guard = 0;
   while (run.phase !== 'over' && run.phase !== 'won' && guard++ < 60) {
     if (run.phase === 'shop') run.phase = 'contract';
-    botShop(run, meta);
+    SHOP_CRAFT = craft; botShop(run, meta);
     if (STORM === 'none') run.weather[run.stage] = undefined;
     const wx = STORM === 'none' ? null : weatherOf(run, run.stage), st = STORM === 'none' ? stats(run.tune, modLevels(run), weatherFx(null, 0)) : flightStats(run);
     // rebuild only when something that changes the flight has changed
     const now = JSON.stringify([run.inv, run.tune, run.mods, wx]);
-    if (now !== sig) { craft = build(run, st, craft); sig = now; }
+    if (now !== sig) {
+      craft = build(run, st, craft, POL.smart ? 120 : 40); sig = now;
+      if (POL.smart) { let s = (run.seed + run.stage * 977) >>> 0; const rnd = () => ((s = (s * 16807) % 2147483647) / 2147483647);
+        craft.pilot = tunePilot(makeCraft(craft.cells, st), st, { lv: modLevels(run), boons: run.boons, flightIdx: 1, cleared: run.stage, coins: run.coins, ...craftCounts(craft.cells) }, 24, rnd).P; }
+    }
     run.cells = craft.cells;
     const K = makeCraft(run.cells, st);
-    const { S, K: K2 } = fly(K, st, POL.make(craft.thr ?? 1)());
+    const { S, K: K2 } = fly(K, st, craft.pilot ? makePilot(craft.pilot) : POL.make(craft.thr ?? 1)());
     const f = summaryOf(S, K2), stg = run.stage;
     lastFlightFrac = S.t / st.flightTime;
     const out = settleFlight(run, meta, f);
