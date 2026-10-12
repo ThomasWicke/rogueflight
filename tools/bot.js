@@ -51,20 +51,15 @@ const POLS = {
 const POL = POLS[PN];
 if (!POL) throw new Error('unknown policy ' + PN + ' (use: ' + Object.keys(POLS).join(', ') + ')');
 
-// mirrors the UI frame loop: 60 fps, fixed SIM_DT physics steps, fast-forward once hands-off for a second after 12 s
+// mirrors the UI frame loop: 60 fps, fixed SIM_DT physics steps (fast-forward only changes how fast that runs, not the flight)
 function fly(K, st, ctl) {
   const S = newFlight(K, st);
-  let ts = 1, idle = 0, acc = 0;
+  let acc = 0;
   const dt = 1 / 60;
   while (!S.done) {
     const c = ctl(S);
-    idle = c.pitch ? 0 : idle + dt;
-    let tgt = 1;
-    if (idle > 1 && S.t > 12) tgt = Math.min(4, 1 + (S.t - 12) / 8);
-    if (S.fuel <= 0 && !S.touch && S.y > 2000) tgt = Math.max(tgt, Math.min(idle > 1 ? 30 : 3, S.y / 600));
-    ts += (tgt - ts) * Math.min(1, dt * (tgt < ts ? 5 : 1.2));
-    acc += dt * ts;
-    const n = Math.min(600, Math.floor(acc / SIM_DT)); acc -= n * SIM_DT;
+    acc += dt;
+    const n = Math.floor(acc / SIM_DT); acc -= n * SIM_DT;
     for (let i = 0; i < n && !S.done; i++) { step(S, K, st, SIM_DT, c); if (S.burst && !S.popped) K = popBalloons(S, K, st); }
   }
   return { S, K };

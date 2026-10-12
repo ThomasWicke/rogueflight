@@ -2,12 +2,21 @@
 // Physics (step), craft assembly (makeCraft), scoring (scoreFlight), economy and run state (newRun, settleFlight).
 // Imported by the browser UI (ui.js) and by the node tests/tools, so keep it free of window/document.
 const GIMBAL=.4, NEUT=.8, PAR=.0016, VAC=.002, VAC2=1.5e-4, C_LIGHT=299792458, G0=9.81, COLS=7, ROWS=5, COCKPIT={c:2,r:2};
-const MAXMODS=5, FLIGHTS=3, CONTRACTS=8, FLIGHT_TIME=300, DAILY_COINS=100;
+const MAXMODS=5, FLIGHTS=3, CONTRACTS=8, FLIGHT_TIME=120, DAILY_COINS=100;
 // the physics step: callers advance step() in fixed 1/120 s steps so a flight is reproducible from its inputs
 const SIM_DT=1/120;
 // style goals a dedicated build can reach: Redline (500 km/h, needs a strong rocket build) and Cloud nine (5 km, balloons
 // with Weather Envelope Lv 2+, or balloons then rockets). The old sound barrier and 100 km were out of reach for any craft.
 const REDLINE=500/3.6, CLOUD9=5000;
+// altitude milestones: peak height pays flat bonuses added to the base (so multipliers apply). ALT_AT are the heights,
+// ALT_PAY what each adds; past the table a milestone every ALT_STEP m adds ALT_MORE more than the one before.
+// They only count when the flight ends in a landing: climb high, but bring it down safely before the clock runs out.
+// (Crashes counted at first: a 3-balloon craft popped at 1 km and dived into the ground for ~2,700 points a flight.)
+const ALT_AT=[100,250,500,750,1000], ALT_PAY=[200,300,500,750,1000], ALT_STEP=250, ALT_MORE=250;
+const altHeight=k=>k<ALT_AT.length?ALT_AT[k]:ALT_AT[ALT_AT.length-1]+(k-ALT_AT.length+1)*ALT_STEP;
+function altMilestones(y){let k=0;while(y>=altHeight(k))k++;return k}
+const altReached=y=>{const k=altMilestones(y);return k?altHeight(k-1):0};
+function altBonus(y){let t=0,last=0;for(let k=0;k<altMilestones(y);k++){last=k<ALT_PAY.length?ALT_PAY[k]:last+ALT_MORE;t+=last}return t}
 const clamp=(v,a,b)=>v<a?a:v>b?b:v;
 // Gameplay randomness: each run carries its own seeded generator state (run.rs, mulberry32), so one seed fixes the shop,
 // packs, weather and storm rewards for everyone (daily puzzles, shared rooms, replays). Entry points that roll dice for a run
@@ -173,7 +182,7 @@ const QUOTA=[500,1100,2000,4000,7500,16000,30000,54000];
 function quotaFor(i,level){const q=i<CONTRACTS?QUOTA[i]:QUOTA[CONTRACTS-1]*Math.pow(2.5,i-CONTRACTS+1);return Math.round(q*(1+.25*(level||0))/10)*10}
 // Ceiling levels: every level adds +25% quota; even levels also add a rule (cumulative)
 const MAX_CEILING=10;
-const CEILING_RULES={2:'Shop prices +1',4:'Contract 5 has a storm too',6:'1 pack per contract after the first',8:'Storms hit harder',10:'4-minute flight clock'};
+const CEILING_RULES={2:'Shop prices +1',4:'Contract 5 has a storm too',6:'1 pack per contract after the first',8:'Storms hit harder',10:'90-second flight clock'};
 const ceilingRules=level=>Object.keys(CEILING_RULES).filter(k=>+k<=(level||0)).map(k=>CEILING_RULES[k]);
 const isStorm=(i,level)=>i===CONTRACTS-1||i%3===2||((level||0)>=4&&i===4);
 // storm strength grows with the contract; from Ceiling 8 every storm counts as two contracts later
@@ -263,7 +272,7 @@ function newFlight(K,st){
   return {x:-4,y:21.2,vx:st.launch*Math.cos(st.launchAng),vy:st.launch*Math.sin(st.launchAng),th:st.launchAng,w:0,fuel:K.fuelMax,t:0,
     maxX:0,maxY:21,maxV:0,ground:0,done:false,crashed:false,landed:false,sw:false,bounces:0,coins:0,got:new Set(),flags:{},events:[],
     rocketOn:false,propOn:false,touch:false,calm:0,slow:0,progX:-4,recyc:0,gPrev:st.launchAng,
-    spin:0,loops:0,passes:0,skim:0,passReady:false,thermals:0,thSeen:new Set(),gustE:0,burst:false,popped:false,touchgos:0,tgArm:false,combos:0,lastTrick:-9};
+    spin:0,loops:0,passes:0,skim:0,passReady:false,thermals:0,thSeen:new Set(),gustE:0,burst:false,popped:false,touchgos:0,tgArm:false,combos:0,lastTrick:-9,altMs:0};
 }
 function segDist(px,py,ax,ay,bx,by){const dx=bx-ax,dy=by-ay,l=dx*dx+dy*dy;let t=l?((px-ax)*dx+(py-ay)*dy)/l:0;t=clamp(t,0,1);return Math.hypot(px-ax-dx*t,py-ay-dy*t)}
 function flag(S,k,msg){if(!S.flags[k]){S.flags[k]=1;S.events.push(msg)}}
@@ -395,6 +404,7 @@ function step(S,K,st,dt,ctl){
   if(S.x>S.maxX)S.maxX=S.x;if(S.y>S.maxY)S.maxY=S.y;if(nv>S.maxV)S.maxV=nv;
   if(nv>REDLINE)flag(S,'mach','Redline');
   if(S.y>CLOUD9)flag(S,'karman','Cloud nine');
+  if(altMilestones(S.y)>S.altMs){S.altMs=altMilestones(S.y);S.events.push('altitude')}
   if(S.y>11000)flag(S,'cruise','Above the airliners');
   if(nv>11186)flag(S,'escape','Escape velocity');
   if(S.x>40075000)flag(S,'earth','Once around the Earth');
@@ -432,6 +442,7 @@ function scoreFlight(f,ctx){
   const lv=ctx.lv||modLevels(ctx.mods||[]), has=k=>!!lv[k], mv=(k,key)=>modVal(lv,k,key), bn=k=>(ctx.boons&&ctx.boons[k])||0, lines=[];
   let base=Math.floor(f.dist);lines.push({t:'b',label:'Distance',v:base,dist:true});
   if(has('odometer')){base+=mv('odometer');lines.push({t:'b',label:'Odometer',v:mv('odometer')})}
+  {const ab=f.landed?altBonus(f.maxY):0;if(ab){base+=ab;lines.push({t:'b',label:`Altitude ${altReached(f.maxY)} m`,v:ab})}}
   let mult=1,xm=1;
   const addM=(label,v)=>{v=Math.round(v*100)/100;if(v>0){mult+=v;lines.push({t:'m',label,v})}};
   const addX=(label,v)=>{if(v>1){xm*=v;lines.push({t:'x',label,v})}};
@@ -514,7 +525,7 @@ function applyPurchase(run,kind,o){
   return true}
 function sellMod(run,id){const i=run.mods.indexOf(id);if(i<0)return 0;const v=sellValue(id,modLevels(run)[id]);note(run,'sell',id,v);run.mods.splice(i,1);if(run.modLv)delete run.modLv[id];run.coins+=v;return v}
 // everything a flight of this run needs: tunings, mod levels, this contract's weather, the ceiling's clock
-function flightStats(run){const w=weatherOf(run,run.stage),fx=weatherFx(w,severity(run,run.stage));if((run.level||0)>=10)fx.clock=240;
+function flightStats(run){const w=weatherOf(run,run.stage),fx=weatherFx(w,severity(run,run.stage));if((run.level||0)>=10)fx.clock=90;
   const st=stats(run.tune,modLevels(run),fx),b=k=>boonN(run,k);
   // live rooms fly together, so their flights are short: 2 minutes, +20 s per Flight permit
   if(isOnline(run))st.flightTime=ONLINE_TIME+20*Math.min(run.tune.time||0,TUNES.time.max);
@@ -603,7 +614,7 @@ export {
   rerollShop, priceOf, offerPrice, rerollCost, sellValue, newRun, craftCounts, flightCtx, onTarget, TARGET_EVERY, settleFlight,
   PACKS, FIRST_PACKS, rollPacks, grantPacks, openPack,
   MODMAX, modLevels, modVal, modDesc, modPrice, canBuy, applyPurchase, sellMod, flightStats, repeats, severity,
-  MAX_CEILING, CEILING_RULES, ceilingRules, REDLINE, CLOUD9,
+  MAX_CEILING, CEILING_RULES, ceilingRules, REDLINE, CLOUD9, ALT_STEP, altBonus, altMilestones, altReached,
   BOONS, rollBoons, boonDesc, pickBoon, modSlots,
   DAILY_COINS, dailyNumber, dailySeed, SIM_DT, isOnline, ONLINE_TIME, clearContract,
 };

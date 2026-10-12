@@ -46,7 +46,7 @@ const artAlt = () => `<div class="gr-alt">
   <div class="gr-altbar"></div>
   <div class="gr-altlbl"><span style="bottom:88%"><b>5 km</b> cloud nine · +2 mult</span><span style="bottom:58%"><b>2 km</b> balloons burst</span>
   <span style="bottom:28%"><b>1 km</b> thinner air · faster, less lift</span><span style="bottom:2%"><b>0 m</b> thick air · lift, thrust, drag</span></div></div>
-  <div class="gr-clock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/></svg><b>5:00</b><span>per flight</span></div>`;
+  <div class="gr-clock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/></svg><b>2:00</b><span>per flight</span></div>`;
 /* ---------- slides ---------- */
 const SLIDES = [
   { t: 'The run', art: artRun, p: [
@@ -66,7 +66,7 @@ const SLIDES = [
     'Out of fuel? Let go and the craft glides on its own. Throttle down to make fuel last.'] },
   { t: 'Altitude & time', art: artAlt, p: [
     'Thin air up high: less drag, but weaker wings and props. Balloons rise until they burst at 2 km.',
-    'A flight lasts 5 minutes (Flight permits add more). Hanging in the air without power also ends it.'] },
+    'A flight lasts 2 minutes (Flight permits add more). Hanging in the air without power also ends it. The ▸▸ button plays it at double speed.'] },
 ];
 
 /* ---------- drawer ---------- */

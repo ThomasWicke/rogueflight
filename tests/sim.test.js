@@ -50,9 +50,9 @@ test('throttle scales fuel burn', () => {
 });
 
 test('flight permits add a minute each, up to three, and stop being offered', () => {
-  assert.equal(stats({}, [], weatherFx(null, 0)).flightTime, 300);
-  assert.equal(stats({ time: 2 }, [], weatherFx(null, 0)).flightTime, 420);
-  assert.equal(stats({ time: 9 }, [], weatherFx(null, 0)).flightTime, 480);
+  assert.equal(stats({}, [], weatherFx(null, 0)).flightTime, 120);
+  assert.equal(stats({ time: 2 }, [], weatherFx(null, 0)).flightTime, 240);
+  assert.equal(stats({ time: 9 }, [], weatherFx(null, 0)).flightTime, 300);
   const run = newRun(0, { bestStage: 0 });
   run.tune.time = 3;
   for (let i = 0; i < 200; i++) assert.ok(!rollTunes(run, 2, []).includes('time'));
@@ -134,8 +134,8 @@ test('ceiling rules: pricier shop, a fourth storm, fewer packs, a shorter clock'
   assert.ok(!isStorm(4, 3) && isStorm(4, 4));
   const r6 = newRun(6, meta); r6.packs = []; r6.stage = 1; grantPacks(r6); assert.equal(r6.packs.length, 1);
   const r5 = newRun(5, meta); r5.packs = []; r5.stage = 1; grantPacks(r5); assert.equal(r5.packs.length, PACKS);
-  assert.equal(flightStats(newRun(9, meta)).flightTime, 300);
-  assert.equal(flightStats(newRun(10, meta)).flightTime, 240);
+  assert.equal(flightStats(newRun(9, meta)).flightTime, 120);
+  assert.equal(flightStats(newRun(10, meta)).flightTime, 90);
   assert.equal(quotaFor(0, 10), 1750);
 });
 
@@ -229,7 +229,7 @@ test('telemetry: every flight logs a snapshot, and purchases, packs and rerolls 
 
 // ---------- 0.4 mods ----------
 const flyWith = (cells, mods, ctl = () => ({ pitch: 0, throttle: 1 }), pop) => {
-  const st = stats({}, mods, weatherFx(null, 0)); let K = makeCraft(layout(cells), st); const S = newFlight(K, st); let last = 0, lt = 0;
+  const st = stats({}, mods, weatherFx(null, 0)); st.flightTime = 600; /* slow balloon climbs: test the mechanic, not the clock */ let K = makeCraft(layout(cells), st); const S = newFlight(K, st); let last = 0, lt = 0;
   while (!S.done) {
     if (pop && K.counts.balloon && !S.burst && S.t - lt > 5) { if (S.y - last < 20 && S.y > 200) S.burst = true; last = S.y; lt = S.t; }
     step(S, K, st, SIM_DT, ctl(S)); if (S.burst && !S.popped) K = popBalloons(S, K, st);
@@ -251,7 +251,7 @@ test('Dive Bomber turns height into speed: Redline from a balloon dive, never mo
 });
 
 test('Hot-Air Burner lets balloons climb past where they stall, paid for with fuel', () => {
-  const cells = 'c22 f32 f12 b11 b21 b31 w02 t23', go = (mods) => { const st = stats({}, mods, weatherFx(null, 0)); const K = makeCraft(layout(cells), st); const S = newFlight(K, st);
+  const cells = 'c22 f32 f12 b11 b21 b31 w02 t23', go = (mods) => { const st = stats({}, mods, weatherFx(null, 0)); st.flightTime = 600; const K = makeCraft(layout(cells), st); const S = newFlight(K, st);
     while (!S.done && !S.burst) step(S, K, st, SIM_DT, { pitch: 0, throttle: 1 }); return S; };
   const a = go({ envelope: 1 }), b = go({ envelope: 1, burner: 3 });
   assert.ok(a.maxY < 2000 && b.maxY > 3500, `${a.maxY} -> ${b.maxY}`);

@@ -58,7 +58,7 @@
   <div class="hud">
     <div class="hrow">
       <div class="dist" id="fDist">0 m</div>
-      <div class="mini"><span id="fAlt">ALT 0 m</span><span id="fSpd">0 km/h</span><span id="fTime" class="ftime" aria-label="Flight time left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/></svg><b>5:00</b></span><span id="fTs" class="ffw" hidden></span></div>
+      <div class="mini"><span id="fAlt">ALT 0 m</span><span id="fSpd">0 km/h</span><span id="fTime" class="ftime" aria-label="Flight time left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/></svg><b>2:00</b></span><span id="fTs" class="ffw" hidden></span></div>
     </div>
     <div class="srow"><span>SCORE <b id="fScore">0</b> <span class="m" id="fMult">×1.0</span></span><span class="need" id="fNeed"></span></div>
     <div class="fuelrow"><span>FUEL</span><div class="fuel"><i id="fFuel"></i></div></div>
@@ -72,6 +72,7 @@
       <button id="bDown" type="button" aria-label="Nose down"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l7 7 7-7"/></svg>NOSE DOWN</button>
     </div>
     <div class="rpad">
+      <button id="bFF" type="button" aria-label="Fast forward" aria-pressed="false"><svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M3 6l8 6-8 6z"/><path d="M12 6l8 6-8 6z"/></svg></button>
       <button id="bPop" type="button" aria-label="Pop balloons"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 1 6 6c0 4-3.5 7-6 7s-6-3-6-7a6 6 0 0 1 6-6z"/><path d="M12 16v5M3 4l3 2M21 4l-3 2M2 11h2M20 11h2"/></svg>POP</button>
       <div id="thr" role="slider" aria-label="Throttle" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100" tabindex="0"><i id="thrFill"></i><b id="thrKnob"></b><span id="thrVal">100%</span></div>
     </div>
