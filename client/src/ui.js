@@ -796,7 +796,7 @@ function showResults(out,S,f){
   let btn='',next='',result='';
   // one result line: sold out (with the bonus), or what is still needed; the gate cash rides along
   if(out.cleared){btn=out.won?'Continue':'Next contract';next=out.won?'won':'shop';
-    result=`<div id="tySold" class="soldout" hidden>Contract cleared! <small>+${out.reward+out.interest+out.pay} coins</small></div>`+(out.unlocks&&out.unlocks.length?`<p class="hint">Unlocked: <strong>${out.unlocks.join(', ')}</strong></p>`:'');}
+    result=`<div id="tySold" class="soldout" hidden>Contract cleared! <small>+${out.reward+out.interest+out.pay+(out.over||0)} coins</small></div>`+(out.unlocks&&out.unlocks.length?`<p class="hint">Unlocked: <strong>${out.unlocks.join(', ')}</strong></p>`:'');}
   else if(out.failed){btn='Run summary';next='over';result=`<p class="tres warn">No flights left · +${out.pay} coins</p>`}
   else if(out.dailyDone){btn='See results';next='daily';result=`<p class="tres">Puzzle complete · +${out.pay} coins</p>`}
   else{const left=FLIGHTS-out.flightNo;btn='Continue';next='hangar';result=`<p class="tres">${isFinite(q)?fmt(q-out.contractScore)+' to target · ':''}${plural(left,'flight')} left · +${out.pay} coins</p>`}

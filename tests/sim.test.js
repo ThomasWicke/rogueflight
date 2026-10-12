@@ -319,3 +319,17 @@ test('altitude milestones are a landing bonus; Rubber Hull lets a wingless craft
   }
   assert.equal(alt({ landed: true, maxY: 90 }), undefined);
 });
+
+test('0.5 mods: Long Haul counts landed minutes, Magpie the coins of the run, Investor and Overachiever pay coins', () => {
+  const f = (o) => ({ dist: 2000, maxY: 50, maxV: 30, coins: 4, loops: 0, passes: 0, thermals: 0, landed: true, fuelFrac: 0, t: 130, ...o });
+  const lab = (fl, lv, ctx = {}) => Object.fromEntries(scoreFlight(fl, { lv, ...ctx }).lines.map((l) => [l.label, l.v]));
+  assert.equal(lab(f({}), { longhaul: 1 })['Long Haul'], 0.6); assert.equal(lab(f({ landed: false, crashed: true }), { longhaul: 1 })['Long Haul'], undefined);
+  assert.equal(lab(f({}), { magpie: 1 }, { coinsRun: 96 })['Magpie'], 1);
+  const meta = { bestStage: 8 }, run = newRun(0, meta, { seed: 5 }); run.mods = ['investor', 'overachiever']; run.modLv = { investor: 1, overachiever: 2 };
+  const coins0 = run.coins, out = settleFlight(run, meta, f({ dist: 3000 }));
+  assert.ok(out.cleared && out.sc.total >= 3000);
+  const invest = Math.min(4, Math.floor(out.sc.total / 1000)), over = Math.min(10, 2 * Math.floor((out.sc.total - 500) / 500 * 10));
+  assert.equal(out.over, over);
+  assert.equal(run.coins - coins0, 3 + 4 + invest + over + out.reward + out.interest);
+  assert.equal(run.coinsRun, 4);
+});

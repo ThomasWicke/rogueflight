@@ -637,6 +637,39 @@ const MOTIF = {
     solid(g, D, p => RR(p, -9, 18, 18, 11, 2), C.wood, C.wood2, 2.2);
     hi(g, p => E(p, -9, -18, 2.2, 4, rad(30)));
   },
+  // added in 0.5
+  longhaul(g, D) {
+    // a pocket watch with little wings
+    for (const sx of [-1, 1]) solid(g, D, p => { p.moveTo(sx * 16, -4); p.quadraticCurveTo(sx * 31, -16, sx * 30, -2); p.quadraticCurveTo(sx * 27, 4, sx * 18, 6); p.closePath(); }, C.canvas, C.paper2, 2);
+    solid(g, D, p => RR(p, -4, -27, 8, 6, 2), C.brass, C.brass2, 1.6);
+    solid(g, D, p => O(p, 0, 4, 19), C.brass, C.brass2);
+    solid(g, D, p => O(p, 0, 4, 14), C.canvas, C.paper2, 2);
+    ln(g, D, p => { p.moveTo(0, 4); p.lineTo(0, -6); p.moveTo(0, 4); p.lineTo(7, 8); }, 1.1);
+    if (!D.small) for (let i = 0; i < 12; i++) { const a = i * PI / 6; ln(g, D, p => { p.moveTo(12 * Math.cos(a), 4 + 12 * Math.sin(a)); p.lineTo(13.6 * Math.cos(a), 4 + 13.6 * Math.sin(a)); }, .5); }
+  },
+  investor(g, D) {
+    // a stack of coins with an arrow going up
+    for (let i = 0; i < 4; i++) coin(g, D, -8, 20 - i * 7, 12, 0);
+    tube(g, D, p => { p.moveTo(6, 18); p.lineTo(22, -14); }, 4, C.good);
+    solid(g, D, p => P(p, [27, -26, 14, -18, 26, -10]), C.good, '#3b7f45', 2);
+  },
+  overachiever(g, D) {
+    // a gauge with the needle past the red
+    solid(g, D, p => { p.moveTo(-27, 14); p.arc(0, 14, 27, PI, TAU); p.closePath(); }, C.canvas, C.paper2);
+    g.save(); g.lineCap = 'butt'; g.beginPath(); g.arc(0, 14, 21, rad(-40), rad(-2)); g.lineWidth = 6; g.strokeStyle = C.red; g.stroke(); g.restore();
+    g.save(); g.lineCap = 'butt'; g.beginPath(); g.arc(0, 14, 21, rad(-90), rad(-40)); g.lineWidth = 6; g.strokeStyle = C.brass; g.stroke(); g.restore();
+    const a = rad(8); solid(g, D, p => P(p, [-2.4 * Math.sin(a), 14 + 2.4 * Math.cos(a), 25 * Math.cos(a), 14 + 25 * Math.sin(a), 2.4 * Math.sin(a), 14 - 2.4 * Math.cos(a)]), C.night, null);
+    solid(g, D, p => O(p, 0, 14, 4), C.brass, null);
+    if (!D.small) solid(g, D, p => sparkle(p, 22, -14, 6), C.brass, null);
+  },
+  magpie(g, D) {
+    // a black-and-white bird carrying a coin
+    solid(g, D, p => { p.moveTo(-26, 10); p.quadraticCurveTo(-10, 2, 4, -2); p.quadraticCurveTo(18, -6, 22, -14); p.quadraticCurveTo(24, -4, 14, 6); p.quadraticCurveTo(0, 16, -26, 10); p.closePath(); }, C.night, null);
+    solid(g, D, p => { p.moveTo(-8, 4); p.quadraticCurveTo(2, -16, 14, -22); p.quadraticCurveTo(10, -6, -2, 6); p.closePath(); }, C.canvas, C.paper2, 1.6);
+    solid(g, D, p => P(p, [22, -14, 30, -12, 23, -9]), C.brass, C.brass2, 1.4);
+    solid(g, D, p => O(p, 17, -12, 1.4), C.canvas, null);
+    coin(g, D, 22, 10, 9, 0);
+  },
 };
 // fallback for ids without a motif: a plain star
 function fallback(g, D) {

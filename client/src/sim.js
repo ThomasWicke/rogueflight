@@ -110,6 +110,11 @@ const MODS={
   booster:{name:'Booster',r:'C',tag:'Engine',d:'Rockets ×{v} thrust for the first 3 s.',v:[2,2.5,3],how:'A big kick right off the catapult. Great for climbing steeply early.'},
   supercharge:{name:'Supercharger',r:'U',tag:'Engine',d:'Props ×{v} thrust with the nose up.',v:[1.25,1.45,1.65],how:'Whenever the nose points up more than 15°, propellers pull harder at no extra fuel. Hold NOSE UP to climb, glide down later.'},
   burner:{name:'Hot-Air Burner',r:'U',tag:'Air',d:'Balloons keep {v%} of their lift high up. Burns fuel.',v:[.5,.75,1],how:'Balloons normally stall around 1.7 km as the air thins. The burner keeps them rising while there is fuel. Burst height still applies.'},
+  // added in 0.5
+  longhaul:{name:'Long Haul',r:'U',tag:'Score',d:'+{v} mult per full minute in the air, if you land.',v:[.3,.4,.5],how:'Every full minute between the catapult and the landing adds mult. Flight permits give you more minutes; a crash or running out of time pays nothing.'},
+  investor:{name:'Investor',r:'U',tag:'Coins',d:'+1 coin per 1,000 points, up to {v} a flight.',v:[4,6,8],how:'After each flight, its score pays coins: one per full 1,000 points.'},
+  overachiever:{name:'Overachiever',r:'U',tag:'Coins',d:'Clearing a contract: +{v} coins per 10% over the target, up to {w}.',v:[1,2,3],w:[6,10,14],how:'When a contract clears, every full 10% your contract score is above the target pays coins. Not in daily puzzles or rooms.',noDaily:1},
+  magpie:{name:'Magpie',r:'R',tag:'Score',d:'+{v} mult per coin collected this run.',v:[.01,.015,.02],how:'Every coin you fly through this run adds to it for good. Coins get rarer the farther out you fly.'},
   sponsor:{name:'Sponsor Decal',r:'C',tag:'Coins',d:'+{v} coins per flight.',v:[2,3,4],how:'Extra coins after every flight, whatever happens.'},
 };
 // owned mods as {id: level}; older saves stored only the ids, which count as Lv 1. Plain id arrays work too (tests).
@@ -484,6 +489,8 @@ function scoreFlight(f,ctx){
   if(has('fanclub'))addM('Fan Club',mv('fanclub')*((ctx.loopsRun||0)+Math.min(3,f.loops||0)));
   if(has('understudy'))addM('Understudy',mv('understudy')*(ctx.empty||0));
   if(has('carpenter'))addM('Carpenter',mv('carpenter')*(ctx.frames||0));
+  if(has('longhaul')&&f.landed&&f.t>=60)addM('Long Haul',mv('longhaul')*Math.floor(f.t/60));
+  if(has('magpie'))addM('Magpie',mv('magpie')*((ctx.coinsRun||0)+(f.coins||0)));
   const total=Math.floor(base*mult*xm);
   return {lines,base,mult:Math.round(mult*100)/100,xm,total};
 }
@@ -569,13 +576,14 @@ function openPack(run){const t=run.packs&&run.packs.shift();if(t){run.inv[t]=(ru
 function craftCounts(cells){const l=connected(cells);const n=t=>l.filter(c=>c.type===t).length;
   return {parts:l.length,wings:n('wing'),tanks:n('tank'),balloons:n('balloon'),frames:n('frame'),engines:n('prop')+n('rocket')}}
 // everything scoreFlight needs to know about the run around a flight
-function flightCtx(run){return {lv:modLevels(run),boons:run.boons,flightIdx:run.flight,cleared:run.stage,coins:run.coins,streak:run.streak||0,loopsRun:run.loopsRun||0,
+function flightCtx(run){return {lv:modLevels(run),boons:run.boons,flightIdx:run.flight,cleared:run.stage,coins:run.coins,streak:run.streak||0,loopsRun:run.loopsRun||0,coinsRun:run.coinsRun||0,
   empty:Math.max(0,modSlots(run)-run.mods.length),...craftCounts(run.cells)}}
 function settleFlight(run,meta,f){
   const lv=modLevels(run), has=k=>!!lv[k];
   const sc=scoreFlight(f,flightCtx(run));
-  run.streak=f.landed?(run.streak||0)+1:f.crashed?0:(run.streak||0);run.loopsRun=(run.loopsRun||0)+Math.min(3,f.loops||0);
-  const pay=3+f.coins+modVal(lv,'sponsor');
+  run.streak=f.landed?(run.streak||0)+1:f.crashed?0:(run.streak||0);run.loopsRun=(run.loopsRun||0)+Math.min(3,f.loops||0);run.coinsRun=(run.coinsRun||0)+(f.coins||0);
+  const invest=has('investor')?Math.min(modVal(lv,'investor'),Math.floor(sc.total/1000)):0;
+  const pay=3+f.coins+modVal(lv,'sponsor')+invest;
   run.coins+=pay;run.score+=sc.total;run.total+=sc.total;run.flight++;run.best=Math.max(run.best,sc.total);run.bestDist=Math.max(run.bestDist||0,f.dist);
   // s: the flight's snapshot for balancing: the build it flew with, where the score came from, how it went
   const lvs=modLevels(run),r1=x=>Math.round(x*100)/100;
@@ -591,7 +599,10 @@ function settleFlight(run,meta,f){
   if(run.mode==='daily'){if(run.flight>=FLIGHTS){run.phase='done';out.dailyDone=true}return out}
   // live rooms: the room adds everyone's flights up and says when a contract is cleared (clearContract) or lost
   if(isOnline(run)){out.quota=Infinity;return out}
-  if(run.score>=quota)clearContract(run,meta,out);
+  if(run.score>=quota){
+    // Overachiever: every full 10% over the target pays coins
+    if(has('overachiever')){const k=Math.floor((run.score-quota)/quota*10);out.over=Math.min(modVal(lv,'overachiever','w'),k*modVal(lv,'overachiever'));run.coins+=out.over}
+    clearContract(run,meta,out)}
   else if(run.flight>=FLIGHTS){run.phase='over';out.failed=true}
   return out}
 // a cleared contract: the reward (more for unused flights and storms), the next town's shop and packs, a storm reward

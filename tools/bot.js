@@ -156,6 +156,7 @@ const MOD_VALUE = {
   sling: 4, thermal: 3, gyro: 3, magnet: 3, solar: 5, afterburner: 4, ramscoop: 4, recycler: 4, antigrav: 6,
   // 0.4 mods this pilot can use (it never builds balloon or engine-less craft, dives, or chains tricks)
   supercharge: 7, sailplane: 5, flyer: 5, carpenter: 4, understudy: 3, booster: 2,
+  investor: 6, overachiever: 5, longhaul: 3, magpie: 5,
 };
 function offerValue(run, kind, o) {
   const inv = (t) => run.inv[t] || 0, engine = inv('prop') + inv('rocket');
