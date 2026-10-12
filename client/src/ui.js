@@ -108,12 +108,10 @@ function renderTitle(){
     <dl class="stats"><dt>Runs</dt><dd>${m.runs}</dd><dt>Wins</dt><dd>${m.wins}</dd><dt>Most contracts in a run</dt><dd>${m.deepest||m.bestStage}</dd><dt>Best score</dt><dd>${fmt(m.bestFlight)}</dd>${m.level?`<dt>Highest Difficulty</dt><dd>${m.level}</dd>`:''}</dl>
     <div class="row" style="margin-top:12px"><span class="label">Unlocks</span><span class="hint">contracts in one run</span></div>
     <ul class="unl">${UNLOCKS.map(u=>{const d=m.bestStage>=u.at;return `<li class="${d?'done':''}"><i>${d?'\u2713':u.at}</i><span>${u.text}</span></li>`}).join('')}</ul></div>`;
-  h+=`<p class="ver" id="ver">v${__VERSION__}</p>`;
+  h+=`<p class="ver">v${__VERSION__}</p>`;
   $('titleBody').innerHTML=h;
   startTitleScene();
   $('howto').onclick=openGuide;
-  // tap the version, or the logo three times, for screen measurements (to debug layouts on phones we cannot test on)
-  $('ver').onclick=showMeasure;{let n=0,t=0;document.querySelector('#title .logo').onclick=()=>{const now=Date.now();n=now-t<600?n+1:1;t=now;if(n>=3){n=0;showMeasure()}}}
   $('libBtn').onclick=()=>openLibrary();
   bindModeCards();
   if(r){
@@ -1214,15 +1212,6 @@ syncSound();
 // dev only: inspect the running flight from the console (stripped from production builds)
 if(import.meta.env.DEV)window.__rf={F:()=>F,R,frame:n=>frame(n)};
 
-function showMeasure(){
-  const probe=k=>{const p=document.createElement('div');p.style.cssText=`position:fixed;visibility:hidden;padding-top:env(safe-area-inset-${k},0px)`;document.body.appendChild(p);const v=parseFloat(getComputedStyle(p).paddingTop)||0;p.remove();return Math.round(v)};
-  const sc=$('title').getBoundingClientRect(),fx=document.createElement('div');fx.style.cssText='position:fixed;left:0;right:0;top:0;bottom:0;visibility:hidden';document.body.appendChild(fx);const fr=fx.getBoundingClientRect();fx.remove();
-  const rows=[['version',__VERSION__],['window',innerWidth+'×'+innerHeight],['screen',screen.width+'×'+screen.height],['html',document.documentElement.clientWidth+'×'+document.documentElement.clientHeight],
-    ['body',Math.round(document.body.getBoundingClientRect().height)],['fixed box',Math.round(fr.top)+'–'+Math.round(fr.bottom)],['title screen',Math.round(sc.top)+'–'+Math.round(sc.bottom)],
-    ['safe top/bottom',probe('top')+' / '+probe('bottom')],['app mode',((matchMedia('(display-mode: standalone)').matches?'css ':'')+(navigator.standalone?'ios':''))||'none'],['visual vp',window.visualViewport?Math.round(visualViewport.width)+'×'+Math.round(visualViewport.height)+' @'+Math.round(visualViewport.offsetTop):'-'],['dpr',devicePixelRatio],['overflow',getComputedStyle(document.body).overflow],['scroll',Math.round(document.scrollingElement.scrollHeight)+' / '+scrollY]];
-  let box=$('measure');if(!box){box=document.createElement('div');box.id='measure';document.body.appendChild(box);box.onclick=()=>box.remove()}
-  box.innerHTML='<b>Screen measurements</b> (tap to close)<br>'+rows.map(([k,v])=>`${k}: <b>${v}</b>`).join('<br>');
-}
 /* ================= boot ================= */
 // moving house: the old address sends players to the new one, carrying their save in the URL fragment
 if(MOVED&&OLD_HOSTS.includes(location.hostname)&&location.hostname!==new URL(MOVED).hostname){let p='';try{p=btoa(unescape(encodeURIComponent(JSON.stringify({save:localStorage.getItem(KEY),

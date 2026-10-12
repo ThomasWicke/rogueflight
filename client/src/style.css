@@ -611,5 +611,4 @@ body.offline::after{content:"Reconnecting…";position:fixed;left:50%;top:calc(v
    starts below it. With "black-translucent" (drawing behind the status bar) iOS made the page a status bar shorter than
    the screen yet started it at the very top, leaving a strip at the bottom no page code can reach (measured: window 793,
    screen 852, safe top 59; 0.4.2 to 0.4.7 tried CSS and JS workarounds, none worked). */
-#measure{position:fixed;left:12px;right:12px;top:calc(var(--reserve) + 8px);z-index:200;background:var(--paper);color:var(--ink);border:2px solid var(--ink);border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.5;box-shadow:var(--shadow)}
-.ver{pointer-events:auto;cursor:pointer;padding:6px 0 10px}
+.ver{padding:6px 0 10px}
