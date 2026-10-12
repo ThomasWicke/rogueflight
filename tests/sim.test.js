@@ -77,7 +77,7 @@ test('reaching the quota clears the contract and opens a new shop', () => {
   assert.ok(out.cleared);
   assert.equal(run.stage, 1);
   assert.equal(run.phase, 'shop');
-  assert.equal(run.packs.length, FIRST_PACKS + PACKS, 'unopened packs carry over, the next contract adds two');
+  assert.equal(run.packs.length, FIRST_PACKS + PACKS, 'unopened packs carry over, the next contract adds one');
 });
 
 test('thermals never out-lift gravity, at any Thermal Rider or Antigravity level', () => {
@@ -132,7 +132,8 @@ test('ceiling rules: pricier shop, a fourth storm, fewer packs, a shorter clock'
   const r1 = newRun(1, meta), r2 = newRun(2, meta);
   assert.equal(offerPrice(r2, 'part', { t: 'wing' }), offerPrice(r1, 'part', { t: 'wing' }) + 1);
   assert.ok(!isStorm(4, 3) && isStorm(4, 4));
-  const r6 = newRun(6, meta); r6.packs = []; r6.stage = 1; grantPacks(r6); assert.equal(r6.packs.length, 1);
+  // Difficulty 6: packs never hold rare parts and the shop has no rare pack
+  { let rare = 0; for (let i = 0; i < 200; i++) { const r = newRun(6, meta, { seed: i }); r.packs = []; r.stage = 1; grantPacks(r); rare += r.packs.filter((t) => t.endsWith('+')).length + (r.shop.pack ? 1 : 0); } assert.equal(rare, 0); }
   const r5 = newRun(5, meta); r5.packs = []; r5.stage = 1; grantPacks(r5); assert.equal(r5.packs.length, PACKS);
   assert.equal(flightStats(newRun(9, meta)).flightTime, 120);
   assert.equal(flightStats(newRun(10, meta)).flightTime, 90);
@@ -332,4 +333,17 @@ test('0.5 mods: Long Haul counts landed minutes, Magpie the coins of the run, In
   assert.equal(out.over, over);
   assert.equal(run.coins - coins0, 3 + 4 + invest + over + out.reward + out.interest);
   assert.equal(run.coinsRun, 4);
+});
+
+test('rare parts: about 15% of later packs, rare packs in some shops, and each rare trait shows in the craft', () => {
+  const meta = { bestStage: 8 };
+  let rare = 0, n = 0, shops = 0;
+  for (let i = 0; i < 400; i++) { const r = newRun(0, meta, { seed: 1000 + i }); r.packs = []; r.stage = 1; grantPacks(r); n += r.packs.length; rare += r.packs.filter((t) => t.endsWith('+')).length; if (r.shop.pack) shops++; }
+  assert.ok(n === 400 && rare > 30 && rare < 95, `${rare} rare of ${n}`); assert.ok(shops > 60 && shops < 150, `${shops} rare packs in 400 shops`);
+  const run = newRun(0, meta, { seed: 3 }); run.coins = 50; run.shop.pack = { t: 'wing+' };
+  assert.ok(applyPurchase(run, 'pack', run.shop.pack)); assert.equal(run.packs[run.packs.length - 1], 'wing+');
+  const st = stats({}, {}, weatherFx(null, 0)), cell = (code, rare) => layout(code).map((c) => (rare.includes(c.type) ? { ...c, rare: 1 } : c));
+  const a = makeCraft(layout('c22 f32 p42 w21 t23 b31'), st), b = makeCraft(cell('c22 f32 p42 w21 t23 b31', ['wing', 'tank', 'prop', 'balloon', 'frame']), st);
+  assert.ok(b.m < a.m); assert.equal(b.wingLift, 1.3); assert.equal(b.balLift, 1.6); assert.equal(b.propPow, 1.4);
+  assert.ok(Math.abs(b.fuelMax - (st.reserve + 1.8 * st.tankFuel)) < 1e-9); assert.equal(b.burstBonus, 1000);
 });

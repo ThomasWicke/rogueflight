@@ -5,7 +5,8 @@ import { COCKPIT, stats, weatherFx, makeCraft, craftCounts } from './sim.js';
 
 const NAMES = ['Baron', 'Ace', 'Biscuit', 'Wobbles', 'Duchess', 'Rivets', 'Pip', 'Marigold', 'Captain Hay', 'Sprocket'];
 const T = { c: 'cockpit', f: 'frame', p: 'prop', w: 'wing', t: 'tank', r: 'rocket', b: 'balloon' };
-const cellsOf = (code) => code.split(' ').map((x) => ({ type: T[x[0]], c: +x[1], r: +x[2] }));
+// 'w21' -> a wing at (2,1); an upper-case letter is the rare variant ('W21')
+const cellsOf = (code) => code.split(' ').map((x) => { const l = x[0], rare = l !== l.toLowerCase(); const c = { type: T[l.toLowerCase()], c: +x[1], r: +x[2] }; if (rare) c.rare = 1; return c; });
 // builds get bigger every round, like a player's would
 const BUILDS = ['c22 f32 p42 w31', 'c22 f32 p42 w21 w31 t33', 'c22 f32 t12 p42 w11 w21 w31 t33', 'c22 f32 t12 p42 w11 w21 w31 t33 t23',
   'c22 f32 t12 p42 w11 w21 w31 t33 t23 t13', 'c22 f32 t12 p42 w11 w21 w31 t33 t23 t13 f02 w01'];

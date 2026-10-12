@@ -76,6 +76,8 @@ function mount(g, x, y, w, h, lw, c) {
 // stay legible), o.frac fuel 0..1 (tank), o.on engine firing (prop blur / rocket flame), o.mood (cockpit).
 export function drawPart(g, type, t, o) {
   o = o || {}; t = t || 0;
+  // rare variants ('wing+' or o.rare): the same part with a brass sparkle in the corner
+  let rare = !!o.rare; if (type && type.endsWith('+')) { type = type.slice(0, -1); rare = true; }
   const lw = Math.min(o.lw || .05, .12), fine = lw < .075; // fine = enough pixels (>~33 px/cell) for grain, stitches, rivets
   g.save(); g.lineJoin = 'round'; g.lineCap = 'round'; ink(g, lw);
   switch (type) {
@@ -87,7 +89,16 @@ export function drawPart(g, type, t, o) {
     case 'rocket': rocket(g, t, lw, fine, !!o.on); break;
     case 'balloon': balloon(g, lw, fine); break;
   }
+  if (rare) rareMark(g, lw);
   g.restore();
+}
+// a four-point brass sparkle at the top right of the cell, outlined in ink so it reads on any part
+function rareMark(g, lw) {
+  const x = .32, y = -.32, r = .17, q = r * .28;
+  g.beginPath(); g.moveTo(x, y - r); g.quadraticCurveTo(x + q, y - q, x + r, y); g.quadraticCurveTo(x + q, y + q, x, y + r);
+  g.quadraticCurveTo(x - q, y + q, x - r, y); g.quadraticCurveTo(x - q, y - q, x, y - r); g.closePath();
+  g.fillStyle = '#e9a93b'; g.fill(); g.lineWidth = lw * .8; g.strokeStyle = '#22283a'; g.stroke();
+  g.beginPath(); g.arc(x - r * .18, y - r * .18, r * .14, 0, 7); g.fillStyle = 'rgba(255,255,255,.75)'; g.fill();
 }
 
 // --- frame: a wooden crate seen from the front: rim boards, one diagonal brace, dark back slats

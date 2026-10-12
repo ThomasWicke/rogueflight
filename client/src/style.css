@@ -612,3 +612,9 @@ body.offline::after{content:"Reconnecting…";position:fixed;left:50%;top:calc(v
    the screen yet started it at the very top, leaving a strip at the bottom no page code can reach (measured: window 793,
    screen 852, safe top 59; 0.4.2 to 0.4.7 tried CSS and JS workarounds, none worked). */
 .ver{padding:6px 0 10px}
+/* rare parts: brass-trimmed palette tiles, the trait under the bench, the shop's rare pack */
+.pal button.rare{background:linear-gradient(#fff4d6,#f6e2b0);box-shadow:inset 0 0 0 2px var(--brass),3px 3px 0 var(--ink)}
+.pal button.rare[aria-pressed="true"]{background:var(--brass)}
+.rarenote{color:var(--brass2);font-weight:900}
+.offer.rarepack{background:#fff4d6;box-shadow:inset 0 0 0 2px var(--brass),2px 2px 0 var(--ink)}
+.offer.rarepack .glyph{background:var(--brass);color:var(--ink)}

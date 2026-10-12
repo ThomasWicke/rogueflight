@@ -8,7 +8,7 @@ import {
   COINSEG, COINR, thermalSeg, coinAt, newFlight, segDist, flag, step,
   popBalloons, summaryOf, scoreFlight, wpick, PART_W, rollMods, rollTunes, genShop,
   rerollShop, priceOf, offerPrice, rerollCost, sellValue, newRun, craftCounts, flightCtx, onTarget, TARGET_EVERY, settleFlight,
-  PACKS, FIRST_PACKS, rollPacks, grantPacks, openPack,
+  PACKS, FIRST_PACKS, rollPacks, grantPacks, openPack, RARE, RARE_CHANCE, RARE_PACK_PRICE, isRare, baseOf, partName,
   MODMAX, modLevels, modVal, modDesc, modPrice, canBuy, applyPurchase, sellMod, flightStats, repeats, severity,
   MAX_CEILING, CEILING_RULES, ceilingRules, REDLINE, CLOUD9, ALT_STEP, altBonus, altMilestones, altReached,
   BOONS, rollBoons, boonDesc, pickBoon, modSlots,
@@ -47,7 +47,12 @@ const plural=(n,w)=>n+' '+w+(n===1?'':'s');
 
 /* ================= part drawing (art.js) ================= */
 const ICON={};
-for(const t of Object.keys(PARTS)){const c=document.createElement('canvas');c.width=c.height=96;const g=c.getContext('2d');g.translate(48,48);g.scale(96,96);drawPart(g,t,.33,{frac:.7,lw:.055});ICON[t]=c.toDataURL()}
+// icons for every part, and for the rare variants ('wing+' etc.), which art.js draws with brass trim
+for(const t of [...Object.keys(PARTS),...Object.keys(RARE).map(k=>k+'+')]){const c=document.createElement('canvas');c.width=c.height=96;const g=c.getContext('2d');g.translate(48,48);g.scale(96,96);drawPart(g,t,.33,{frac:.7,lw:.055});ICON[t]=c.toDataURL()}
+// a part on the bench as its inventory key: rare ones are 'wing+' etc.
+const keyOf=c=>c.rare?c.type+'+':c.type;
+// the compact cell code used for telemetry and ghosts: type initial + column + row, upper case for rare parts
+const cellCodeOf=cells=>cells.map(c=>{const l=c.type==='cockpit'?'c':c.type[0];return (c.rare?l.toUpperCase():l)+c.c+c.r}).join(' ');
 
 const $=id=>document.getElementById(id);
 const veil=$('veil'), sheet=$('sheet'), bench=$('bench');
@@ -61,7 +66,7 @@ const esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;',
 let armAbandon=false;
 function runCode(r){if(!r)return '';const L=t=>t==='cockpit'?'c':t[0];
   return JSON.stringify({lvl:r.level,cleared:r.stage,boons:r.boons||{},endless:!!r.endless,coins:r.coins,mods:r.mods.map(id=>{const L=modLevels(r)[id];return L>1?id+':'+L:id}),tune:r.tune,inv:r.inv,
-    cells:r.cells.map(c=>L(c.type)+c.c+c.r).join(' '),log:r.log.map(l=>[l.stage+1,l.flight,l.score,l.d,l.x,l.s||null]),ev:r.ev||[]})}
+    cells:cellCodeOf(r.cells),log:r.log.map(l=>[l.stage+1,l.flight,l.score,l.d,l.x,l.s||null]),ev:r.ev||[]})}
 // telemetry: after every flight and when a run ends, the run goes to /api/run (a Pages Function storing it in D1, one row
 // per run, updated in place) for balancing. Each flight carries a snapshot (build, score lines, height, speed, how it
 // ended); ev lists purchases, sales, rerolls, packs and storm rewards. Anonymous: a random id per browser and the run code.
@@ -149,7 +154,9 @@ function startTitleScene(){
 
 /* ================= hangar ================= */
 let tab='build', sel='wing', armClear=false, clearTimer=0, armSell=null;
-const owned=t=>R().inv[t]||0, usedN=t=>R().cells.filter(x=>x.type===t).length, left=t=>Math.max(0,owned(t)-usedN(t));
+const owned=t=>R().inv[t]||0, usedN=t=>R().cells.filter(x=>keyOf(x)===t).length, left=t=>Math.max(0,owned(t)-usedN(t));
+// the palette: the six parts, then any rare variants you own
+const palette=()=>[...PALETTE,...Object.keys(RARE).map(k=>k+'+').filter(k=>owned(k)||usedN(k))];
 const curWx=()=>weatherOf(R(),R().stage);
 const curStats=()=>flightStats(R());
 function openHangar(){
@@ -223,13 +230,13 @@ function renderBuild(){
   let cells='';
   for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){const k=x+','+y,p=map.get(k);
     const cls='cell'+(p?' on':'')+(p&&!conn.has(k)?' loose':'')+(p&&p.type==='cockpit'?' cock':'')+(blockedSet.has(k)?' blocked':'');
-    cells+=`<button class="${cls}" data-c="${x}" data-r="${y}" type="button" aria-label="${p?PARTS[p.type].name:'Empty'} at column ${x+1}, row ${y+1}">${p?`<img alt="" src="${ICON[p.type]}">`:''}</button>`}
+    cells+=`<button class="${cls}" data-c="${x}" data-r="${y}" type="button" aria-label="${p?partName(keyOf(p)):'Empty'} at column ${x+1}, row ${y+1}">${p?`<img alt="" src="${ICON[keyOf(p)]}">`:''}</button>`}
   const W=K.m*G0*st.grav, n=K.counts;
-  const propT=n.prop*st.prop*st.rhoMul/W, rockT=n.rocket*st.rocket/W;
+  const propT=(K.propPow??n.prop)*st.prop*st.rhoMul/W, rockT=n.rocket*st.rocket/W;
   const burn=n.prop*st.propUse;
   const off=K.lift, balF=off==null?0:balanceOf(off);
-  const lift=n.wing*st.wing*st.rhoMul*2500*.56*balF/W;
-  const bal=n.balloon*st.balloon*st.rhoMul/W;
+  const lift=(K.wingLift??n.wing)*st.wing*st.rhoMul*2500*.56*balF/W;
+  const bal=(K.balLift??n.balloon)*st.balloon*st.rhoMul/W;
   const ratio=x=>x>0?mul(x)+'× weight':'none';
   const lineOf=x=>x==null?null:Math.abs(x)<=GIMBAL?'in line':`${Math.abs(x).toFixed(2)} m ${x<0?'below':'above'} center`;
   let balTxt='',balCls='';
@@ -262,7 +269,7 @@ function renderBuild(){
     <div class="row"><span class="label">Build</span><button class="ghost${armClear?' armed':''}" id="clear" type="button" ${r.cells.length<=1?'disabled':''}>${armClear?'Tap again':'Clear'}</button></div>
     <div class="grid" id="grid">${cells}<svg class="ov" viewBox="0 0 7 5" preserveAspectRatio="none" aria-hidden="true">${ov}</svg></div>
     <div class="legend"><span><i class="lg-com"></i>Mass</span><span><i class="lg-col"></i>Lift</span><span style="margin-left:auto">Nose \u2192</span></div>
-    <div class="pal" id="pal">${PALETTE.map(t=>`<button type="button" data-t="${t}" aria-pressed="${t===sel}"><img alt="" src="${ICON[t]}"><span>${PARTS[t].name}</span><small class="${left(t)?'':'none'}">${left(t)}/${owned(t)}</small></button>`).join('')}</div>
+    <div class="pal" id="pal">${palette().map(t=>`<button type="button" data-t="${t}" aria-pressed="${t===sel}"${isRare(t)?' class="rare"':''}><img alt="" src="${ICON[t]}"><span>${partName(t)}</span><small class="${left(t)?'':'none'}">${left(t)}/${owned(t)}</small></button>`).join('')}</div>
     <div class="blurb" id="blurb">${warns.length?`<span class="warn">${warns.join(' \u00b7 ')}</span>`:''}</div>
   </div>
   <div class="card">
@@ -272,6 +279,7 @@ function renderBuild(){
   $('grid').onclick=e=>{if(skipClick){skipClick=false;return}const b=e.target.closest('.cell');if(b)placeAt(+b.dataset.c,+b.dataset.r)};
   bindDrag($('grid'));
   $('pal').onclick=e=>{const b=e.target.closest('button');if(b){sel=b.dataset.t;armClear=false;renderBuild()}};
+  if(isRare(sel)&&!warns.length)$('blurb').innerHTML=`<span class="rarenote">${partName(sel)}: ${RARE[baseOf(sel)].d}</span>`;
   $('clear').onclick=()=>{if(!armClear){armClear=true;renderBuild();clearTimeout(clearTimer);clearTimer=setTimeout(()=>{armClear=false;if(tab==='build'&&save.run)renderBuild()},3000);return}
     armClear=false;r.cells=r.cells.filter(x=>x.type==='cockpit');persist();renderBuild()};
 }
@@ -283,7 +291,7 @@ function bindDrag(G){
     if(c===COCKPIT.c&&r===COCKPIT.r)return;const p=R().cells.find(x=>x.c===c&&x.r===r);if(!p)return;
     clearTimeout(drag&&drag.timer);
     drag={c,r,type:p.type,x0:e.clientX,y0:e.clientY,on:false,id:e.pointerId,timer:setTimeout(()=>{if(!drag)return;drag.on=true;
-      b.classList.add('lift');const g=document.createElement('img');g.className='ghost-part';g.src=ICON[p.type];g.style.left=drag.x+'px';g.style.top=drag.y+'px';document.body.appendChild(g);drag.ghost=g;
+      b.classList.add('lift');const g=document.createElement('img');g.className='ghost-part';g.src=ICON[keyOf(p)];g.style.left=drag.x+'px';g.style.top=drag.y+'px';document.body.appendChild(g);drag.ghost=g;
       try{navigator.vibrate&&navigator.vibrate(12)}catch(_){}},280),x:e.clientX,y:e.clientY}};
   G.onpointermove=e=>{if(!drag)return;drag.x=e.clientX;drag.y=e.clientY;
     if(!drag.on){if(Math.hypot(e.clientX-drag.x0,e.clientY-drag.y0)>10){clearTimeout(drag.timer);drag=null}return}
@@ -303,11 +311,11 @@ function moveCell(c1,r1,c2,r2){const r=R();
 function placeAt(c,y){
   const r=R();
   if(c===COCKPIT.c&&y===COCKPIT.r)return;
-  const i=r.cells.findIndex(x=>x.c===c&&x.r===y);
-  if(i>=0&&r.cells[i].type===sel)r.cells.splice(i,1);
-  else if(left(sel)<=0){$('blurb').innerHTML=`<span class="warn">No ${PARTS[sel].name.toLowerCase()}s left</span>`;return}
-  else if(i>=0)r.cells[i].type=sel;
-  else r.cells.push({c,r:y,type:sel});
+  const i=r.cells.findIndex(x=>x.c===c&&x.r===y),type=baseOf(sel),rare=isRare(sel);
+  if(i>=0&&keyOf(r.cells[i])===sel)r.cells.splice(i,1);
+  else if(left(sel)<=0){$('blurb').innerHTML=`<span class="warn">No ${partName(sel)}${/s$/.test(partName(sel))?'':'s'} left</span>`;return}
+  else if(i>=0){r.cells[i].type=type;if(rare)r.cells[i].rare=1;else delete r.cells[i].rare}
+  else r.cells.push(rare?{c,r:y,type,rare:1}:{c,r:y,type});
   persist();renderBuild();
 }
 
@@ -323,7 +331,8 @@ function renderShop(){
   // an owned mod on offer is an upgrade: show the level it would reach (a sold one already shows its new level)
   const mods=S.mods.length?S.mods.map((o,i)=>{const L=lv[o.id]||0,up=!!L&&!o.sold;return `<div class="${o.sold?'sold':''}">${modCard(o.id,btn('mod',i,o),o.sold?Math.max(1,L):L+1,up)}</div>`}).join(''):'<p class="hint">\u2014</p>';
   const tunes=S.tunes.map((o,i)=>{const T=TUNES[o.k],L=r.tune[o.k]||0;return `<div class="offer${o.sold?' sold':''}"><div class="glyph C" aria-hidden="true">+</div><div><h3>${T.name}</h3><p>${T.d} \u00b7 Lv ${L+1}${T.max?'/'+T.max:''}</p></div>${btn('tune',i,o)}</div>`}).join('');
-  const parts=S.parts.map((o,i)=>`<div class="offer${o.sold?' sold':''}"><img alt="" src="${ICON[o.t]}"><div><h3>${PARTS[o.t].name}</h3><p>${owned(o.t)} owned</p></div>${btn('part',i,o)}</div>`).join('');
+  const parts=S.parts.map((o,i)=>`<div class="offer${o.sold?' sold':''}"><img alt="" src="${ICON[o.t]}"><div><h3>${PARTS[o.t].name}</h3><p>${owned(o.t)} owned</p></div>${btn('part',i,o)}</div>`).join('')
+    +(S.pack?`<div class="offer rarepack${S.pack.sold?' sold':''}"><div class="glyph R" aria-hidden="true">★</div><div><h3>Rare parts pack</h3><p>A random rare part</p></div>${btn('pack',0,S.pack)}</div>`:'');
   const rc=rerollCost(r);
   $('dealerTitle').textContent='Shop';
   dbody.innerHTML=`
@@ -339,8 +348,8 @@ function renderShop(){
   };
 }
 function buy(kind,i){
-  const r=R(),S=r.shop;const o=S[kind==='part'?'parts':kind==='tune'?'tunes':'mods'][i];if(!o)return;
-  if(applyPurchase(r,kind,o)){sfx('buy');buzz(12);persist();renderHangar()}else sfx('error')
+  const r=R(),S=r.shop;const o=kind==='pack'?S.pack:S[kind==='part'?'parts':kind==='tune'?'tunes':'mods'][i];if(!o)return;
+  if(applyPurchase(r,kind,o)){sfx('buy');buzz(12);persist();renderHangar();if(kind==='pack')showPacks()}else sfx('error')
 }
 function renderMods(){
   const r=R();
@@ -422,7 +431,7 @@ function showBoons(){
 // every contract starts with packs to open: shake, tear the top off, burst, the part pops out and flies to the tray
 const BIG={};
 function bigIcon(t){if(!BIG[t]){const c=document.createElement('canvas');c.width=c.height=240;const g=c.getContext('2d');g.translate(120,120);g.scale(210,210);drawPart(g,t,.33,{frac:1,lw:.035});BIG[t]=c.toDataURL()}return BIG[t]}
-const isEngine=t=>t==='prop'||t==='rocket';
+const isEngine=t=>t==='prop'||t==='rocket'||isRare(t); // gold rays for engines and every rare part
 // the packet is two copies of one face: the cap above a jagged tear line and the body below it, so it looks whole until torn
 const PW=178,PH=164,CAP=34,TEAR=3;
 const zig=(n,y0,y1)=>Array.from({length:n+1},(_,i)=>`${PW*i/n}px ${i%2?y1:y0}px`);
@@ -476,14 +485,14 @@ async function tearPack(){
   anim(q('.pk-glow'),[{opacity:0,transform:'scale(.4)'},{opacity:1,transform:'scale(1)'}],{duration:500});
   if(!reduceMotion())sparks(gold);
   const rv=q('.pk-reveal'),img=rv.querySelector('img');
-  img.src=bigIcon(t);rv.querySelector('h3').textContent=PARTS[t].name;rv.querySelector('small').textContent='×'+r.inv[t];rv.hidden=false;
+  img.src=bigIcon(t);rv.querySelector('h3').textContent=partName(t);rv.querySelector('small').textContent='×'+r.inv[t];rv.hidden=false;
   anim(rv.querySelector('h3'),[{opacity:0,transform:'translateY(14px)'},{opacity:1,transform:'none'}],{duration:300,delay:520});
   anim(rv.querySelector('small'),[{opacity:0},{opacity:1}],{duration:300,delay:640});
   await anim(img,[{transform:'translateY(70px) scale(.15) rotate(-30deg)',opacity:0},{transform:'translateY(-18px) scale(1.2) rotate(8deg)',opacity:1,offset:.6},{transform:'none',opacity:1}],
     {duration:760,delay:120,easing:'ease-out'}).finished;
   PK.state='reveal';PK.busy=false;
 }
-function fillSlot(i,t){const s=pkTray.children[i];if(!s)return;s.className='on'+(isEngine(t)?' gold':'');s.innerHTML=`<img alt="${PARTS[t].name}" src="${ICON[t]}">`;
+function fillSlot(i,t){const s=pkTray.children[i];if(!s)return;s.className='on'+(isEngine(t)?' gold':'');s.innerHTML=`<img alt="${partName(t)}" src="${ICON[t]}">`;
   s.animate([{transform:'scale(.4)'},{transform:'scale(1.25)'},{transform:'none'}],{duration:ms(320),easing:'ease-out'})}
 async function collect(){
   if(PK.busy)return;PK.busy=true;
@@ -499,7 +508,7 @@ function finishPacks(){
   PK.state='done';$('pkSkip').hidden=true;$('pkDone').hidden=false;pkTray.hidden=true;
   const n={};for(const t of PK.got)n[t]=(n[t]||0)+1;
   pkStage.className='pk-stage';
-  pkStage.innerHTML=`<div class="pk-sum">${Object.entries(n).map(([t,k])=>`<div class="${isEngine(t)?'gold':''}"><img alt="" src="${bigIcon(t)}"><b>${PARTS[t].name}</b><small>+${k}</small></div>`).join('')}</div>`;
+  pkStage.innerHTML=`<div class="pk-sum">${Object.entries(n).map(([t,k])=>`<div class="${isEngine(t)?'gold':''}"><img alt="" src="${bigIcon(t)}"><b>${partName(t)}</b><small>+${k}</small></div>`).join('')}</div>`;
   pkStage.querySelectorAll('.pk-sum>div').forEach((el,i)=>anim(el,[{opacity:0,transform:'scale(.5) translateY(20px)'},{opacity:1,transform:'scale(1.1)',offset:.7},{opacity:1,transform:'none'}],{duration:420,delay:80+i*110,easing:'ease-out'}));
 }
 function openAll(){
@@ -649,7 +658,7 @@ function pilotMood(){
 // crash: every part becomes a tumbling piece of debris, and the pilot pops out on a parachute
 function breakApart(){
   const {S}=F,K=F.K,c=Math.cos(S.th),s=Math.sin(S.th);
-  F.debris=K.parts.map(p=>({type:p.type,x:S.x+p.lx*c-p.ly*s,y:S.y+p.lx*s+p.ly*c+.3,vx:S.vx*.35+(Math.random()-.5)*9+p.lx*3,vy:4+Math.random()*7,th:S.th,w:(Math.random()-.5)*14}));
+  F.debris=K.parts.map(p=>({type:p.type,rare:p.rare,x:S.x+p.lx*c-p.ly*s,y:S.y+p.lx*s+p.ly*c+.3,vx:S.vx*.35+(Math.random()-.5)*9+p.lx*3,vy:4+Math.random()*7,th:S.th,w:(Math.random()-.5)*14}));
   F.chute={x:S.x,y:S.y+1,vx:S.vx*.15+1.5,vy:11,t:0};
 }
 function updDebris(dt){
@@ -659,7 +668,7 @@ function updDebris(dt){
 }
 function drawDebris(X,Y,sc,now){
   const ds=Math.max(sc,14);
-  for(const d of F.debris){ctx.save();ctx.translate(X(d.x),Y(d.y));ctx.scale(ds,ds);ctx.rotate(-d.th);drawPart(ctx,d.type,now/1000,{frac:0,lw:2.5/ds,mood:'crash'});ctx.restore()}
+  for(const d of F.debris){ctx.save();ctx.translate(X(d.x),Y(d.y));ctx.scale(ds,ds);ctx.rotate(-d.th);drawPart(ctx,d.type,now/1000,{frac:0,lw:2.5/ds,mood:'crash',rare:d.rare});ctx.restore()}
   const p=F.chute;if(!p)return;
   const sway=Math.sin(p.t*2.2)*.25;ctx.save();ctx.translate(X(p.x),Y(p.y));ctx.scale(ds*1.4,ds*1.4);ctx.rotate(sway);
   if(ART&&ART.drawParachute)ART.drawParachute(ctx,now/1000,{lw:2.5/(ds*1.4),open:clamp(p.t*3,0,1)});
@@ -715,7 +724,7 @@ function draw(now){
     ctx.save();ctx.translate(px,py);ctx.scale(ds,ds);ctx.rotate(-S.th);
     if(F.stretch>0)ctx.scale(1+.18*F.stretch,1-.12*F.stretch);
     const frac=K.fuelMax?S.fuel/K.fuelMax:0, mood=pilotMood();
-    for(const p of K.parts){ctx.save();ctx.translate(p.lx,-p.ly);drawPart(ctx,p.type,now/1000,{on:p.type==='rocket'?S.rocketOn:S.propOn,frac,lw:clamp(ds*.06,.9,2.5)/ds,mood});ctx.restore()}
+    for(const p of K.parts){ctx.save();ctx.translate(p.lx,-p.ly);drawPart(ctx,p.type,now/1000,{rare:p.rare,on:p.type==='rocket'?S.rocketOn:S.propOn,frac,lw:clamp(ds*.06,.9,2.5)/ds,mood});ctx.restore()}
     ctx.restore()
   }
   drawGrain(ctx,vw,vh);
@@ -729,7 +738,7 @@ function drawFlyers(list,X,Y,sc,now,fo){
     const px=X(f.x),py=Y(f.y);let ext=.7;for(const p of f.K.parts)ext=Math.max(ext,Math.hypot(p.lx,p.ly)+.7);
     const ds=Math.max(sc,12/ext),inView=px>-30&&px<vw+30&&py>RES+40&&py<vh+30;
     if(inView){ctx.save();ctx.globalAlpha=f.done?.35:.62;ctx.translate(px,py);ctx.scale(ds,ds);ctx.rotate(-f.th);
-      for(const p of f.K.parts){ctx.save();ctx.translate(p.lx,-p.ly);drawPart(ctx,p.type,now/1000,{on:f.on,frac:.6,lw:clamp(ds*.06,.9,2.5)/ds,mood:f.mood});ctx.restore()}
+      for(const p of f.K.parts){ctx.save();ctx.translate(p.lx,-p.ly);drawPart(ctx,p.type,now/1000,{rare:p.rare,on:f.on,frac:.6,lw:clamp(ds*.06,.9,2.5)/ds,mood:f.mood});ctx.restore()}
       ctx.restore();tag(px,py-ext*ds-14,f.name+(f.s?' · '+fmt(f.s):''),fo&&fo.id===f.id)}
     else if(!f.done){const ex=clamp(px,44,vw-44),ey=clamp(py,RES+110,vh-150);tag(ex,ey,(px<0?'◂ ':'')+f.name+(px>vw?' ▸':'')+(py<RES+40&&px>=0&&px<=vw?' ▴':''),false)}}
   ctx.restore();
@@ -1094,7 +1103,7 @@ function startOnlineFlight(room){
   F.round=room.round;F.roundScores={};F.sendT=0;F.sent=0;
   F.pre=F.pre0=watch?0:Math.max(.4,(room.launchAt-NET.now())/1000);
   ghosts.forEach(g=>{g.done=false;g.x=null;g.dx=null});
-  for(const p of room.players)if(p.id!==clientId()&&!isBotP(p)){const g=ghosts.get(p.id)||{};ghosts.set(p.id,g);g.done=!p.alive;g.x=null;g.dx=null;g.name=p.name;if(p.cells){const code=p.cells.map(c=>(c.type==='cockpit'?'c':c.type[0])+c.c+c.r).join(' ');if(code!==g.code){g.code=code;try{g.K=makeCraft(p.cells,ghostSt())}catch(_){g.K=null}}}}
+  for(const p of room.players)if(p.id!==clientId()&&!isBotP(p)){const g=ghosts.get(p.id)||{};ghosts.set(p.id,g);g.done=!p.alive;g.x=null;g.dx=null;g.name=p.name;if(p.cells){const code=cellCodeOf(p.cells);if(code!==g.code){g.code=code;try{g.K=makeCraft(p.cells,ghostSt())}catch(_){g.K=null}}}}
   // bots fly here too, from the room's seed, so every phone sees the same bot flight
   F.bots=room.players.filter(p=>isBotP(p)&&p.alive).map(p=>{const b=botFlight(room.seed,room.stage,p.bot,ONLINE_TIME);return {...b,id:p.id,name:roomName(p),S:newFlight(b.K,b.st)}});
   if(watch){F.S.done=true;F.ended=true;F.settled=true;F.pre=0;$('flight').classList.add('watching');F.focus=null;updSpec()}
@@ -1118,7 +1127,7 @@ function stepBots(n){
 function sendPos(dt){
   const S=F.S;if(S.done||F.pre>0)return;F.sendT-=dt;if(F.sendT>0)return;F.sendT=.1;F.sent++;
   const m={t:'pos',s:F.live||0,x:+S.x.toFixed(2),y:+S.y.toFixed(2),th:+S.th.toFixed(3),vx:+S.vx.toFixed(2),vy:+S.vy.toFixed(2),on:!!(S.propOn||S.rocketOn),mood:pilotMood()};
-  if(F.sent%20===1)m.k=R().cells.map(c=>(c.type==='cockpit'?'c':c.type[0])+c.c+c.r).join(' ');
+  if(F.sent%20===1)m.k=cellCodeOf(R().cells);
   NET.send(m);
 }
 // everything airborne except me: other players (ghosts) and bots, as {id,name,x,y,th,vx,vy,K,on,mood,done}

@@ -38,6 +38,19 @@ const PARTS={
   frame:{name:'Frame',mass:0.45,price:3,mount:'all four sides, and passes connections on',blurb:'Light structure. Frames, tanks and the cockpit carry connections onward; everything else must bolt to one of them.'},
 };
 const PALETTE=['wing','prop','rocket','tank','balloon','frame'];
+// rare variants: same sockets and rules as the base part, one trait each. In the inventory they count as 'wing+' etc.,
+// on the bench a placed one is a normal cell with rare:1. They come from packs (RARE_CHANCE) and the shop's rare pack.
+const RARE={
+  prop:{name:'Brass Propeller',d:'+40% thrust, same fuel'},
+  rocket:{name:'Long-Burn Rocket',d:'40% less fuel'},
+  wing:{name:'Silk Wing',d:'+30% lift, 30% lighter'},
+  tank:{name:'Copper Tank',d:'+80% fuel'},
+  balloon:{name:'Zeppelin Cell',d:'+60% lift; all Zeppelin Cells burst 1 km higher'},
+  frame:{name:'Balsa Frame',d:'Half the weight'},
+};
+const RARE_CHANCE=.15, RARE_PACK_PRICE=8, RARE_PACK_CHANCE=.25;
+const isRare=t=>typeof t==='string'&&t.endsWith('+'), baseOf=t=>isRare(t)?t.slice(0,-1):t;
+const partName=t=>isRare(t)?RARE[baseOf(t)].name:PARTS[t].name;
 
 /* ---------- tuning (stackable shop upgrades) ---------- */
 const TUNES={
@@ -166,7 +179,7 @@ function _rollBoons(run){
 const boonDesc=o=>BOONS[o.id].d.replace('{mod}',o.mod?MODS[o.mod].name:'');
 // telemetry: what the player did and when, as compact arrays [kind, contract, flight, ...] in run.ev
 function note(run,...a){(run.ev=run.ev||[]).push([a[0],run.stage,run.flight,...a.slice(1)])}
-const cellCode=cells=>cells.map(c=>(c.type==='cockpit'?'c':c.type[0])+c.c+c.r).join(' ');
+const cellCode=cells=>cells.map(c=>{const l=c.type==='cockpit'?'c':c.type[0];return (c.rare?l.toUpperCase():l)+c.c+c.r}).join(' ');
 function pickBoon(run,i){
   const o=run.boonOffer&&run.boonOffer[i];if(!o)return false;note(run,'boon',o.id,o.mod||'');
   run.boons=run.boons||{};run.boons[o.id]=(run.boons[o.id]||0)+1;
@@ -189,7 +202,7 @@ const QUOTA=[500,1100,2000,4000,7500,16000,30000,54000];
 function quotaFor(i,level){const q=i<CONTRACTS?QUOTA[i]:QUOTA[CONTRACTS-1]*Math.pow(2.5,i-CONTRACTS+1);return Math.round(q*(1+.25*(level||0))/10)*10}
 // Ceiling levels: every level adds +25% quota; even levels also add a rule (cumulative)
 const MAX_CEILING=10;
-const CEILING_RULES={2:'Shop prices +1',4:'Contract 5 has a storm too',6:'1 pack per contract after the first',8:'Storms hit harder',10:'90-second flight clock'};
+const CEILING_RULES={2:'Shop prices +1',4:'Contract 5 has a storm too',6:'Packs hold no rare parts',8:'Storms hit harder',10:'90-second flight clock'};
 const ceilingRules=level=>Object.keys(CEILING_RULES).filter(k=>+k<=(level||0)).map(k=>CEILING_RULES[k]);
 const isStorm=(i,level)=>i===CONTRACTS-1||i%3===2||((level||0)>=4&&i===4);
 // storm strength grows with the contract; from Ceiling 8 every storm counts as two contracts later
@@ -249,9 +262,13 @@ function makeCraft(cells,st){
   const list=connected(cells), parts=[], counts={};
   const occ=new Set(cells.map(x=>x.c+','+x.r));
   let m=0,cx=0,cy=0;
-  for(const c of list){const mass=PARTS[c.type].mass*st.massMul*(c.type==='frame'&&st.frameMass!=null?st.frameMass:1);const lx=c.c+.5,ly=-(c.r+.5);
+  let wingLift=0,balLift=0,propPow=0,fuelTanks=0,balRare=0;
+  for(const c of list){const rm=c.rare?(c.type==='wing'?.7:c.type==='frame'?.5:1):1;
+    const mass=PARTS[c.type].mass*st.massMul*(c.type==='frame'&&st.frameMass!=null?st.frameMass:1)*rm;const lx=c.c+.5,ly=-(c.r+.5);
     const blocked=(c.type==='prop'&&occ.has((c.c+1)+','+c.r))||(c.type==='rocket'&&occ.has((c.c-1)+','+c.r));
-    parts.push({type:c.type,lx,ly,m:mass,blocked,gc:c.c,gr:c.r});m+=mass;cx+=mass*lx;cy+=mass*ly;if(!blocked)counts[c.type]=(counts[c.type]||0)+1}
+    parts.push({type:c.type,lx,ly,m:mass,blocked,gc:c.c,gr:c.r,rare:!!c.rare});m+=mass;cx+=mass*lx;cy+=mass*ly;if(!blocked)counts[c.type]=(counts[c.type]||0)+1;
+    if(c.type==='wing')wingLift+=c.rare?1.3:1;else if(c.type==='balloon'){balLift+=c.rare?1.6:1;if(c.rare)balRare++}
+    else if(c.type==='prop'&&!blocked)propPow+=c.rare?1.4:1;else if(c.type==='tank')fuelTanks+=c.rare?1.8:1}
   const cg={x:COCKPIT.c+.5,y:-(COCKPIT.r+.5)};
   if(st.cargo){m+=st.cargo;cx+=st.cargo*cg.x;cy+=st.cargo*cg.y}
   cx/=m;cy/=m;let I=0;
@@ -261,7 +278,9 @@ function makeCraft(cells,st){
   const wings=parts.filter(p=>p.type==='wing'), props=parts.filter(p=>p.type==='prop'&&!p.blocked), rockets=parts.filter(p=>p.type==='rocket'&&!p.blocked);
   const avg=(a,f)=>a.length?a.reduce((t,p)=>t+f(p),0)/a.length:null;
   return {parts,m,I,cells:list,cargoPos,counts:{prop:n('prop'),rocket:n('rocket'),wing:n('wing'),tank:n('tank'),balloon:n('balloon')},
-    fuelMax:st.reserve+n('tank')*st.tankFuel,loose:cells.length-list.length,
+    fuelMax:st.reserve+fuelTanks*st.tankFuel,loose:cells.length-list.length,
+    // rare parts count for more: wing lift, balloon lift and prop power in base-part units; Zeppelin Cells burst higher
+    wingLift,balLift,propPow,burstBonus:balRare&&balRare===n('balloon')?1000:0,
     com:{x:cx,y:-cy},lift:avg(wings,p=>p.lx),propLine:avg(props,p=>p.ly),rocketLine:avg(rockets,p=>p.ly),
     blocked:parts.filter(p=>p.blocked).length};
 }
@@ -309,10 +328,10 @@ function step(S,K,st,dt,ctl){
   const pitch=ctl.pitch||0;
   // one throttle drives every engine; old callers that only pass boost keep props on full
   const thrl=ctl.throttle==null?1:clamp(ctl.throttle,0,1), rocketThr=ctl.throttle==null?(ctl.boost?1:0):thrl;
-  const nw=K.counts.wing, Lfull=nw*st.wing*rho*q;
+  const nw=K.counts.wing, Lfull=(K.wingLift??nw)*st.wing*rho*q;
   const off=K.lift==null?0:K.lift;
   const Lcap=Lfull*.56*balanceOf(off);
-  const up0=K.counts.balloon*st.balloon*rhoBal, Wn=Math.max(0,W-up0);
+  const up0=(K.balLift??K.counts.balloon)*st.balloon*rhoBal, Wn=Math.max(0,W-up0);
   // hands off, the autopilot holds a slight climb under power and a shallow glide without it
   const neut=hasFuel&&((K.counts.prop&&thrl>.3)||(K.counts.rocket&&rocketThr>.3))?1.05:NEUT;
   const Lcmd=clamp(Wn*neut-W*1.5*uy+W*2.5*pitch,-Lcap,Lcap);
@@ -325,14 +344,14 @@ function step(S,K,st,dt,ctl){
   for(const p of K.parts){
     const rx=p.lx*c-p.ly*s, ry=p.lx*s+p.ly*c;
     let fx=0,fy=0,tx=0,ty=0;
-    if(p.type==='prop'){if(hasFuel&&!p.blocked&&thrl>0){const th=st.prop*rho*thrl*climbK;tx=c*th;ty=s*th;thr+=th;use+=st.propUse*thrl;S.propOn=true}}
-    else if(p.type==='rocket'){if(hasFuel&&rocketThr>0&&!p.blocked){const th=st.rocket*rocketThr*(1+st.afterburner*Math.min(v,1000)/100)*(S.t<3?st.booster||1:1);tx=c*th;ty=s*th;thr+=th;use+=4*rocketThr;S.rocketOn=true}}
+    if(p.type==='prop'){if(hasFuel&&!p.blocked&&thrl>0){const th=st.prop*rho*thrl*climbK*(p.rare?1.4:1);tx=c*th;ty=s*th;thr+=th;use+=st.propUse*thrl;S.propOn=true}}
+    else if(p.type==='rocket'){if(hasFuel&&rocketThr>0&&!p.blocked){const th=st.rocket*rocketThr*(1+st.afterburner*Math.min(v,1000)/100)*(S.t<3?st.booster||1:1);tx=c*th;ty=s*th;thr+=th;use+=4*rocketThr*(p.rare?.6:1);S.rocketOn=true}}
     else if(p.type==='wing'){
       const L=Lact/nw;Fx+=-uy*L;Fy+=ux*L;
       const D=st.wingCD*rho*q*(.06+sa*sa)*drag;fx-=ux*D;fy-=uy*D;
       if(st.solar&&S.y>800){const sp=st.solar*st.prop*clamp((S.y-800)/400,0,1);tx+=c*sp;ty+=s*sp}
     }
-    else if(p.type==='balloon'){fy+=st.balloon*rhoBal;const bd=.004*rho*q;fx-=ux*bd;fy-=uy*bd}
+    else if(p.type==='balloon'){fy+=st.balloon*rhoBal*(p.rare?1.6:1);const bd=.004*rho*q;fx-=ux*bd;fy-=uy*bd}
     const pd=PAR*rho*q*drag;fx-=ux*pd;fy-=uy*pd;
     Fx+=fx+tx;Fy+=fy+ty;Ta+=rx*fy-ry*fx;Tt+=rx*ty-ry*tx;
   }
@@ -371,7 +390,7 @@ function step(S,K,st,dt,ctl){
   if(st.recycler&&S.vy<0&&S.recyc<st.recycler*K.fuelMax){const g=Math.min(.1*(-S.vy)*dt,st.recycler*K.fuelMax-S.recyc);S.fuel+=g;S.recyc+=g}
   S.fuel=Math.min(S.fuel,K.fuelMax);
   if(S.fuel<=0){S.fuel=0;if(st.secondwind&&!S.sw){S.sw=true;S.fuel=K.fuelMax*st.secondwind;S.events.push('Second Wind')}}
-  if(K.counts.balloon&&!S.burst&&S.y>st.burstAlt){S.burst=true;S.events.push('burst')}
+  if(K.counts.balloon&&!S.burst&&S.y>st.burstAlt+(K.burstBonus||0)){S.burst=true;S.events.push('burst')}
   if(S.x<0&&px0>=0&&S.y<20){S.x=.05;S.vx=Math.abs(S.vx)*.3}
   // ground
   const cs=Math.cos(S.th), sn=Math.sin(S.th);
@@ -512,7 +531,9 @@ function _rollTunes(run,n,exclude){
   for(let i=pool.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]]}
   return pool.slice(0,n)}
 function genShop(run,meta){return seeded(run,()=>_genShop(run,meta))}
-function _genShop(run,meta){return {parts:[0,1,2].map(()=>({t:wpick(PART_W)})),tunes:rollTunes(run,2,[]).map(k=>({k})),mods:rollMods(run,meta,3,[]).map(id=>({id})),rerolls:0}}
+function _genShop(run,meta){return {parts:[0,1,2].map(()=>({t:wpick(PART_W)})),tunes:rollTunes(run,2,[]).map(k=>({k})),mods:rollMods(run,meta,3,[]).map(id=>({id})),rerolls:0,pack:rollRarePack(run)}}
+// sometimes the shop has a rare parts pack: a guaranteed rare part of a random type (rolled now, revealed when opened)
+const rollRarePack=run=>(run.level||0)<6&&rnd()<RARE_PACK_CHANCE?{t:wpick(PART_W)+'+'}:null;
 // a reroll is a whole new shop, sold slots included; only the mods on offer right now are kept out of the new picks
 function rerollShop(run,meta){note(run,'reroll',run.shop.rerolls);return seeded(run,()=>_rerollShop(run,meta))}
 function _rerollShop(run,meta){
@@ -520,11 +541,12 @@ function _rerollShop(run,meta){
   S.parts=[0,1,2].map(()=>({t:wpick(PART_W)}));
   S.tunes=rollTunes(run,2,[]).map(k=>({k}));
   S.mods=rollMods(run,meta,3,S.mods.map(o=>o.id)).map(id=>({id}));
+  S.pack=rollRarePack(run);
   S.rerolls++}
 const priceOf=(run,p)=>{const lv=modLevels(run);if(lv.coupon)p=Math.max(1,Math.floor(p*(1-modVal(lv,'coupon')/100)));return p+((run.level||0)>=2?1:0)};
 // an upgrade costs the rarity price plus 2 per level already owned
 const modPrice=(run,id)=>RARITY[MODS[id].r].price+2*(modLevels(run)[id]||0);
-function offerPrice(run,kind,o){return priceOf(run,kind==='part'?PARTS[o.t].price:kind==='tune'?tuneCost(run.tune[o.k]||0):modPrice(run,o.id))}
+function offerPrice(run,kind,o){return priceOf(run,kind==='part'?PARTS[o.t].price:kind==='pack'?RARE_PACK_PRICE:kind==='tune'?tuneCost(run.tune[o.k]||0):modPrice(run,o.id))}
 const rerollCost=run=>2+run.shop.rerolls;
 const sellValue=(id,L)=>Math.floor(RARITY[MODS[id].r].price/2)+2*((L||1)-1);
 // can this offer be bought right now (coins aside)? New mods need a free slot, upgrades do not
@@ -533,6 +555,7 @@ function applyPurchase(run,kind,o){
   const p=offerPrice(run,kind,o);if(!canBuy(run,kind,o)||p>run.coins)return false;
   run.coins-=p;o.sold=true;note(run,'buy',kind,o.t||o.k||o.id,p);
   if(kind==='part')run.inv[o.t]=(run.inv[o.t]||0)+1;
+  else if(kind==='pack')(run.packs=run.packs||[]).push(o.t);
   else if(kind==='tune')run.tune[o.k]=(run.tune[o.k]||0)+1;
   else{run.modLv=run.modLv||{};if(run.mods.includes(o.id))run.modLv[o.id]=Math.min(MODMAX,(run.modLv[o.id]||1)+1);else{run.mods.push(o.id);run.modLv[o.id]=1}}
   return true}
@@ -559,19 +582,20 @@ function newRun(level,meta,opts={}){
   run.shop=genShop(run,meta);
   grantPacks(run);
   return run}
-// parts packs: one random part each, handed out at the start of every contract (2, or 4 for the first).
+// parts packs: one random part each, handed out at the start of every contract (1, or 4 for the first); later packs can be rare.
 // The opening four always hold a tank, a wing and an engine, so every run can fly; the fourth is random.
-const PACKS=2, FIRST_PACKS=4;
+const PACKS=1, FIRST_PACKS=4; // 0.5: later contracts give 1 pack (was 2), which may hold a rare part
 // daily puzzles: number N is the Nth UTC day since launch; its seed is a hash of N, the same for everyone
 const DAILY_EPOCH=Date.UTC(2026,9,11);
 const dailyNumber=(ms=Date.now())=>Math.floor((ms-DAILY_EPOCH)/86400000)+1;
 function dailySeed(n){let h=(n*2654435761)>>>0;h^=h>>>16;h=Math.imul(h,0x45d9f3b)>>>0;h^=h>>>16;return h>>>0}
-function rollPacks(first){
+function rollPacks(first,rareOk=true){
+  if(!first){const t=wpick(PART_W);return [rareOk&&rnd()<RARE_CHANCE?t+'+':t]}
   const out=first?['tank','wing',wpick({prop:PART_W.prop,rocket:PART_W.rocket}),wpick(PART_W)]:Array.from({length:PACKS},()=>wpick(PART_W));
   for(let i=out.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[out[i],out[j]]=[out[j],out[i]]}
   return out}
 function grantPacks(run){return seeded(run,()=>_grantPacks(run))}
-function _grantPacks(run){const first=run.stage===0&&!run.endless;(run.packs=run.packs||[]).push(...rollPacks(first).slice(0,first||(run.level||0)<6?99:1))}
+function _grantPacks(run){const first=run.stage===0&&!run.endless;(run.packs=run.packs||[]).push(...rollPacks(first,(run.level||0)<6))}
 function openPack(run){const t=run.packs&&run.packs.shift();if(t){run.inv[t]=(run.inv[t]||0)+1;note(run,'pack',t)}return t}
 function craftCounts(cells){const l=connected(cells);const n=t=>l.filter(c=>c.type===t).length;
   return {parts:l.length,wings:n('wing'),tanks:n('tank'),balloons:n('balloon'),frames:n('frame'),engines:n('prop')+n('rocket')}}
@@ -631,7 +655,7 @@ export {
   COINSEG, COINR, thermalSeg, coinAt, newFlight, segDist, flag, step,
   popBalloons, summaryOf, scoreFlight, wpick, PART_W, rollMods, rollTunes, genShop,
   rerollShop, priceOf, offerPrice, rerollCost, sellValue, newRun, craftCounts, flightCtx, onTarget, TARGET_EVERY, settleFlight,
-  PACKS, FIRST_PACKS, rollPacks, grantPacks, openPack,
+  PACKS, FIRST_PACKS, rollPacks, grantPacks, openPack, RARE, RARE_CHANCE, RARE_PACK_PRICE, isRare, baseOf, partName,
   MODMAX, modLevels, modVal, modDesc, modPrice, canBuy, applyPurchase, sellMod, flightStats, repeats, severity,
   MAX_CEILING, CEILING_RULES, ceilingRules, REDLINE, CLOUD9, ALT_STEP, altBonus, altMilestones, altReached,
   BOONS, rollBoons, boonDesc, pickBoon, modSlots,

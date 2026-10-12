@@ -129,18 +129,24 @@ function evaluate(cells, run, st) {
   return best;
 }
 const invOf = (cells) => cells.reduce((m, x) => (x.type !== 'cockpit' && (m[x.type] = (m[x.type] || 0) + 1), m), {});
+// rare parts ('wing+') lay out like their base part; once the layout is chosen, as many cells as there are rare copies
+// become the rare variant (each rare trait is an upgrade)
+const baseInv = (inv) => { const m = {}; for (const k in inv) { const b = k.replace('+', ''); m[b] = (m[b] || 0) + inv[k]; } return m; };
+function applyRare(cells, inv) { for (const k in inv) { if (!k.endsWith('+')) continue; let n = inv[k]; for (const c of cells) if (n > 0 && c.type === k.slice(0, -1) && !c.rare) { c.rare = 1; n--; } } return cells; }
 // hill-climb from the template and from the last build (with any new parts added); one evaluation is one test flight
 function build(run, st, prev, tries = 40) {
-  const starts = [template(run.inv, st)];
+  const inv = baseInv(run.inv);
+  const starts = [applyRare(template(inv, st), run.inv)];
   if (prev) {
     const cells = prev.cells.map((x) => ({ ...x })), have = invOf(cells);
-    for (const t in run.inv) for (let i = have[t] || 0; i < run.inv[t]; i++) placeValid(cells, t, st);
+    for (const t in inv) for (let i = have[t] || 0; i < inv[t]; i++) placeValid(cells, t, st);
+    applyRare(cells, run.inv);
     starts.push(cells);
   }
   let best = { cells: starts[0], ...evaluate(starts[0], run, st) };
   for (const s of starts.slice(1)) { const e = evaluate(s, run, st); if (e.score > best.score) best = { cells: s, ...e }; }
   for (let i = 0; i < tries; i++) {
-    const cand = mutate(best.cells), e = evaluate(cand, run, st);
+    const cand = mutate(best.cells), e = evaluate(cand, run, st); // mutate swaps types; rare flags travel with the cell
     // equal scores may drift (escapes flat spots), but never onto a layout that cannot fly
     if (e.score > best.score || (e.score === best.score && e.score >= 0)) best = { cells: cand, ...e };
   }
@@ -159,7 +165,8 @@ const MOD_VALUE = {
   investor: 6, overachiever: 5, longhaul: 3, magpie: 5,
 };
 function offerValue(run, kind, o) {
-  const inv = (t) => run.inv[t] || 0, engine = inv('prop') + inv('rocket');
+  const inv = (t) => (run.inv[t] || 0) + (run.inv[t + '+'] || 0), engine = inv('prop') + inv('rocket');
+  if (kind === 'pack') return 6;
   if (kind === 'part') {
     if (!engine && (o.t === 'prop' || o.t === 'rocket')) return o.t === 'prop' ? 100 : 90;
     return { wing: inv('wing') < 3 ? 6 : 0, tank: inv('tank') < 3 ? 5 : 0, frame: inv('frame') < 2 ? 4 : 0, prop: inv('prop') < 2 ? 4 : 0, rocket: 0, balloon: 0 }[o.t];
@@ -177,7 +184,7 @@ function botShop(run, meta) {
   while (run.packs && run.packs.length) openPack(run);
   for (let pass = 0; pass < 2; pass++) {
     const offers = [];
-    for (const [kind, list] of [['part', run.shop.parts], ['tune', run.shop.tunes], ['mod', run.shop.mods]])
+    for (const [kind, list] of [['part', run.shop.parts], ['tune', run.shop.tunes], ['mod', run.shop.mods], ['pack', run.shop.pack ? [run.shop.pack] : []]])
       for (const o of list) if (!o.sold) offers.push({ kind, o });
     // greedy by value; re-check values after each buy (owning a prop changes what is worth buying)
     for (;;) {
