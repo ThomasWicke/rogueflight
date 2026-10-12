@@ -5,6 +5,7 @@ import {
   newRun, stats, weatherFx, makeCraft, newFlight, step, popBalloons, summaryOf, scoreFlight, settleFlight,
   quotaFor, openPack, PACKS, FIRST_PACKS, rollTunes, thermalSeg, G0, repeats, rerollShop, applyPurchase, offerPrice, rollMods,
   isStorm, grantPacks, flightStats, MODMAX, pickBoon, rollBoons, modSlots, dailySeed, clearContract, ONLINE_TIME, SIM_DT,
+  craftCounts, flightCtx, onTarget, MODS,
 } from '../client/src/sim.js';
 import { botFlight } from '../client/src/bots.js';
 
@@ -208,7 +209,7 @@ test('daily shops never offer Logbook', () => {
     const run = newRun(0, { bestStage: 8 }, { mode: 'daily', seed });
     for (let i = 0; i < 3; i++) { assert.ok(!run.shop.mods.some((o) => o.id === 'logbook')); rerollShop(run, { bestStage: 8 }); }
   }
-  assert.ok(rollMods(newRun(0, { bestStage: 8 }), { bestStage: 8 }, 40, []).includes('logbook'));
+  assert.ok(rollMods(newRun(0, { bestStage: 8 }), { bestStage: 8 }, 99, []).includes('logbook'));
 });
 
 test('telemetry: every flight logs a snapshot, and purchases, packs and rerolls are noted', () => {
@@ -224,4 +225,82 @@ test('telemetry: every flight logs a snapshot, and purchases, packs and rerolls 
   const kinds = run.ev.map((e) => e[0]);
   assert.deepEqual(kinds.filter((k) => k !== 'pack'), ['buy', 'reroll']);
   assert.equal(kinds.filter((k) => k === 'pack').length, FIRST_PACKS);
+});
+
+// ---------- 0.4 mods ----------
+const flyWith = (cells, mods, ctl = () => ({ pitch: 0, throttle: 1 }), pop) => {
+  const st = stats({}, mods, weatherFx(null, 0)); let K = makeCraft(layout(cells), st); const S = newFlight(K, st); let last = 0, lt = 0;
+  while (!S.done) {
+    if (pop && K.counts.balloon && !S.burst && S.t - lt > 5) { if (S.y - last < 20 && S.y > 200) S.burst = true; last = S.y; lt = S.t; }
+    step(S, K, st, SIM_DT, ctl(S)); if (S.burst && !S.popped) K = popBalloons(S, K, st);
+  }
+  return { S, K, f: summaryOf(S, K) };
+};
+const BALLOON_GLIDER = 'c22 f32 f12 b11 b21 b31 w02';
+
+test('every mod has a how-to line and three level values', () => {
+  for (const [id, M] of Object.entries(MODS)) { assert.ok(M.how && M.how.length > 10, id); assert.equal(M.v.length, 3, id); }
+});
+
+test('Dive Bomber turns height into speed: Redline from a balloon dive, never more energy than the height gave', () => {
+  const dive = (S) => ({ pitch: S.popped && S.y > 80 ? -1 : 0, throttle: 1 });
+  const plain = flyWith(BALLOON_GLIDER, {}, dive, true).f, bomb = flyWith(BALLOON_GLIDER, { divebomb: 3, slipstream: 3 }, dive, true).f;
+  assert.ok(plain.maxV * 3.6 < 300 && bomb.mach, `${plain.maxV * 3.6} -> ${bomb.maxV * 3.6} km/h`);
+  // energy check: top speed stays below free fall from the highest point
+  assert.ok(bomb.maxV < Math.sqrt(2 * G0 * bomb.maxY) + 30);
+});
+
+test('Hot-Air Burner lets balloons climb past where they stall, paid for with fuel', () => {
+  const cells = 'c22 f32 f12 b11 b21 b31 w02 t23', go = (mods) => { const st = stats({}, mods, weatherFx(null, 0)); const K = makeCraft(layout(cells), st); const S = newFlight(K, st);
+    while (!S.done && !S.burst) step(S, K, st, SIM_DT, { pitch: 0, throttle: 1 }); return S; };
+  const a = go({ envelope: 1 }), b = go({ envelope: 1, burner: 3 });
+  assert.ok(a.maxY < 2000 && b.maxY > 3500, `${a.maxY} -> ${b.maxY}`);
+  assert.ok(b.fuel < a.fuel, 'the burner burns fuel');
+});
+
+test('Sailplane and Supercharger add distance; Booster gets rockets climbing', () => {
+  const bg = (m) => flyWith(BALLOON_GLIDER, m, undefined, true).f.dist;
+  assert.ok(bg({ sailplane: 3 }) > bg({}) * 1.15);
+  const climb = (S) => { const g = Math.atan2(S.vy, S.vx) * 57.3, v = Math.hypot(S.vx, S.vy); return { pitch: S.fuel > 0 && v > 20 ? (g < 30 ? 1 : g > 40 ? -1 : 0) : 0, throttle: 1 }; };
+  const pg = 'c22 f32 p42 w21 w31 t23';
+  assert.ok(flyWith(pg, { supercharge: 3 }, climb).f.dist > flyWith(pg, {}, climb).f.dist * 1.3);
+  const rc = 'c22 f32 t12 r02 w21 w31 t23 t33';
+  assert.ok(flyWith(rc, { booster: 3 }, climb).f.maxY > flyWith(rc, {}, climb).f.maxY * 2);
+});
+
+test('Silent Flight, Balloon Bouquet, Carpenter and Understudy count the right things', () => {
+  const cc = craftCounts(layout(BALLOON_GLIDER));
+  assert.deepEqual([cc.engines, cc.balloons, cc.frames], [0, 3, 2]);
+  const f = { dist: 1000, maxY: 50, maxV: 30, coins: 0, loops: 0, passes: 0, thermals: 0, landed: false, fuelFrac: 0 };
+  const sc = scoreFlight(f, { lv: { silent: 1, bouquet: 1, carpenter: 1, understudy: 1 }, ...cc, empty: 1 });
+  const lab = Object.fromEntries(sc.lines.map((l) => [l.label, l.v]));
+  assert.equal(lab['Silent Flight'], 1.5); assert.equal(lab['Balloon Bouquet'], 0.6); assert.equal(lab.Carpenter, 0.3); assert.equal(lab.Understudy, 0.3);
+  const withProp = scoreFlight(f, { lv: { silent: 1 }, ...craftCounts(layout('c22 p32 w21')) });
+  assert.ok(!withProp.lines.some((l) => l.label === 'Silent Flight'));
+  // carpenter frames weigh nothing
+  const st0 = stats({}, {}, weatherFx(null, 0)), st1 = stats({}, { carpenter: 1 }, weatherFx(null, 0));
+  assert.ok(makeCraft(layout('c22 f32 f42'), st1).m < makeCraft(layout('c22 f32 f42'), st0).m);
+});
+
+test('Hedgehopper, Bullseye and Frequent Flyer follow the flight and the run', () => {
+  const f = (o) => ({ dist: 800, maxY: 25, maxV: 30, coins: 0, loops: 0, passes: 0, thermals: 0, landed: true, fuelFrac: 0, landX: 403, ...o });
+  const lab = (fl, lv, ctx = {}) => Object.fromEntries(scoreFlight(fl, { lv, ...ctx }).lines.map((l) => [l.label, l.v]));
+  assert.equal(lab(f({}), { hedgehop: 2 }).Hedgehopper, 2); assert.equal(lab(f({ maxY: 31 }), { hedgehop: 2 }).Hedgehopper, undefined);
+  assert.ok(onTarget(403) && onTarget(1996) && !onTarget(410) && !onTarget(3));
+  assert.equal(lab(f({}), { bullseye: 1 }).Bullseye, 1.5); assert.equal(lab(f({ landX: 450 }), { bullseye: 1 }).Bullseye, undefined);
+  // the streak lives on the run: two landings, then a crash resets it
+  const meta = { bestStage: 8 }, run = newRun(0, meta, { seed: 9 }); run.mods = ['flyer']; run.modLv = { flyer: 1 };
+  settleFlight(run, meta, f({})); const out2 = settleFlight(run, meta, f({}));
+  assert.equal(run.streak, 2); assert.ok(out2.sc.lines.some((l) => l.label === 'Frequent Flyer' && l.v === 0.2));
+  settleFlight(run, meta, f({ landed: false, crashed: true })); assert.equal(run.streak, 0);
+});
+
+test('touch-and-gos and combos are detected in flight, and Fan Club counts at most 3 loops a flight', () => {
+  const st = stats({}, {}, weatherFx(null, 0)), K = makeCraft(layout('c22 f32 p42 w21 w31 t23'), st), S = newFlight(K, st);
+  Object.assign(S, { x: 100, y: 2.4, vx: 30, vy: -1.5, th: 0 });
+  for (let i = 0; i < 1200 && !S.done; i++) step(S, K, st, SIM_DT, { pitch: S.touch || S.tgArm ? 1 : 0, throttle: 1 });
+  assert.equal(S.touchgos, 1);
+  const f = { dist: 500, maxY: 60, maxV: 30, coins: 0, loops: 10, passes: 0, thermals: 0, landed: false, fuelFrac: 0, combos: 2 };
+  const lab = Object.fromEntries(scoreFlight(f, { lv: { fanclub: 1, showboat: 1 }, loopsRun: 10 }).lines.map((l) => [l.label, l.v]));
+  assert.equal(lab['Fan Club'], 0.39); assert.equal(lab['2 combos'], 0.33);
 });

@@ -7,7 +7,7 @@ import {
   SOCK, STRUCT, linkage, connected, balanceOf, makeCraft, hs, groundY,
   COINSEG, COINR, thermalSeg, coinAt, newFlight, segDist, flag, step,
   popBalloons, summaryOf, scoreFlight, wpick, PART_W, rollMods, rollTunes, genShop,
-  rerollShop, priceOf, offerPrice, rerollCost, sellValue, newRun, craftCounts, settleFlight,
+  rerollShop, priceOf, offerPrice, rerollCost, sellValue, newRun, craftCounts, flightCtx, onTarget, TARGET_EVERY, settleFlight,
   PACKS, FIRST_PACKS, rollPacks, grantPacks, openPack,
   MODMAX, modLevels, modVal, modDesc, modPrice, canBuy, applyPurchase, sellMod, flightStats, repeats, severity,
   MAX_CEILING, CEILING_RULES, ceilingRules, REDLINE, CLOUD9,
@@ -544,7 +544,7 @@ function sync(e){if(!F)return;const up=keys.ArrowUp||keys.w||keys.W,dn=keys.Arro
 function startFlight(o={}){
   const r=R(),w=curWx(),st=curStats(),K=makeCraft(r.cells,st);
   F={st,K,S:newFlight(K,st),ts:1,online:!!o.online,watch:!!o.watch,flyCoins:[],pre:reduceMotion()?.3:1.1,stretch:0,debris:null,chute:null,idle:0,wx:w,cam:{x:0,y:20,sc:20},trail:[],parts:[],toasts:[],toastT:0,boom:-1,ended:false,coinFlash:0,endT:0,
-    ctx:{mods:r.mods.slice(),lv:modLevels(r),flightIdx:r.flight,cleared:r.stage,coins:r.coins,...craftCounts(r.cells)},quota:r.mode==='daily'||o.online?null:quotaFor(r.stage,r.level),already:r.score,bestDist:r.bestDist||0};
+    ctx:flightCtx(r),quota:r.mode==='daily'||o.online?null:quotaFor(r.stage,r.level),already:r.score,bestDist:r.bestDist||0};
   $('flight').classList.remove('watching');$('fSpec').hidden=true;
   ctl.pitch=0;ctl.boost=false;
   show('flight');setThr(1);$('thr').style.visibility=(K.counts.rocket||K.counts.prop)?'visible':'hidden';$('bPop').style.visibility=K.counts.balloon?'visible':'hidden';
@@ -599,6 +599,8 @@ function frame(now){
       else if(e==='Redline'){F.boom=0;F.cheer=1;sfx('redline');sfx('cheer',{intensity:.9});buzz(40);toast('Redline',has('sonic')?`×${num(mv('sonic'))} score`:'+1 mult')}
       else if(e==='Cloud nine')F.cheer=1,sfx('cheer',{intensity:.9}),toast('Cloud nine',has('escape')?`×${num(mv('escape'))} score`:'+2 mult');
       else if(e==='Downdraft!')toast('Downdraft','The storm pushes you down');
+      else if(e==='touchgo'){if(has('touchgo'))F.cheer=.8,sfx('pass'),toast('Touch and go',nth(S.touchgos,mv('touchgo')))}
+      else if(e==='combo'){if(has('showboat'))F.cheer=1,sfx('cheer',{intensity:.5}),toast('Combo',nth(S.combos,mv('showboat')))}
       else toast(e,'');
     }
     S.events.length=0;
@@ -611,6 +613,7 @@ function frame(now){
     F.ended=true;audio.stopEngine();F.endT=now;F.toasts.length=0;F.toastT=0;
     if(S.crashed){breakApart();sfx('crash');sfx('ooh');buzz([60,40,80]);toast('Crashed',has('crashtest')?`+${num(mv('crashtest'))} mult`:'');dust(S.x,S.y,30,true)}
     else if(S.landed)sfx('touchdown'),sfx('cheer',{intensity:.6}),buzz(25),toast('Touchdown',has('greaser')?`×${num(mv('greaser'))} score`:'+0.5 mult');
+    if(S.landed&&has('bullseye')&&onTarget(S.x))F.cheer=1,sfx('cheer',{intensity:.9}),toast('Bullseye',`×${num(mv('bullseye'))} score`);
   }
   updParts(dt);draw(now);hud(dt);
   if(F.ended&&now-F.endT>(S.crashed?2600:1300)){if(F.online){if(!F.settled)finishOnline()}else{finish();return}}
@@ -677,7 +680,7 @@ function draw(now){
   const left=cam.x-vw/2/sc, right=cam.x+vw/2/sc;
   // the crowd cheers for tricks and records and gets livelier as the flight's hype builds
   F.cheer=Math.max(0,(F.cheer||0)-1/60*1.5);
-  drawWorld(ctx,{vw,vh,sc,X,Y,camX:cam.x,camY:cam.y,left,right,now,RES,stage:R()?R().stage:0,town:R()?townOf(R().seed,R().stage).town:'',wx:F.wx,st,best:F.bestDist,hype:F.hype||0,cheer:F.cheer});
+  drawWorld(ctx,{targets:F.ctx.lv.bullseye?TARGET_EVERY:0,vw,vh,sc,X,Y,camX:cam.x,camY:cam.y,left,right,now,RES,stage:R()?R().stage:0,town:R()?townOf(R().seed,R().stage).town:'',wx:F.wx,st,best:F.bestDist,hype:F.hype||0,cheer:F.cheer});
   const mag=st.magnetR>1;
   if(mag&&!S.done){const R0=COINR*st.magnetR*sc;ctx.save();ctx.strokeStyle='rgba(255,196,60,.45)';ctx.lineWidth=1.5;ctx.setLineDash([5,6]);ctx.lineDashOffset=-now/40;
     ctx.beginPath();ctx.arc(X(S.x),Y(S.y),R0,0,7);ctx.stroke();ctx.restore()}

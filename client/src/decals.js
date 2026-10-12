@@ -107,6 +107,8 @@ function planeTop(g, D, x, y, s, a, col, col2) {
   g.restore();
 }
 
+const planeTopShape = (p, x, y, s) => { RR(p, x - 3.4 * s, y - 16 * s, 6.8 * s, 30 * s, 3.4 * s); RR(p, x - 17 * s, y - 6 * s, 34 * s, 8 * s, 3.6 * s); };
+
 /* ---------- motifs: one per mod id, drawn in a box of about ±30 units ---------- */
 const MOTIF = {
   // Engine
@@ -525,6 +527,115 @@ const MOTIF = {
     ln(g, D, p => { p.moveTo(-13, -23); p.lineTo(-13, 7); }, .7);
     coin(g, D, 1, -7.5, 6.2, 0);
     solid(g, D, p => O(p, -20, -26, 3.6), C.brass, C.brass2, 1.6);
+  },
+  // added in 0.4
+  silent(g, D) {
+    // a glider sliding by, three soft wind lines behind it and no engine anywhere
+    for (const [y, x0, len] of [[-12, -30, 16], [0, -31, 20], [12, -28, 14]]) ln(g, D, p => { p.moveTo(x0, y); p.lineTo(x0 + len, y); }, .8, C.teal2);
+    planeTop(g, D, 6, 0, 1.15, rad(90), C.canvas, C.paper2);
+    if (!D.small) solid(g, D, p => sparkle(p, 22, -20, 6), C.canvas, null);
+  },
+  bouquet(g, D) {
+    // three balloons tied together with a bow
+    const bal = (x, y, col, col2) => { solid(g, D, p => { p.moveTo(x, y + 12); p.bezierCurveTo(x - 13, y + 4, x - 11, y - 13, x, y - 13); p.bezierCurveTo(x + 11, y - 13, x + 13, y + 4, x, y + 12); p.closePath(); }, col, col2); hi(g, p => E(p, x - 4.5, y - 6, 1.8, 3.4, rad(30))); };
+    ln(g, D, p => { p.moveTo(-13, 0); p.lineTo(0, 24); p.moveTo(0, -6); p.lineTo(0, 24); p.moveTo(13, 0); p.lineTo(0, 24); }, .7);
+    bal(-13, -10, C.teal, C.teal2); bal(13, -10, C.brass, C.brass2); bal(0, -16, C.red, C.red2);
+    solid(g, D, p => { p.moveTo(0, 22); p.lineTo(-8, 18); p.lineTo(-8, 27); p.closePath(); p.moveTo(0, 22); p.lineTo(8, 18); p.lineTo(8, 27); p.closePath(); }, C.red, C.red2, 1.6);
+  },
+  hedgehop(g, D) {
+    // a hedge with a little plane skimming just over it
+    blob(g, D, p => { O(p, -16, 18, 10); O(p, -2, 15, 12); O(p, 13, 18, 10); RR(p, -26, 18, 50, 10, 2); }, C.grass, C.grass2);
+    if (!D.small) for (const [x, y] of [[-14, 14], [0, 10], [12, 15]]) ln(g, D, p => { p.moveTo(x - 3, y); p.lineTo(x, y - 3); p.lineTo(x + 3, y); }, .6, C.grass2);
+    planeTop(g, D, 2, -14, .9, rad(90), C.red, C.red2);
+    ln(g, D, p => { p.moveTo(-30, -14); p.lineTo(-18, -14); }, .8, C.teal2);
+  },
+  touchgo(g, D) {
+    // a flight path that dips to touch the ground and climbs away
+    tube(g, D, p => { p.moveTo(-30, -16); p.bezierCurveTo(-14, -14, -8, 16, 0, 16); p.bezierCurveTo(8, 16, 14, -8, 24, -18); }, 4.5, C.red);
+    solid(g, D, p => P(p, [30, -24, 18, -21, 26, -12]), C.red, C.red2, 2);
+    solid(g, D, p => RR(p, -28, 20, 56, 7, 2), C.wood, C.wood2, 2);
+    for (const x of [-6, 0, 6]) if (!D.small) ln(g, D, p => { p.moveTo(x, 19); p.lineTo(x - 3, 13); }, .7, C.brass2);
+  },
+  bullseye(g, D) {
+    for (const [r, col] of [[26, C.red], [18, C.canvas], [10, C.red]]) solid(g, D, p => O(p, 0, 2, r), col, col === C.red ? C.red2 : C.paper2, r > 20 ? D.k : 2.2);
+    solid(g, D, p => O(p, 0, 2, 3.6), C.brass, null);
+    tube(g, D, p => { p.moveTo(2, 0); p.lineTo(27, -25); }, 3, C.wood);
+    solid(g, D, p => P(p, [24, -31, 31, -23, 33, -33]), C.teal, C.teal2, 1.8);
+  },
+  showboat(g, D) {
+    // three stars chained by a ribbon: tricks back to back
+    tube(g, D, p => { p.moveTo(-22, 14); p.quadraticCurveTo(-11, -6, 0, 4); p.quadraticCurveTo(11, 14, 22, -10); }, 3, C.teal);
+    for (const [x, y, r] of [[-22, 14, 9], [0, 4, 11], [22, -10, 13]]) { solid(g, D, p => star(p, x, y, 5, r, r * .45), C.brass, C.brass2, 2.4); hi(g, p => E(p, x - r * .25, y - r * .3, r * .1, r * .18, .4)); }
+  },
+  flyer(g, D) {
+    // a ticket stub with punched holes, one per landing
+    g.save(); g.rotate(rad(-10));
+    solid(g, D, p => { p.moveTo(-26, -14); p.lineTo(26, -14); p.lineTo(26, -6); p.arc(26, 0, 6, -PI / 2, PI / 2, true); p.lineTo(26, 14); p.lineTo(-26, 14); p.lineTo(-26, 6); p.arc(-26, 0, 6, PI / 2, -PI / 2, true); p.closePath(); }, C.paper, C.paper2);
+    ln(g, D, p => { p.setLineDash([2.5, 2.5]); p.moveTo(10, -14); p.lineTo(10, 14); }, .6); g.setLineDash([]);
+    for (const x of [-15, -6, 3]) solid(g, D, p => O(p, x, 0, 3.4), C.night, null);
+    solid(g, D, p => planeTopShape(p, 18, 0, .32), C.red, null);
+    g.restore();
+  },
+  fanclub(g, D) {
+    // a pennant on a stick with a heart
+    tube(g, D, p => { p.moveTo(-22, 30); p.lineTo(-22, -26); }, 3, C.wood);
+    solid(g, D, p => { p.moveTo(-20, -25); p.lineTo(28, -12); p.lineTo(-20, 3); p.closePath(); }, C.red, C.red2);
+    solid(g, D, p => { const x = -4, y = -11, r = 4.2; p.moveTo(x, y + 6.5); p.bezierCurveTo(x - 9, y + 1, x - 6, y - 7, x, y - 3); p.bezierCurveTo(x + 6, y - 7, x + 9, y + 1, x, y + 6.5); p.closePath(); }, C.canvas, null);
+  },
+  understudy(g, D) {
+    // an empty dashed slot waiting in the wings, a star outline inside
+    g.save(); g.setLineDash([4, 3]); ln(g, D, p => RR(p, -24, -24, 48, 48, 6), 1); g.restore();
+    solid(g, D, p => star(p, 0, 2, 5, 16, 7), C.canvas, C.paper2);
+    if (!D.small) solid(g, D, p => sparkle(p, 17, -16, 5), C.brass, null);
+  },
+  carpenter(g, D) {
+    // a hammer over a wooden plank
+    solid(g, D, p => RR(p, -28, 8, 56, 12, 2), C.wood, C.wood2);
+    if (!D.small) { ln(g, D, p => { p.moveTo(-20, 12); p.quadraticCurveTo(0, 15, 18, 12); }, .6, C.wood2); for (const x of [-22, 22]) solid(g, D, p => O(p, x, 14, 1.6), C.tin2, null); }
+    g.save(); g.rotate(rad(-35));
+    tube(g, D, p => { p.moveTo(0, 18); p.lineTo(0, -10); }, 4.5, C.wood3);
+    solid(g, D, p => RR(p, -12, -20, 24, 10, 2), C.tin, C.tin2, 2.4);
+    hiLn(g, D, p => { p.moveTo(-9, -17.5); p.lineTo(6, -17.5); });
+    g.restore();
+  },
+  divebomb(g, D) {
+    // a plane diving nose-first with speed lines
+    for (const [x, len] of [[-12, 20], [0, 26], [12, 18]]) ln(g, D, p => { p.moveTo(x, -30); p.lineTo(x, -30 + len); }, .8, C.teal2);
+    planeTop(g, D, 0, 6, 1.1, rad(180), C.red, C.red2);
+    if (!D.small) solid(g, D, p => P(p, [-6, 27, 0, 33, 6, 27]), C.brass, C.brass2, 1.6);
+  },
+  sailplane(g, D) {
+    // a long-winged glider side view on a gentle swoop
+    tube(g, D, p => { p.moveTo(-30, 22); p.quadraticCurveTo(0, 30, 30, 18); }, 3, C.teal);
+    solid(g, D, p => { p.moveTo(-30, -2); p.quadraticCurveTo(0, -10, 30, -6); p.quadraticCurveTo(0, -3, -30, 2); p.closePath(); }, C.canvas, C.paper2, 2);
+    solid(g, D, p => { p.moveTo(-18, 2); p.quadraticCurveTo(-4, -6, 16, -2); p.quadraticCurveTo(22, 2, 16, 5); p.quadraticCurveTo(0, 8, -22, 6); p.lineTo(-27, -4); p.closePath(); }, C.red, C.red2, 2.4);
+    solid(g, D, p => E(p, 8, -1, 4, 2.6), C.night, null);
+  },
+  booster(g, D) {
+    // a fat rocket kicking off with a big flame
+    g.save(); g.rotate(rad(45));
+    solid(g, D, p => curve(p, [-7, 14, -11, 24, -4, 36, 0, 30, 4, 36, 11, 24, 7, 14]), C.red, C.red2, 2.4);
+    fillP(g, p => curve(p, [-4, 15, -6, 24, 0, 31, 6, 24, 4, 15]), C.brass);
+    solid(g, D, p => { p.moveTo(-8, 15); p.lineTo(-8, -10); p.quadraticCurveTo(0, -30, 8, -10); p.lineTo(8, 15); p.closePath(); }, C.tin, C.tin2);
+    solid(g, D, p => P(p, [-8, 15, -15, 18, -8, 4]), C.red, C.red2, 1.6); solid(g, D, p => P(p, [8, 15, 15, 18, 8, 4]), C.red, C.red2, 1.6);
+    solid(g, D, p => O(p, 0, -6, 3.6), C.night, null);
+    g.restore();
+  },
+  supercharge(g, D) {
+    // a cog with an arrow climbing out of it
+    solid(g, D, p => star(p, -4, 6, 10, 22, 17, rad(-90)), C.tin, C.tin2);
+    solid(g, D, p => O(p, -4, 6, 8), C.night, null);
+    tube(g, D, p => { p.moveTo(-14, 18); p.lineTo(16, -14); }, 4.5, C.brass);
+    solid(g, D, p => P(p, [26, -24, 10, -19, 21, -8]), C.brass, C.brass2, 2);
+  },
+  burner(g, D) {
+    // a balloon over a basket with a burner flame
+    solid(g, D, p => { p.moveTo(0, 6); p.bezierCurveTo(-24, -4, -20, -30, 0, -30); p.bezierCurveTo(20, -30, 24, -4, 0, 6); p.closePath(); }, C.brass, C.brass2);
+    if (!D.small) ln(g, D, p => { p.moveTo(0, -30); p.lineTo(0, 6); p.moveTo(-10, -27); p.quadraticCurveTo(-14, -10, -5, 3); p.moveTo(10, -27); p.quadraticCurveTo(14, -10, 5, 3); }, .6, C.brass2);
+    solid(g, D, p => curve(p, [-4, 16, -6, 10, 0, 4, 6, 10, 4, 16]), C.red, C.red2, 1.6);
+    ln(g, D, p => { p.moveTo(-8, 18); p.lineTo(-4, 6); p.moveTo(8, 18); p.lineTo(4, 6); }, .6);
+    solid(g, D, p => RR(p, -9, 18, 18, 11, 2), C.wood, C.wood2, 2.2);
+    hi(g, p => E(p, -9, -18, 2.2, 4, rad(30)));
   },
 };
 // fallback for ids without a motif: a plain star
