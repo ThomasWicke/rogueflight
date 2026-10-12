@@ -10,10 +10,10 @@ const SIM_DT=1/120;
 const REDLINE=500/3.6, CLOUD9=5000;
 // altitude milestones: peak height pays flat bonuses added to the base (so multipliers apply). ALT_AT are the heights,
 // ALT_PAY what each adds; past the table a milestone every ALT_STEP m adds ALT_MORE more than the one before.
-// A landing keeps all of it; a crash keeps ALT_CRASH, and a flight that ends in the air (out of time, becalmed) keeps
-// ALT_AIR, so climbing with no plan to come down again pays little (4 balloons just floating up to 1.7 km would
-// otherwise score about as much as a well-flown propeller plane).
-const ALT_CRASH=.5, ALT_AIR=.25;
+// It is a landing bonus: only a landing collects it (ALT_CRASH / ALT_AIR are what a crash or a flight that ends in the
+// air would keep; both 0). Partial credit was tried: at x0.5 / x0.75, 4 balloons just floating up to 1.7 km scored
+// about as much as a well-flown propeller plane. Rubber Hull lets a wingless craft bounce to a stop and land.
+const ALT_CRASH=0, ALT_AIR=0;
 const ALT_AT=[100,250,500,750,1000], ALT_PAY=[200,300,500,750,1000], ALT_STEP=250, ALT_MORE=250;
 const altHeight=k=>k<ALT_AT.length?ALT_AT[k]:ALT_AT[ALT_AT.length-1]+(k-ALT_AT.length+1)*ALT_STEP;
 function altMilestones(y){let k=0;while(y>=altHeight(k))k++;return k}
@@ -382,7 +382,8 @@ function step(S,K,st,dt,ctl){
       // a hard hit (over ~55 km/h straight down) or a nose-first impact steeper than 45 degrees is a crash
       {let a=S.th%(2*Math.PI);if(a>Math.PI)a-=2*Math.PI;if(a<-Math.PI)a+=2*Math.PI;
        if(!st.bounce&&(imp>15||(imp>5&&a<-Math.PI/4))){S.crashed=true;S.done=true;S.impact=imp;return}}
-      const e=st.bounce?.8:.18;
+      // Rubber Hull bounces big hits back up, but small ones die out so the craft can settle and land
+      const e=st.bounce&&imp>3?.8:.18;
       S.vy=imp*e;if(imp>2){S.vx*=st.bounce?.97:.95;S.w*=.5}
       if(st.bounce&&imp>4){S.bounces++;S.events.push('bounce')}
     }
@@ -417,7 +418,9 @@ function step(S,K,st,dt,ctl){
   // can still rise to where it bursts (bounded by burstAlt and the clock)
   if(idle&&nv<6&&!S.touch&&Math.abs(S.vy)<1)S.slow+=dt;else S.slow=0;
   if(Math.abs(S.vy)>1)S.calm=0;
-  if(S.calm>6||S.slow>5){S.done=true;S.becalmed=true}
+  if(S.touch)S.lastTouch=S.t;
+  // stalled while sitting on the ground (say a Rubber Hull craft that bounced itself out): that is a landing
+  if(S.calm>6||S.slow>5){S.done=true;if(S.t-(S.lastTouch??-9)<1&&nv<3)S.landed=true;else S.becalmed=true}
   if(S.ground>.5){S.done=true;S.landed=true}
   if(S.t>st.flightTime){S.done=true;S.timeout=true}
 }

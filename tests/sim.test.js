@@ -305,9 +305,14 @@ test('touch-and-gos and combos are detected in flight, and Fan Club counts at mo
   assert.equal(lab['Fan Club'], 0.39); assert.equal(lab['2 combos'], 0.33);
 });
 
-test('altitude milestones: landing keeps the bonus, a crash half, ending in the air a quarter', () => {
+test('altitude milestones are a landing bonus; Rubber Hull lets a wingless craft bounce to a stop and land', () => {
   const f = (o) => ({ dist: 100, maxY: 520, maxV: 30, coins: 0, loops: 0, passes: 0, thermals: 0, landed: false, fuelFrac: 0, ...o });
   const alt = (o) => scoreFlight(f(o), { lv: {} }).lines.find((l) => l.label.startsWith('Altitude'));
-  assert.equal(alt({ landed: true }).v, 1000); assert.equal(alt({ crashed: true }).v, 500); assert.equal(alt({}).v, 250);
+  assert.equal(alt({ landed: true }).v, 1000); assert.equal(alt({ crashed: true }), undefined); assert.equal(alt({}), undefined);
+  for (const vx of [null, 0]) {
+    const st = stats({}, { bounce: 1 }, weatherFx(null, 0)); let K = makeCraft(layout('c22 f32 f12 b11 b21 b31'), st); const S = newFlight(K, st);
+    while (!S.done) { if (!S.burst && S.y >= 300) S.burst = true; step(S, K, st, SIM_DT, { pitch: 0, throttle: 1 }); if (S.burst && !S.popped) { K = popBalloons(S, K, st); if (vx === 0) S.vx = 0; } }
+    assert.ok(S.landed && !S.crashed, 'Rubber Hull drop lands');
+  }
   assert.equal(alt({ landed: true, maxY: 90 }), undefined);
 });

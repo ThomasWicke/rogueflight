@@ -181,6 +181,7 @@ button:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
 .srow{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px;font-weight:900;font-variant-numeric:tabular-nums;color:var(--ink);background:var(--paper);border:2px solid var(--ink);border-radius:6px;padding:4px 10px;box-shadow:2px 2px 0 var(--ink)}
 .srow b{font-family:var(--display);font-weight:400;font-size:18px;color:var(--ink)}
 .srow .m{color:var(--red);font-family:var(--display);font-size:16px}
+.srow .lb{font-style:normal;color:var(--brass2)}
 .srow .need.ok{color:var(--good)}
 .fuel{height:12px;border-radius:3px;background:var(--paper2);border:2px solid var(--ink);overflow:hidden;position:relative}
 .fuel i{position:absolute;inset:0;background:repeating-linear-gradient(-45deg,var(--brass) 0 6px,#f0b84f 6px 12px);transform-origin:left center}

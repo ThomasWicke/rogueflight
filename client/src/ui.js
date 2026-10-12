@@ -377,7 +377,7 @@ $('hHelp').onclick=openGuide;
 // every mod with its values at each level and one plain line on how to trigger it, plus the tricks the score mods refer to
 const TRICKS=[['Loop','Turn a full circle in the air (hold NOSE UP over the top).','+0.5'],['Low pass','Fly under 4 m fast for a second, then climb above 8 m.','+0.25'],
   ['Thermal','Fly through a rising air column.','+0.1'],['Coin','Fly through a gold coin.','+0.05'],['Touchdown','Land and roll to a stop without crashing.','+0.5'],
-  ['Altitude','Reach 100, 250, 500, 750, 1000 m … Each height adds to the distance score; a crash keeps half, ending in the air a quarter.','+200 … +1000'],['Redline','Reach 500 km/h.','+1'],['Cloud nine','Climb to 5 km.','+2']];
+  ['Altitude','Reach 100, 250, 500, 750, 1000 m … Land afterwards and each height adds to the distance score (a landing bonus).','+200 … +1000'],['Redline','Reach 500 km/h.','+1'],['Cloud nine','Climb to 5 km.','+2']];
 const lib=$('library');let libTag='All';
 function descAll(id){const M=MODS[id],j=a=>a.map(x=>String(Math.round(x*100)/100)).join(' / ');
   return M.d.replace('{v%}',M.v?M.v.map(x=>Math.round(x*100)).join(' / ')+'%':'').replace('{v}',M.v?j(M.v):'').replace('{w}',M.w?j(M.w):'')}
@@ -600,7 +600,7 @@ function frame(now){
       else if(e==='Redline'){F.boom=0;F.cheer=1;sfx('redline');sfx('cheer',{intensity:.9});buzz(40);toast('Redline',has('sonic')?`×${num(mv('sonic'))} score`:'+1 mult')}
       else if(e==='Cloud nine')F.cheer=1,sfx('cheer',{intensity:.9}),toast('Cloud nine',has('escape')?`×${num(mv('escape'))} score`:'+2 mult');
       else if(e==='Downdraft!')toast('Downdraft','The storm pushes you down');
-      else if(e==='altitude'){const y=altReached(S.y);F.cheer=.7;sfx('pass');toast(`${y} m`,`+${fmt(altBonus(S.y))} · land to keep it all`)}
+      else if(e==='altitude'){const y=altReached(S.y);F.cheer=.7;sfx('pass');toast(`${y} m`,`+${fmt(altBonus(S.y))} landing bonus`)}
       else if(e==='touchgo'){if(has('touchgo'))F.cheer=.8,sfx('pass'),toast('Touch and go',nth(S.touchgos,mv('touchgo')))}
       else if(e==='combo'){if(has('showboat'))F.cheer=1,sfx('cheer',{intensity:.5}),toast('Combo',nth(S.combos,mv('showboat')))}
       else toast(e,'');
@@ -748,7 +748,10 @@ function hud(dt){
   const sc=scoreFlight(summaryOf(S,K),F.ctx);F.live=sc.total;
   F.hype=clamp((sc.mult*sc.xm-1)/4,0,1);audio.hype(F.hype);
   if(!S.done&&F.pre<=0){const fr=K.fuelMax?S.fuel/K.fuelMax:0;audio.engine({prop:S.propOn?ctl.throttle:0,rocket:S.rocketOn?ctl.throttle:0,speed:Math.hypot(S.vx,S.vy),fuel:fr,alt:S.y})}F.coinT=Math.max(0,(F.coinT||0)-dt);
-  elS.textContent=fmt(sc.total);elM.textContent='×'+num(sc.mult*sc.xm);
+  // the score as its sum: distance points (+ the altitude landing bonus waiting for a landing) times the multiplier
+  {const pend=!S.landed&&!S.done?altBonus(S.maxY):0,key=sc.base+'|'+pend;if(key!==F.scoreKey){F.scoreKey=key;
+    elS.innerHTML=pend?`(${fmt(sc.base)} <i class="lb">+ ${fmt(pend)}</i>)`:fmt(sc.base)}}
+  elM.textContent='×'+num(sc.mult*sc.xm);
   if(F.quota!=null){const need=F.quota-F.already-sc.total;elN.textContent=need>0?`${fmt(need)} to target`:'Target reached';elN.className='need'+(need>0?'':' ok')}
   else if(F.online&&ROOM&&ROOM.mode==='team'){let got=sc.total;for(const f of F.fl||[])got+=f.s||0;const need=ROOM.target-ROOM.teamScore-got;
     elN.textContent=need>0?`${fmt(need)} to team target`:'Team target reached';elN.className='need'+(need>0?'':' ok')}
