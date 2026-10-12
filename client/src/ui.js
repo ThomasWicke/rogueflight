@@ -67,9 +67,10 @@ function runCode(r){if(!r)return '';const L=t=>t==='cockpit'?'c':t[0];
 // ended); ev lists purchases, sales, rerolls, packs and storm rewards. Anonymous: a random id per browser and the run code.
 // Production builds only.
 // the game's home: copies hosted elsewhere (itch.io, a future app) send telemetry and invite links here
-// MOVED: once the new domain serves the game, set it here; the old address then sends players over with their save
-const HOME='https://rogueflight.pages.dev', MOVED=null,
-  ATHOME=/(^|\.)rogueflight\.pages\.dev$|(^|\.)wingnutcircus\.com$|^localhost$|^127\.0\.0\.1$/.test(location.hostname);
+// HOME: where copies hosted elsewhere (itch.io) send telemetry and invite links. MOVED: once wingnut-circus.com serves
+// the game, set it here; the old addresses (OLD_HOSTS) then send players over with their save
+const HOME='https://wingnut-circus.pages.dev', MOVED=null, OLD_HOSTS=['rogueflight.pages.dev','wingnut-circus.pages.dev'],
+  ATHOME=/(^|\.)rogueflight\.pages\.dev$|(^|\.)wingnut-circus\.pages\.dev$|(^|\.)wingnut-circus\.com$|^localhost$|^127\.0\.0\.1$/.test(location.hostname);
 const homeURL=p=>(ATHOME?location.origin:HOME)+p;
 function clientId(){try{let id=localStorage.getItem('rogueflight-client');if(!id){id=Math.random().toString(36).slice(2)+Date.now().toString(36);localStorage.setItem('rogueflight-client',id)}return id}catch(_){return ''}}
 function reportRun(r,finished){
@@ -1204,7 +1205,7 @@ if(import.meta.env.DEV)window.__rf={F:()=>F,R,frame:n=>frame(n)};
 
 /* ================= boot ================= */
 // moving house: the old address sends players to the new one, carrying their save in the URL fragment
-if(MOVED&&location.hostname==='rogueflight.pages.dev'){let p='';try{p=btoa(unescape(encodeURIComponent(JSON.stringify({save:localStorage.getItem(KEY),
+if(MOVED&&OLD_HOSTS.includes(location.hostname)&&location.hostname!==new URL(MOVED).hostname){let p='';try{p=btoa(unescape(encodeURIComponent(JSON.stringify({save:localStorage.getItem(KEY),
   client:localStorage.getItem('rogueflight-client'),audio:localStorage.getItem('rogueflight-audio')}))))}catch(_){}location.replace(MOVED+'/'+location.search+(p?'#move='+p:''))}
 show('title');renderTitle();
 // an invite link (?room=CODE) drops straight into that room's lobby
