@@ -115,7 +115,7 @@ function renderTitle(){
   // tap the version for screen measurements (helps debug layouts on phones we cannot test on)
   $('ver').onclick=()=>{const probe=k=>{const p=document.createElement('div');p.style.cssText=`position:fixed;visibility:hidden;padding-top:env(safe-area-inset-${k},0px)`;document.body.appendChild(p);const v=parseFloat(getComputedStyle(p).paddingTop)||0;p.remove();return Math.round(v)};
     const sc=$('title').getBoundingClientRect(),tb=document.querySelector('.titlebench'),lg=document.querySelector('.logo').getBoundingClientRect();
-    $('ver').textContent=`v${__VERSION__} · inner ${innerWidth}×${innerHeight} · screen ${screen.width}×${screen.height} · html ${document.documentElement.clientHeight} · title ${Math.round(sc.top)}–${Math.round(sc.bottom)} · safe top ${probe('top')} bottom ${probe('bottom')} · standalone ${matchMedia('(display-mode: standalone)').matches?'css':'-'}/${navigator.standalone?'ios':'-'} · bench pad ${getComputedStyle(tb).paddingTop} scroll ${tb.scrollTop} · logo top ${Math.round(lg.top)} · vv ${window.visualViewport?Math.round(visualViewport.height)+'@'+Math.round(visualViewport.offsetTop):'-'}`};
+    $('ver').textContent=`v${__VERSION__} · inner ${innerWidth}×${innerHeight} · screen ${screen.width}×${screen.height} · html ${document.documentElement.clientHeight} · title ${Math.round(sc.top)}–${Math.round(sc.bottom)} · safe top ${probe('top')} bottom ${probe('bottom')} · standalone ${matchMedia('(display-mode: standalone)').matches?'css':'-'}/${navigator.standalone?'ios':'-'} · bench pad ${getComputedStyle(tb).paddingTop} scroll ${tb.scrollTop} · logo top ${Math.round(lg.top)} · app-h ${getComputedStyle(document.documentElement).getPropertyValue('--app-h')||'-'} · vv ${window.visualViewport?Math.round(visualViewport.height)+'@'+Math.round(visualViewport.offsetTop):'-'}`};
   $('libBtn').onclick=()=>openLibrary();
   bindModeCards();
   if(r){
@@ -1217,6 +1217,14 @@ syncSound();
 if(import.meta.env.DEV)window.__rf={F:()=>F,R,frame:n=>frame(n)};
 
 /* ================= boot ================= */
+// installed iPhone app: the window can be a status bar shorter than the screen it fills (an iOS bug), which left a strip
+// at the bottom. Size the screens to the physical screen when the shortfall is about a status bar.
+function fitApp(){
+  const app=navigator.standalone||matchMedia('(display-mode: standalone)').matches;if(!app)return;
+  const gap=screen.height-innerHeight;
+  document.documentElement.style.setProperty('--app-h',(gap>0&&gap<=80?screen.height:innerHeight)+'px');
+}
+fitApp();window.addEventListener('resize',fitApp);
 // moving house: the old address sends players to the new one, carrying their save in the URL fragment
 if(MOVED&&OLD_HOSTS.includes(location.hostname)&&location.hostname!==new URL(MOVED).hostname){let p='';try{p=btoa(unescape(encodeURIComponent(JSON.stringify({save:localStorage.getItem(KEY),
   client:localStorage.getItem('rogueflight-client'),audio:localStorage.getItem('rogueflight-audio')}))))}catch(_){}location.replace(MOVED+'/'+location.search+(p?'#move='+p:''))}

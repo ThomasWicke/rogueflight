@@ -607,10 +607,11 @@ body.offline::after{content:"Reconnecting…";position:fixed;left:50%;top:calc(v
 /* scrolling barn screens slide under the status bar on iPhones: a wood strip behind the clock keeps it readable */
 .barn::before{content:"";position:fixed;left:0;right:0;top:0;height:var(--reserve);z-index:6;pointer-events:none;
   background:linear-gradient(var(--barn2) 70%,rgba(0,0,0,0))}
-/* installed on an iPhone home screen (black-translucent status bar), the page height leaves out the status bar although
-   the content starts behind it, so screens sized to the page stop one status bar short of the bottom. There (and only
-   there: in Safari, 100vh would reach behind the toolbar) size them to the full screen instead. */
+/* installed on an iPhone home screen (black-translucent status bar), the page height (and 100vh) leaves out the status
+   bar although the content starts behind it, so screens sized to the page stop one status bar short of the bottom.
+   fitApp() in ui.js measures the real screen height into --app-h; only in the installed app (in Safari the toolbar
+   really does take that space). */
 @media (display-mode: standalone){
-  .screen,.drawer,.veil{bottom:auto;height:100vh}
+  .screen,.drawer,.veil{bottom:auto;height:var(--app-h,100vh)}
 }
 .ver{pointer-events:auto;cursor:pointer;padding:6px 0 10px}
