@@ -48,6 +48,8 @@ functions/api/run.js     Pages Function storing finished runs in D1 (schema.sql)
 client/src/net.js        client side of the game server: daily leaderboard fetches, room WebSocket with auto-reconnect
 client/src/bots.js       pure: Elimination bots: a style (propeller glider, booster, balloon glider) and skill per bot, builds that grow per round, pilot planned by test-flying (`planBot`)
 client/src/pilot.js      pure: bot pilot settings (climb angle, level-off height, throttle, flare, loops, balloon pop) and `tunePilot`, shared by the balance bot and Elimination bots
+server/accounts.js       accounts and cloud saves: Better Auth guest accounts (anonymous + bearer), /save, /link codes; tables in server/accounts.sql
+docs/security.md         what we protect, how, what was tested, the routine checks
 server/worker.js         game server Worker (wingnutcircus-server.thomaswi1998.workers.dev): /daily leaderboard in D1, Room Durable Object for live rooms
 server/wrangler.toml     its config: Durable Object ROOMS (class Room), D1 binding DB
 tools/bot.js             balance harness (scripted shopper, builder, pilot), prints contracts reached and per-contract score spread
@@ -124,6 +126,11 @@ Code style is dense (many one-line functions, short names: `S` flight state, `K`
 - Baseline with packs (30 runs, `--seed=7`, Ceiling 0): `climb` clears 5.8 contracts on average and wins 5 of 30; `hands` clears 5.2 and wins 1. Over 200 runs the pack economy came out even with the old one (5.68 vs 5.75 contracts for `climb`). Median flight scores fall behind the quota from contract 3 on, so runs are won by the occasional big flight (thermals, sound barrier, xmult mods).
 - One human data point: the player won all 8 contracts on their first serious run with a light, strong-prop glider (before quotas 6–8 were raised by about 20%). A balloon-heavy build later died to thin air on contract 6; that loss motivated revealing storms early.
 - Additive per-part mods (Wingman +0.3 per wing, Fuel Hauler +0.4 per tank) stack strongly with big builds.
+
+## Accounts and cloud saves
+- Every player is a guest account (no personal data). The game signs in on first start, keeps the token in localStorage (`rogueflight-auth`) and uploads the save (`meta`, `run`, `daily`; not rooms) a few seconds after each change and when the app goes to the background. On start the newer copy wins (device `save.t` vs server `t`; `save.cloud.rev` guards overwrites). "Your progress" on the title shows the state; "Use on another device" makes a link code, "Enter a code" takes that account's progress onto this device.
+- On iPhones a home-screen app and Safari have separate storage, and deleting the home-screen app deletes its storage: the cloud save plus a link code is how progress survives that.
+- Later: Sign in with Apple attaches to the same account (Better Auth social provider). See docs/security.md.
 
 ## Modes
 - **Run** (`save.run`): the main 8-contract run, unchanged.

@@ -48,4 +48,41 @@ function connectRoom(code, id, name, h) {
   return c;
 }
 
-export { SERVER, getDaily, postDaily, newRoomCode, connectRoom };
+/* ---------- accounts and cloud saves (server/accounts.js) ----------
+   Every player is a guest account; the session token is kept on this device and sent as a bearer token. */
+const TOKEN_KEY = 'rogueflight-auth';
+let token = null;
+try { token = localStorage.getItem(TOKEN_KEY); } catch (_) {}
+const setToken = (t) => { token = t; try { t ? localStorage.setItem(TOKEN_KEY, t) : localStorage.removeItem(TOKEN_KEY); } catch (_) {} };
+async function ensureAccount() {
+  if (token) return token;
+  const res = await fetch(SERVER + '/api/auth/sign-in/anonymous', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
+  const t = res.ok && res.headers.get('set-auth-token');
+  if (!t) throw new Error('could not start a guest account (' + res.status + ')');
+  setToken(t); return t;
+}
+async function authed(path, opt = {}) {
+  await ensureAccount();
+  const go = () => fetch(SERVER + path, { ...opt, headers: { 'content-type': 'application/json', authorization: 'Bearer ' + token } });
+  let res = await go();
+  // a token the server no longer knows (never expected within a year): start a fresh guest account
+  if (res.status === 401) { setToken(null); await ensureAccount(); res = await go(); }
+  return res;
+}
+const cloudGet = async () => (await authed('/save')).json();
+// rev must match the server's; a 409 answer carries the newer server copy
+async function cloudPut(save, rev, t, keepalive) {
+  const body = JSON.stringify({ save, rev, t });
+  const res = await authed('/save', { method: 'PUT', body, keepalive: !!keepalive && body.length < 60000 });
+  return { status: res.status, ...(await res.json().catch(() => ({}))) };
+}
+async function linkCode() { const res = await authed('/link', { method: 'POST' }); if (!res.ok) throw new Error('no code'); return res.json(); }
+// sign this device into the account behind a link code
+async function claimCode(code) {
+  const res = await fetch(SERVER + '/link/claim', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code }) });
+  const j = await res.json().catch(() => ({}));
+  if (!res.ok || !j.token) throw new Error(j.error || 'That code did not work.');
+  setToken(j.token); return true;
+}
+
+export { SERVER, getDaily, postDaily, newRoomCode, connectRoom, ensureAccount, cloudGet, cloudPut, linkCode, claimCode };

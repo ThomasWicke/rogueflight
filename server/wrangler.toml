@@ -3,6 +3,8 @@
 name = "wingnutcircus-server"
 main = "worker.js"
 compatibility_date = "2026-09-01"
+# Better Auth needs AsyncLocalStorage (node:async_hooks)
+compatibility_flags = ["nodejs_compat"]
 
 [[durable_objects.bindings]]
 name = "ROOMS"

@@ -14,7 +14,7 @@ import {
   BOONS, rollBoons, boonDesc, pickBoon, modSlots,
   DAILY_COINS, dailyNumber, dailySeed, SIM_DT, isOnline, ONLINE_TIME, clearContract,
 } from './sim.js';
-import { getDaily, postDaily, newRoomCode, connectRoom } from './net.js';
+import { getDaily, postDaily, newRoomCode, connectRoom, cloudGet, cloudPut, linkCode, claimCode } from './net.js';
 import { botFlight, planBot, cellsOf } from './bots.js';
 import { drawWorld, drawGrain, biomeOf } from './world.js';
 import { audio } from './audio.js';
@@ -32,9 +32,53 @@ const META0={runs:0,wins:0,bestStage:0,bestFlight:0,deepest:0,level:0};
 {const m=location.hash.match(/^#move=(.+)$/);if(m){try{const d=JSON.parse(decodeURIComponent(escape(atob(m[1]))));
   for(const [k,v] of [[KEY,d.save],['rogueflight-client',d.client],['rogueflight-audio',d.audio]])if(v&&!localStorage.getItem(k))localStorage.setItem(k,v)}catch(_){}
   history.replaceState(null,'',location.pathname+location.search)}}
-let save=(()=>{try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s&&s.meta)return {meta:{...META0,...s.meta},run:s.run||null,daily:s.daily||null,online:s.online||null,room:s.room||null}}catch(e){}return {meta:{...META0},run:null,daily:null,online:null,room:null}})();
+// t: when this device last changed the save (cloud sync keeps the newer copy); cloud.rev: the server's revision we hold
+let save=(()=>{try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s&&s.meta)return {meta:{...META0,...s.meta},run:s.run||null,daily:s.daily||null,online:s.online||null,room:s.room||null,t:s.t||0,cloud:s.cloud||{rev:0}}}catch(e){}return {meta:{...META0},run:null,daily:null,online:null,room:null}})();
 if(save.daily&&save.daily.phase==='done')save.daily=null;
-function persist(){try{localStorage.setItem(KEY,JSON.stringify(save))}catch(e){}}
+function persist(){save.t=Date.now();store();cloudSoon()}
+const store=()=>{try{localStorage.setItem(KEY,JSON.stringify(save))}catch(e){}};
+
+/* ---------- cloud save ----------
+   The save also lives on the game server under this player's guest account (net.js, server/accounts.js), so it survives
+   updates, new addresses, reinstalls (with a link code) and new devices. A few seconds after a change, and when the app
+   goes to the background, it is uploaded; on start the newer copy (device or cloud) wins. Rooms stay on this device. */
+const CLOUD={state:'idle',timer:0,busy:false,again:false};
+const cloudCopy=()=>({meta:save.meta,run:save.run,daily:save.daily});
+const hasProgress=s=>!!(s&&(s.run||s.daily||(s.meta&&(s.meta.runs||s.meta.bestFlight||s.meta.dailyEver))));
+function cloudSoon(ms=4000){clearTimeout(CLOUD.timer);CLOUD.timer=setTimeout(()=>cloudPush(),ms)}
+function setCloud(st){CLOUD.state=st;const el=document.getElementById('cloudState');if(el)el.textContent=cloudLabel()}
+const cloudLabel=()=>({ok:'Saved to the cloud ✓',saving:'Saving…',off:'Offline: saved on this device',idle:'Connecting…'})[CLOUD.state]||'';
+// take the cloud's save: it replaces this device's progress (rooms and the current flight stay as they are)
+function adoptCloud(data,rev,t){
+  save={...save,meta:{...META0,...(data.meta||{})},run:data.run||null,daily:data.daily||null,t:t||Date.now(),cloud:{rev}};
+  if(slot!=='online')slot='run';store();
+  if(!$('title').hidden)renderTitle();else if(!$('hangar').hidden&&R())renderHangar();
+}
+async function cloudPush(keepalive){
+  if(CLOUD.busy){CLOUD.again=true;return}
+  if(F&&!keepalive){cloudSoon(3000);return} // not mid-flight: the frame loop has the stage
+  CLOUD.busy=true;setCloud('saving');
+  try{
+    let r=await cloudPut(cloudCopy(),save.cloud.rev,save.t,keepalive);
+    if(r.status===409){
+      // another device saved meanwhile: the newer copy wins
+      if((r.t||0)>save.t&&!F){adoptCloud(r.save||{},r.rev,r.t);setCloud('ok');return}
+      r=await cloudPut(cloudCopy(),r.rev,save.t,keepalive);
+    }
+    if(r.rev){save.cloud={rev:r.rev};store();setCloud('ok')}else setCloud('off');
+  }catch(_){setCloud('off');cloudSoon(30000)}
+  finally{CLOUD.busy=false;if(CLOUD.again){CLOUD.again=false;cloudSoon(500)}}
+}
+// on start: compare with the cloud copy and keep the newer one
+async function cloudStart(){
+  try{
+    const c=await cloudGet();
+    if(c.save&&(!hasProgress(save)||(c.t||0)>save.t))adoptCloud(c.save,c.rev,c.t);
+    else{save.cloud={rev:c.rev||0};store();if(hasProgress(save))await cloudPush();}
+    setCloud('ok');
+  }catch(_){setCloud('off');setTimeout(cloudStart,60000)}
+}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'&&save.t>0){clearTimeout(CLOUD.timer);cloudPush(true)}});
 
 /* ================= formatting ================= */
 const SUF=['','k','M','B','T','Qa','Qi','Sx','Sp','Oc','No','Dc'];
@@ -108,6 +152,8 @@ function renderTitle(){
       <div style="margin-top:12px"><button class="big" id="start" type="button">Start run</button></div></div>`;
   }
   h+=dailyCard()+roomCard();
+  h+=`<div class="card stack"><span class="label">Your progress</span><p class="hint" id="cloudState">${cloudLabel()}</p>
+    <div class="row2"><button class="ghost" id="cloudOut" type="button">Use on another device</button><button class="ghost" id="cloudIn" type="button">Enter a code</button></div></div>`;
   h+=`<div class="row2"><button class="ghost howto${m.guideSeen?'':' new'}" id="howto" type="button">How to play</button><button class="ghost" id="libBtn" type="button">Mods library</button></div>`;
   h+=`<div class="card"><span class="label">Stats</span>
     <dl class="stats"><dt>Runs</dt><dd>${m.runs}</dd><dt>Wins</dt><dd>${m.wins}</dd><dt>Most contracts in a run</dt><dd>${m.deepest||m.bestStage}</dd><dt>Best score</dt><dd>${fmt(m.bestFlight)}</dd>${m.level?`<dt>Highest Difficulty</dt><dd>${m.level}</dd>`:''}</dl>
@@ -119,6 +165,7 @@ function renderTitle(){
   $('howto').onclick=openGuide;
   $('libBtn').onclick=()=>openLibrary();
   bindModeCards();
+  $('cloudOut').onclick=showLinkCode;$('cloudIn').onclick=showClaim;
   if(r){
     $('cont').onclick=()=>{armAbandon=false;slot='run';openHangar()};
     $('aband').onclick=()=>{if(!armAbandon){armAbandon=true;renderTitle();return}endRun()};
@@ -1225,10 +1272,32 @@ syncSound();
 // dev only: inspect the running flight from the console (stripped from production builds)
 if(import.meta.env.DEV)window.__rf={F:()=>F,R,frame:n=>frame(n)};
 
+// a code for another device: it signs that device into this account (10 minutes, single use)
+async function showLinkCode(){
+  sheet.className='sheet';sheet.innerHTML=`<span class="label">Use on another device</span><h2 class="rcode" id="lcode">…</h2>
+    <p class="hint">On the other device: Wingnut Circus → Your progress → Enter a code. Valid for 10 minutes.</p><button class="big" id="lOk" type="button">Done</button>`;
+  veil.hidden=false;$('lOk').onclick=()=>{veil.hidden=true};
+  try{await cloudPush();const {code}=await linkCode();if($('lcode'))$('lcode').textContent=code.slice(0,4)+'-'+code.slice(4)}
+  catch(_){if($('lcode'))$('lcode').textContent='Offline'}
+}
+function showClaim(){
+  sheet.className='sheet';sheet.innerHTML=`<span class="label">Enter a code</span>
+    <p class="note">Shown on your other device under Your progress → Use on another device. This device then plays that progress (its own is replaced).</p>
+    <div class="joinrow"><input id="ccode" maxlength="9" placeholder="XXXX-XXXX" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Code"><button class="big" id="cGo" type="button">Use</button></div>
+    <p class="hint warn" id="cErr" hidden></p><button class="ghost" id="cNo" type="button">Cancel</button>`;
+  veil.hidden=false;$('cNo').onclick=()=>{veil.hidden=true};
+  $('cGo').onclick=async()=>{const code=($('ccode').value||'').toUpperCase().replace(/[^A-Z0-9]/g,'');const err=$('cErr');
+    if(code.length!==8){err.hidden=false;err.textContent='The code has 8 letters and digits.';return}
+    $('cGo').disabled=true;
+    try{await claimCode(code);const c=await cloudGet();if(c.save)adoptCloud(c.save,c.rev,c.t);else{save.cloud={rev:c.rev||0};store()}setCloud('ok');veil.hidden=true;sfx('fanfare')}
+    catch(e){err.hidden=false;err.textContent=e.message||'That code did not work.';$('cGo').disabled=false}};
+}
+
 /* ================= boot ================= */
 // moving house: the old address sends players to the new one, carrying their save in the URL fragment
 if(MOVED&&OLD_HOSTS.includes(location.hostname)&&location.hostname!==new URL(MOVED).hostname){let p='';try{p=btoa(unescape(encodeURIComponent(JSON.stringify({save:localStorage.getItem(KEY),
   client:localStorage.getItem('rogueflight-client'),audio:localStorage.getItem('rogueflight-audio')}))))}catch(_){}location.replace(MOVED+'/'+location.search+(p?'#move='+p:''))}
 show('title');renderTitle();
+cloudStart();
 // an invite link (?room=CODE) drops straight into that room's lobby
 {const q=new URLSearchParams(location.search).get('room');if(q&&/^[A-Za-z]{4}$/.test(q)){history.replaceState(null,'',location.pathname);joinRoom(q.toUpperCase())}}

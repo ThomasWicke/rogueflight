@@ -4,11 +4,16 @@
 //   POST /daily {day,client,name,score,data}   submit a daily score; only the first submission per client and day counts
 //   GET  /room/new                    create a private room, returns {code}
 //   GET  /room/CODE  (WebSocket)      join a room; the Room Durable Object runs the live session
+//   /api/auth/*, /save, /link         accounts and cloud saves (accounts.js)
 // Friends-only beta: scores and flights are reported by the clients and trusted.
 import { quotaFor, CONTRACTS, FLIGHTS, dailyNumber } from '../client/src/sim.js';
 import { botName } from '../client/src/bots.js';
+import { accounts } from './accounts.js';
 
-const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET,POST,OPTIONS', 'Access-Control-Allow-Headers': 'content-type' };
+// no cookies anywhere (accounts use a bearer token), so any origin may call; the token header is exposed for sign-in
+const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET,POST,PUT,OPTIONS', 'Access-Control-Allow-Headers': 'content-type, authorization',
+  'Access-Control-Expose-Headers': 'set-auth-token' };
+const withCors = (res) => { const r = new Response(res.body, res); for (const [k, v] of Object.entries(CORS)) r.headers.set(k, v); return r; };
 const json = (o, status = 200) => new Response(JSON.stringify(o), { status, headers: { 'content-type': 'application/json', ...CORS } });
 const clean = (s, n) => String(s || '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, n);
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
@@ -24,6 +29,7 @@ export default {
       return json({ ok: true, room: await r.text(), db: d.ok, day: dailyNumber() });
     }
     if (url.pathname === '/daily') return daily(req, env, url);
+    { const r = await accounts(req, env, url, json); if (r) return withCors(r); }
     if (url.pathname === '/room/new') return json({ code: newCode() });
     const m = url.pathname.match(/^\/room\/([A-Z]{4})$/);
     if (m) {
