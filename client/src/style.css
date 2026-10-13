@@ -541,7 +541,8 @@ html,body{height:100%;min-height:100dvh}
 .joinrow,.namerow{display:flex;gap:8px;align-items:stretch}
 .joinrow input,.namerow input{flex:1;min-width:0;font:inherit;font-weight:900;font-size:16px;color:var(--ink);background:var(--canvas);border:2px solid var(--ink);border-radius:6px;padding:8px 10px;box-shadow:inset 2px 2px 0 rgba(34,40,58,.12);-webkit-user-select:text;user-select:text}
 .joinrow input{text-transform:uppercase;letter-spacing:.3em;text-align:center;font-family:var(--display)}
-.namerow .big{width:auto;padding-left:18px;padding-right:18px}
+.joinrow .big,.namerow .big{width:auto;flex:none;padding-left:18px;padding-right:18px}
+#ccode{letter-spacing:.15em}
 .board{list-style:none;margin:8px 0;padding:0;display:grid;gap:3px;font-variant-numeric:tabular-nums}
 .board li{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:5px;background:var(--paper2);font-size:14px}
 .board li i{font-style:normal;font-weight:900;color:var(--muted);min-width:1.4em}
