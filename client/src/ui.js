@@ -152,10 +152,12 @@ function renderTitle(){
       <div style="margin-top:12px"><button class="big" id="start" type="button">Start run</button></div></div>`;
   }
   h+=dailyCard()+roomCard();
-  h+=`<div class="card stack"><span class="label">Your progress</span><p class="hint" id="cloudState">${cloudLabel()}</p>
-    <div class="row2"><button class="ghost" id="cloudOut" type="button">Use on another device</button><button class="ghost" id="cloudIn" type="button">Enter a code</button></div></div>`;
   h+=`<div class="row2"><button class="ghost howto${m.guideSeen?'':' new'}" id="howto" type="button">How to play</button><button class="ghost" id="libBtn" type="button">Mods library</button></div>`;
-  h+=`<div class="card"><span class="label">Stats</span>
+  h+=`<div class="card"><span class="label">Profile</span>
+    <div class="profile"><img class="avatar" alt="" src="${avatarURL()}"><div class="pname"><strong>${esc(m.name||'Pilot')}</strong>
+      <button class="icon" id="nameEdit" type="button" aria-label="Change name">${PENCIL}</button></div>
+      <button class="icon" id="profSet" type="button" aria-label="Settings">${GEAR}</button></div>
+    <div class="row" style="margin-top:14px"><span class="label">Stats</span></div>
     <dl class="stats"><dt>Runs</dt><dd>${m.runs}</dd><dt>Wins</dt><dd>${m.wins}</dd><dt>Most contracts in a run</dt><dd>${m.deepest||m.bestStage}</dd><dt>Best score</dt><dd>${fmt(m.bestFlight)}</dd>${m.level?`<dt>Highest Difficulty</dt><dd>${m.level}</dd>`:''}</dl>
     <div class="row" style="margin-top:12px"><span class="label">Unlocks</span><span class="hint">contracts in one run</span></div>
     <ul class="unl">${UNLOCKS.map(u=>{const d=m.bestStage>=u.at;return `<li class="${d?'done':''}"><i>${d?'\u2713':u.at}</i><span>${u.text}</span></li>`}).join('')}</ul></div>`;
@@ -165,7 +167,7 @@ function renderTitle(){
   $('howto').onclick=openGuide;
   $('libBtn').onclick=()=>openLibrary();
   bindModeCards();
-  $('cloudOut').onclick=showLinkCode;$('cloudIn').onclick=showClaim;
+  $('nameEdit').onclick=editName;$('profSet').onclick=showSettings;
   if(r){
     $('cont').onclick=()=>{armAbandon=false;slot='run';openHangar()};
     $('aband').onclick=()=>{if(!armAbandon){armAbandon=true;renderTitle();return}endRun()};
@@ -1272,17 +1274,38 @@ syncSound();
 // dev only: inspect the running flight from the console (stripped from production builds)
 if(import.meta.env.DEV)window.__rf={F:()=>F,R,frame:n=>frame(n)};
 
+/* ---------- profile ---------- */
+const PENCIL='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l1-5L16 4l4 4L9 19z M14 6l4 4" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/></svg>';
+const GEAR='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2 2.6 3.2-.6.7 3.2 2.9 1.5-1.4 3 1.4 3-2.9 1.5-.7 3.2-3.2-.6-2 2.6-2-2.6-3.2.6-.7-3.2-2.9-1.5 1.4-3-1.4-3 2.9-1.5.7-3.2 3.2.6z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><circle cx="12" cy="12" r="3.4" fill="none" stroke="currentColor" stroke-width="2.2"/></svg>';
+let AVATAR='';
+function avatarURL(){if(AVATAR)return AVATAR;const c=document.createElement('canvas');c.width=c.height=128;const g=c.getContext('2d');
+  g.translate(64,74);g.scale(92,92);drawPilot(g,'grin',0,{lw:.045});return AVATAR=c.toDataURL()}
+function editName(){
+  sheet.className='sheet';sheet.innerHTML=`<span class="label">Your name</span>
+    <div class="namerow"><input id="pName" maxlength="16" placeholder="Pilot" autocomplete="nickname" value="${esc(save.meta.name||'')}"><button class="big" id="pOk" type="button">Save</button></div>
+    <p class="hint">Shown on the daily leaderboard and in live rooms.</p><button class="ghost" id="pNo" type="button">Cancel</button>`;
+  veil.hidden=false;const inp=$('pName');inp.focus();$('pNo').onclick=()=>{veil.hidden=true};
+  const ok=()=>{const n=inp.value.trim().slice(0,16);if(!n){inp.focus();return}save.meta.name=n;persist();veil.hidden=true;renderTitle()};
+  $('pOk').onclick=ok;inp.onkeydown=e=>{if(e.key==='Enter')ok()};
+}
+function showSettings(){
+  sheet.className='sheet';sheet.innerHTML=`<span class="label">Your progress</span><p class="hint" id="cloudState">${cloudLabel()}</p>
+    <div class="row2"><button class="ghost" id="cloudOut" type="button">Use on another device</button><button class="ghost" id="cloudIn" type="button">Enter a code</button></div>
+    <button class="big" id="sOk" type="button">Done</button>`;
+  veil.hidden=false;$('sOk').onclick=()=>{veil.hidden=true};$('cloudOut').onclick=showLinkCode;$('cloudIn').onclick=showClaim;
+}
+
 // a code for another device: it signs that device into this account (10 minutes, single use)
 async function showLinkCode(){
   sheet.className='sheet';sheet.innerHTML=`<span class="label">Use on another device</span><h2 class="rcode" id="lcode">…</h2>
-    <p class="hint">On the other device: Wingnut Circus → Your progress → Enter a code. Valid for 10 minutes.</p><button class="big" id="lOk" type="button">Done</button>`;
+    <p class="hint">On the other device: Profile → ⚙ → Enter a code. Valid for 10 minutes.</p><button class="big" id="lOk" type="button">Done</button>`;
   veil.hidden=false;$('lOk').onclick=()=>{veil.hidden=true};
   try{await cloudPush();const {code}=await linkCode();if($('lcode'))$('lcode').textContent=code.slice(0,4)+'-'+code.slice(4)}
   catch(_){if($('lcode'))$('lcode').textContent='Offline'}
 }
 function showClaim(){
   sheet.className='sheet';sheet.innerHTML=`<span class="label">Enter a code</span>
-    <p class="note">Shown on your other device under Your progress → Use on another device. This device then plays that progress (its own is replaced).</p>
+    <p class="note">Shown on your other device under Profile → ⚙ → Use on another device. This device then plays that progress (its own is replaced).</p>
     <div class="joinrow"><input id="ccode" maxlength="9" placeholder="XXXX-XXXX" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Code"><button class="big" id="cGo" type="button">Use</button></div>
     <p class="hint warn" id="cErr" hidden></p><button class="ghost" id="cNo" type="button">Cancel</button>`;
   veil.hidden=false;$('cNo').onclick=()=>{veil.hidden=true};

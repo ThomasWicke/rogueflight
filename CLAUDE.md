@@ -128,7 +128,7 @@ Code style is dense (many one-line functions, short names: `S` flight state, `K`
 - Additive per-part mods (Wingman +0.3 per wing, Fuel Hauler +0.4 per tank) stack strongly with big builds.
 
 ## Accounts and cloud saves
-- Every player is a guest account (no personal data). The game signs in on first start, keeps the token in localStorage (`rogueflight-auth`) and uploads the save (`meta`, `run`, `daily`; not rooms) a few seconds after each change and when the app goes to the background. On start the newer copy wins (device `save.t` vs server `t`; `save.cloud.rev` guards overwrites). "Your progress" on the title shows the state; "Use on another device" makes a link code, "Enter a code" takes that account's progress onto this device.
+- Every player is a guest account (no personal data). The game signs in on first start, keeps the token in localStorage (`rogueflight-auth`) and uploads the save (`meta`, `run`, `daily`; not rooms) a few seconds after each change and when the app goes to the background. On start the newer copy wins (device `save.t` vs server `t`; `save.cloud.rev` guards overwrites). The Profile card on the title (name with an edit button, avatar) has a settings button that opens "Your progress": the sync state, "Use on another device" makes a link code, "Enter a code" takes that account's progress onto this device.
 - On iPhones a home-screen app and Safari have separate storage, and deleting the home-screen app deletes its storage: the cloud save plus a link code is how progress survives that.
 - Later: Sign in with Apple attaches to the same account (Better Auth social provider). See docs/security.md.
 
