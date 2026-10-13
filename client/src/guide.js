@@ -1,5 +1,6 @@
 // How-to-play drawer: a swipeable slide show that explains the parts of the game a player would not guess.
 // Content only; ui.js passes in the part icons and opens it from the title screen and the hangar.
+import { decalURL } from './decals.js';
 let ICON = {}, onSeen = () => {};
 const $ = (id) => document.getElementById(id);
 const img = (t, cls = '') => `<img class="${cls}" alt="" src="${ICON[t]}">`;
@@ -47,14 +48,21 @@ const artAlt = () => `<div class="gr-alt">
   <div class="gr-altlbl"><span style="bottom:88%"><b>5 km</b> cloud nine · +2 mult</span><span style="bottom:58%"><b>2 km</b> balloons burst</span>
   <span style="bottom:28%"><b>1 km</b> thinner air · faster, less lift</span><span style="bottom:2%"><b>0 m</b> thick air · lift, thrust, drag</span></div></div>
   <div class="gr-clock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/></svg><b>2:00</b><span>per flight</span></div>`;
+// the in-flight score line: distance plus the pending landing bonus, times the multiplier
+const artScore = () => `<div class="gr-score"><span class="label">Score</span><b>(1,365 <em>+ 2,750</em>) ×1.6</b></div>
+  <div class="gr-row"><span class="gr-key">distance</span><span class="gr-key alt">height bonus · land to keep it</span><span class="gr-key">mult</span></div>
+  <div class="gr-chips"><span>Landing +0.5</span><span>Loop +0.5</span><span>Low pass +0.25</span><span>Thermal +0.1</span><span>Coin +0.05</span></div>`;
+// five mod slots, two still empty, and a storm reward
+const artMods = () => `<div class="gr-mods">${['stunt', 'greaser', 'collector'].map((id, i) => `<img alt="" src="${decalURL(id, 52, i === 0 ? 3 : 1)}">`).join('')}<i></i><i></i></div>
+  <div class="gr-row"><span class="label">Lv 1 → 3</span><b>buy it again</b></div><div class="gr-row" style="margin-top:-6px"><span class="label">Storm cleared</span><b>pick a reward</b></div>`;
 /* ---------- slides ---------- */
 const SLIDES = [
   { t: 'The run', art: artRun, p: [
     '8 contracts, 3 flights each. Your flights add up: reach the target or the run ends.',
     'Storm clouds on the route mark storm contracts, known from the start. Build for them early.'] },
   { t: 'Packs & shop', art: artPacks, p: [
-    'Each contract starts with packs of parts: 4 in the first (tank, wing, engine + 1), then 1, which can hold a rare part with a brass star. The shop sometimes sells a rare parts pack.',
-    'The shop is always open, but new stock only arrives after you clear a contract.'] },
+    'Each contract starts with packs of parts: 4 in the first (tank, wing, engine + 1), then 1, which can hold a rare part (brass sparkle). The shop sometimes sells a rare parts pack.',
+    'The shop is always open, but new stock only arrives after you clear a contract. A reroll restocks it now, for coins.'] },
   { t: 'Building', art: artBuild, p: [
     'Everything connects to the cockpit through frames and tanks. Hold a part to move it.',
     'Propellers need a free square in front, rockets one behind. Blocked engines do nothing.'] },
@@ -64,9 +72,15 @@ const SLIDES = [
   { t: 'Flying', art: artFly, p: [
     'Wings need airspeed. Climb at about 30–35°; steeper bleeds speed until you stall.',
     'Out of fuel? Let go and the craft glides on its own. Throttle down to make fuel last.'] },
+  { t: 'Scoring', art: artScore, p: [
+    'Distance, plus a bonus for the height you reached, times your multiplier. The height bonus only counts if you land: crash and it is gone.',
+    'Clean landings, loops, low passes, thermals and coins raise the multiplier. Repeated loops and low passes pay a little less each time.'] },
   { t: 'Altitude & time', art: artAlt, p: [
     'Thin air up high: less drag, but weaker wings and props. Balloons rise until they burst at 2 km.',
     'A flight lasts 2 minutes (Flight permits add more). Hanging in the air without power also ends it. The ▸▸ button plays it at double speed.'] },
+  { t: 'Mods & rewards', art: artMods, p: [
+    'Mods change the rules: up to 5 at once. Buy one you own again to level it up, up to Lv 3. Sell one to free its slot.',
+    'Clearing a storm contract earns a storm reward: pick 1 of 2.'] },
 ];
 
 /* ---------- drawer ---------- */
