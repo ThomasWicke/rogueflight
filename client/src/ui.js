@@ -223,7 +223,10 @@ const dealer=$('dealer'), dbody=$('dealerBody');
 // docked on the right, always showing the shop or the mods (side), switched by tabs
 const WIDE=matchMedia('(min-width:820px) and (min-height:520px) and (orientation:landscape)');
 let side='shop';
-function dock(){const wide=WIDE.matches;dealer.classList.toggle('docked',wide);return wide}
+function dock(){const wide=WIDE.matches;dealer.classList.toggle('docked',wide);if(wide)requestAnimationFrame(dockTop);return wide}
+// the docked panel starts level with the show poster, under the coins bar
+function dockTop(){if(!$('hangar').hidden)document.documentElement.style.setProperty('--dtop',Math.round($('cstrip').getBoundingClientRect().top)+'px')}
+addEventListener('resize',()=>{if(WIDE.matches)dockTop()});
 function setTab(t){const wide=dock();
   if(wide&&t==='build')t=side;if(t!=='build')side=t;
   tab=t;armSell=null;armAbandon=false;

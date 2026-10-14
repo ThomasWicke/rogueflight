@@ -665,10 +665,15 @@ body.offline::after{content:"Reconnecting…";position:fixed;left:50%;top:calc(v
   #hangar>.hbar .tool{display:none}
 
   /* the docked panel: Shop | Mods tabs, the offers scrolling below */
-  .drawer.docked{left:calc(var(--x0) + var(--lw) + 8px);right:auto;width:var(--side);top:calc(var(--reserve) + 12px);bottom:calc(14px + env(safe-area-inset-bottom,0px));align-items:stretch;z-index:5}
+  /* the coins / sound / help bar runs across both columns; the panel starts level with the poster (top set in ui.js)
+     and is only as tall as its content */
+  #hangar>.htop{max-width:none;margin:0 calc(-8px - var(--side)) 0 0;padding-right:0}
+  .drawer.docked{left:calc(var(--x0) + var(--lw) + 8px);right:auto;width:var(--side);top:var(--dtop,70px);bottom:auto;
+    max-height:calc(100vh - var(--dtop,70px) - 14px - env(safe-area-inset-bottom,0px));flex-direction:column;align-items:stretch;z-index:5}
   .drawer.docked .dr-scrim,.drawer.docked .dr-grab,.drawer.docked .dr-x,.drawer.docked #dealerTitle{display:none}
-  .drawer.docked .dr-panel{max-width:none;height:auto;transform:none;transition:none;border:var(--ol) solid var(--ink);border-radius:10px;
+  .drawer.docked .dr-panel{max-width:none;height:auto;max-height:100%;min-height:0;flex:0 1 auto;transform:none;transition:none;border:var(--ol) solid var(--ink);border-radius:10px;
     padding:12px 0 6px;box-shadow:6px 6px 0 var(--ink);overflow:hidden}
+  .drawer.docked .dr-body{flex:0 1 auto}
   .drawer.docked .dr-head{padding:0 16px 8px}
   .drawer.docked .dr-body{padding:4px 12px 12px}
   .drawer.docked .dr-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%}
