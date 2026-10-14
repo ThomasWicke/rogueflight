@@ -151,7 +151,7 @@ function renderTitle(){
         ${pickLevel?`<div class="crules"><span>+${pickLevel*25}% score targets</span>${ceilingRules(pickLevel).map(t=>`<span>${t}</span>`).join('')}</div>`:''}</div>`:''}
       <div style="margin-top:12px"><button class="big" id="start" type="button">Start run</button></div></div>`;
   }
-  // two groups: they stack on phones; on landscape screens the games go right, the profile under the logo (style.css)
+  // the games, then you (on landscape screens all cards sit in one column beside a big logo, style.css)
   h=`<div class="tcol tgames">${h}`+dailyCard()+roomCard();
   h+=`<div class="row2"><button class="ghost howto${m.guideSeen?'':' new'}" id="howto" type="button">How to play</button><button class="ghost" id="libBtn" type="button">Mods library</button></div>`;
   h+=`</div><div class="tcol tme"><div class="card"><span class="label">Profile</span>
@@ -191,9 +191,9 @@ function startTitleScene(){
     const t=reduceMotion()?1.2:now/1000, cx=w/2, cy=h*.52, R=Math.min(w*.3,h*.36);
     // a loop-the-loop path: the plane rides it, the contrail trails behind
     const pt=u=>{const a=u*Math.PI*2;return [cx+Math.sin(a)*R*1.25+Math.sin(a*2)*R*.15,cy-Math.cos(a)*R*.55+R*.1]};
-    g.strokeStyle='#e9a93b';g.lineWidth=5;g.lineCap='round';g.setLineDash([2,11]);g.beginPath();
+    const k=Math.max(1,Math.min(w/330,h/150));g.strokeStyle='#e9a93b';g.lineWidth=5*k;g.lineCap='round';g.setLineDash([2*k,11*k]);g.beginPath();
     const u0=(t*.12)%1;for(let i=0;i<=60;i++){const [x,y]=pt(u0-i/60*.55);i?g.lineTo(x,y):g.moveTo(x,y)}g.stroke();g.setLineDash([]);
-    const [x,y]=pt(u0),[x2,y2]=pt(u0+.005),ang=Math.atan2(y2-y,x2-x),s=Math.min(30,w/11);
+    const [x,y]=pt(u0),[x2,y2]=pt(u0+.005),ang=Math.atan2(y2-y,x2-x),s=Math.min(30*k,w/11);
     g.save();g.translate(x,y);g.rotate(ang);g.scale(s,s);
     for(const [type,lx,ly] of [['cockpit',0,0],['frame',1,0],['prop',2,0],['wing',0,-1],['wing',1,-1]]){g.save();g.translate(lx-.6,ly);drawPart(g,type,t,{on:true,frac:.8,lw:2.5/s,mood:'grin'});g.restore()}
     g.restore();

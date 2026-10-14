@@ -641,6 +641,7 @@ body.offline::after{content:"Reconnecting…";position:fixed;left:50%;top:calc(v
 
 /* phones: the title's card groups simply stack */
 .tcol{display:grid;gap:16px;align-content:start}
+.thero{display:contents}
 .dr-tabs{display:none}
 
 /* ---------- landscape screens (desktop, the itch.io embed, tablets on their side) ----------
@@ -649,15 +650,18 @@ body.offline::after{content:"Reconnecting…";position:fixed;left:50%;top:calc(v
   /* the hangar column and the shop column float side by side, centered on the barn wall */
   :root{--side:clamp(330px,31vw,400px);--lw:min(552px,calc(100vw - var(--side) - 40px));--x0:max(0px,calc((100vw - var(--lw) - 8px - var(--side)) / 2));--span:calc(var(--lw) - 8px + var(--side))}
 
-  /* home: the phone layout split in two. Logo, plane and profile left, the games right */
-  .bench.titlebench{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:auto auto 1fr;column-gap:32px;row-gap:0;
-    width:100%;max-width:1080px;margin:0 auto;padding:calc(var(--reserve) + 24px) 28px 24px}
-  .bench.titlebench>*{max-width:520px;margin:0 auto}
-  .titlebench>#titleBody{display:contents}
-  .titlebench>.logo{grid-column:1;grid-row:1;margin-top:4px}
-  .titlebench>.titlecv{grid-column:1;grid-row:2;height:150px;margin:-4px auto 8px}
-  .titlebench .tme{grid-column:1;grid-row:3;width:100%}
-  .titlebench .tgames{grid-column:2;grid-row:1/span 3;width:100%}
+  /* home: a big logo with the looping plane on the left, held in view; the phone's cards in one column on the right */
+  .bench.titlebench{--lf:clamp(40px,calc((min(100vw,1200px) - 572px) / 6.6),90px);grid-template-columns:minmax(0,1fr) minmax(0,460px);column-gap:48px;width:100%;max-width:1200px;margin:0 auto;
+    padding:calc(var(--reserve) + 24px) 32px 24px}
+  .bench.titlebench>*{max-width:none;margin:0}
+  .thero{grid-column:1;grid-row:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    position:sticky;top:0;height:calc(100vh - var(--reserve) - 48px)}
+  .thero .logo{margin:0}
+  .thero .logo .l1{font-size:var(--lf);text-shadow:7px 7px 0 var(--ink);-webkit-text-stroke:3px var(--ink)}
+  .thero .logo .l2{font-size:calc(var(--lf) * 1.16);text-shadow:7px 7px 0 var(--ink);-webkit-text-stroke:3px var(--ink)}
+  .thero .logo .ribbon{font-size:max(15px,calc(var(--lf) * .29));margin-top:14px}
+  .thero .titlecv{width:100%;height:min(32vh,280px);margin:8px 0 0}
+  .titlebench>#titleBody{grid-column:2;grid-row:1;align-self:start;align-content:start}
 
   /* hangar: the phone layout on the left, the shop / mods panel docked on the right (its tabs replace the bar's buttons) */
   #hangar{padding-left:var(--x0);padding-right:calc(100vw - var(--x0) - var(--lw))}
