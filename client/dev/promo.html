@@ -1,0 +1,63 @@
+<!doctype html><meta charset="utf-8"><title>itch.io promo images</title>
+<!-- itch.io promo images, same scene as cover.html at other sizes:
+     ?k=social  1200×630 (link previews)      ?k=wide  1260×540, 21:9 (home page featuring)
+     ?k=logo    the logo alone on a transparent background (screenshot with a transparent page background).
+     Screenshot #art at device scale 2. -->
+<style>
+  body{margin:0;background:#22283a}
+  body.logo-only{background:transparent}
+  #art{position:relative;overflow:hidden}
+  canvas{position:absolute;inset:0}
+  .logo{position:absolute;display:grid;justify-items:center;transform:rotate(-4deg)}
+  .l1,.l2{font-family:'Bowlby One';line-height:.86;-webkit-text-stroke:3px #22283a}
+  .l1{color:#f3e7ce;text-shadow:6px 6px 0 #22283a}
+  .l2{color:#e9a93b;text-shadow:6px 6px 0 #22283a;margin-top:-2px}
+  .ribbon{margin-top:10px;font-family:'Bowlby One';color:#f3e7ce;background:#d2402f;border:3px solid #22283a;padding:4px 26px 3px;box-shadow:4px 4px 0 #22283a;
+    clip-path:polygon(0 0,100% 0,96% 50%,100% 100%,0 100%,4% 50%)}
+  .tag{position:absolute;font-family:'Nunito';font-weight:900;color:#22283a;background:#f3e7ce;border:3px solid #22283a;border-radius:8px;
+    padding:6px 14px;box-shadow:4px 4px 0 #22283a;transform:rotate(2deg)}
+  /* logo only: one line, wider than tall, room for the shadow */
+  .logo.one{position:static;transform:rotate(-3deg);margin:0 auto}
+  body.logo-only #art{width:1080px;height:300px;display:grid;place-items:center}
+  .logo.one .row{display:flex;gap:22px;align-items:baseline}
+</style>
+<div id="art"></div>
+<script type="module">
+import '@fontsource/bowlby-one/400';
+import '@fontsource/nunito/900';
+import { drawPart } from '../src/art.js';
+const k=new URLSearchParams(location.search).get('k')||'social', art=document.getElementById('art'), INK='#22283a';
+if(k==='logo'){
+  document.body.className='logo-only';
+  art.innerHTML=`<div class="logo one"><div class="row"><span class="l1" style="font-size:96px">WINGNUT</span><span class="l2" style="font-size:96px">CIRCUS</span></div><span class="ribbon" style="font-size:26px">Build · Fly · Show off</span></div>`;
+}else{
+  const [W,H]=k==='wide'?[1260,540]:[1200,630], d=window.devicePixelRatio||1;
+  art.style.width=W+'px';art.style.height=H+'px';
+  // logo on the left third, the plane looping over a sunburst on the right
+  const ls=H/500, lx=k==='wide'?90:70, ly=k==='wide'?95:110;
+  art.innerHTML=`<canvas id="c" style="width:${W}px;height:${H}px"></canvas>
+    <div class="logo" style="left:${lx}px;top:${ly}px"><span class="l1" style="font-size:${92*ls}px">WINGNUT</span><span class="l2" style="font-size:${104*ls}px">CIRCUS</span><span class="ribbon" style="font-size:${24*ls}px">Build · Fly · Show off</span></div>
+    <div class="tag" style="right:${30*ls}px;bottom:${28*ls}px;font-size:${21*ls}px">A junk-plane roguelite with a goat pilot</div>`;
+  const c=document.getElementById('c');c.width=W*d;c.height=H*d;
+  const g=c.getContext('2d');g.scale(d,d);
+  const sky=g.createLinearGradient(0,0,0,H);sky.addColorStop(0,'#7cc4dd');sky.addColorStop(.75,'#f3d9a4');sky.addColorStop(1,'#f0c98a');g.fillStyle=sky;g.fillRect(0,0,W,H);
+  const cx=W*(k==='wide'?.68:.74),cy=H*.5;
+  g.save();g.translate(cx,cy);for(let i=0;i<20;i++){g.rotate(Math.PI/10);g.fillStyle=i%2?'rgba(251,245,232,.22)':'rgba(255,255,255,0)';g.beginPath();g.moveTo(0,0);g.lineTo(-160,-1400);g.lineTo(160,-1400);g.closePath();g.fill()}g.restore();
+  const cloud=(x,y,s)=>{const puffs=[[0,0,26],[30,-12,30],[62,0,24],[30,8,26]];g.fillStyle='#fbf5e8';g.strokeStyle=INK;g.lineWidth=3;
+    for(const [dx,dy,r] of puffs){g.beginPath();g.arc(x+dx*s,y+dy*s,r*s,0,7);g.stroke()}for(const [dx,dy,r] of puffs){g.beginPath();g.arc(x+dx*s,y+dy*s,r*s-1.5,0,7);g.fill()}};
+  cloud(W*.06,H*.78,1.1*ls);cloud(W*.86,H*.14,.85*ls);cloud(W*.4,H*.86,.7*ls);cloud(W*.52,H*.1,.6*ls);
+  g.fillStyle='#7faf55';g.strokeStyle=INK;g.lineWidth=3;g.beginPath();g.moveTo(0,H);g.lineTo(0,H*.88);g.bezierCurveTo(W*.22,H*.82,W*.41,H*.91,W*.63,H*.86);g.bezierCurveTo(W*.79,H*.82,W*.92,H*.86,W,H*.84);g.lineTo(W,H);g.closePath();g.fill();g.stroke();
+  g.fillStyle='#5e8f43';g.beginPath();g.moveTo(0,H);g.lineTo(0,H*.94);g.bezierCurveTo(W*.32,H*.9,W*.6,H*.96,W,H*.92);g.lineTo(W,H);g.closePath();g.fill();
+  // brass dashed loop-the-loop contrail
+  const R1=120*ls,R2=92*ls;
+  g.strokeStyle='#e9a93b';g.lineWidth=7*ls;g.lineCap='round';g.setLineDash([3*ls,15*ls]);g.beginPath();
+  const pt=u=>{const a=u*Math.PI*2;return [cx+Math.sin(a)*R1,cy+30*ls-Math.cos(a)*R2]};
+  const U=.93;for(let i=0;i<=90;i++){const [x,y]=pt(U-.03-i/90*.8);i?g.lineTo(x,y):g.moveTo(x,y)}g.stroke();g.setLineDash([]);
+  const [x,y]=pt(U),[x2,y2]=pt(U+.005),ang=Math.atan2(y2-y,x2-x),s=50*ls;
+  g.save();g.translate(x,y);g.rotate(ang);g.scale(s,s);
+  for(const [type,px,py] of [['cockpit',0,0],['frame',1,0],['prop',2,0],['wing',0,-1],['wing',1,-1],['tank',0,1],['rocket',-1,0]]){g.save();g.translate(px-.6,py);drawPart(g,type,1.3,{on:true,frac:.8,lw:3/s,mood:'grin'});g.restore()}
+  g.restore();
+  for(const [ux,uy] of [[.73,.2],[.77,.16],[.81,.13]]){g.fillStyle='#ffb020';g.strokeStyle='#b87300';g.lineWidth=3;g.beginPath();g.arc(W*ux,H*uy,10*ls,0,7);g.fill();g.stroke()}
+}
+await document.fonts.ready;document.body.dataset.ready='1';
+</script>

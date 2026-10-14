@@ -24,7 +24,7 @@ npx wrangler deploy --config server/wrangler.toml   # deploy the game server (da
 ```
 
 ## Releases
-`package.json` "version" is the release number players see (title screen, bottom) and is sent with telemetry as `version` = `<release>+<commit>`. Bump it for each release that goes out (web and itch together): patch for fixes, minor for new features. Store assets live in `store/itch/` (cover rendered by `client/dev/cover.html`).
+`package.json` "version" is the release number players see (title screen, bottom) and is sent with telemetry as `version` = `<release>+<commit>`. Bump it for each release that goes out (web and itch together): patch for fixes, minor for new features. Store assets live in `store/itch/` (cover rendered by `client/dev/cover.html`, promo images by `client/dev/promo.html?k=social|wide|logo`; the favicon is `icons/icon-512.png`).
 
 ## Layout
 
