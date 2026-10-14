@@ -151,9 +151,10 @@ function renderTitle(){
         ${pickLevel?`<div class="crules"><span>+${pickLevel*25}% score targets</span>${ceilingRules(pickLevel).map(t=>`<span>${t}</span>`).join('')}</div>`:''}</div>`:''}
       <div style="margin-top:12px"><button class="big" id="start" type="button">Start run</button></div></div>`;
   }
-  h+=dailyCard()+roomCard();
+  // two groups: they stack on phones; on landscape screens the games go right, the profile under the logo (style.css)
+  h=`<div class="tcol tgames">${h}`+dailyCard()+roomCard();
   h+=`<div class="row2"><button class="ghost howto${m.guideSeen?'':' new'}" id="howto" type="button">How to play</button><button class="ghost" id="libBtn" type="button">Mods library</button></div>`;
-  h+=`<div class="card"><span class="label">Profile</span>
+  h+=`</div><div class="tcol tme"><div class="card"><span class="label">Profile</span>
     <div class="profile"><img class="avatar" alt="" src="${avatarURL()}"><div class="pname"><strong>${esc(m.name||'Pilot')}</strong>
       <button class="icon" id="nameEdit" type="button" aria-label="Change name">${PENCIL}</button></div>
       <button class="icon" id="profSet" type="button" aria-label="Settings">${GEAR}</button></div>
@@ -161,7 +162,7 @@ function renderTitle(){
     <dl class="stats"><dt>Runs</dt><dd>${m.runs}</dd><dt>Wins</dt><dd>${m.wins}</dd><dt>Most contracts in a run</dt><dd>${m.deepest||m.bestStage}</dd><dt>Best score</dt><dd>${fmt(m.bestFlight)}</dd>${m.level?`<dt>Highest Difficulty</dt><dd>${m.level}</dd>`:''}</dl>
     <div class="row" style="margin-top:12px"><span class="label">Unlocks</span><span class="hint">contracts in one run</span></div>
     <ul class="unl">${UNLOCKS.map(u=>{const d=m.bestStage>=u.at;return `<li class="${d?'done':''}"><i>${d?'\u2713':u.at}</i><span>${u.text}</span></li>`}).join('')}</ul></div>`;
-  h+=`<p class="ver">v${__VERSION__}</p>`;
+  h+=`<p class="ver">v${__VERSION__}</p></div>`;
   $('titleBody').innerHTML=h;
   startTitleScene();
   $('howto').onclick=openGuide;
@@ -218,13 +219,25 @@ function openHangar(){
 }
 // tab: 'build' is the barn itself; 'shop' and 'mods' open the dealer drawer over it
 const dealer=$('dealer'), dbody=$('dealerBody');
-function setTab(t){tab=t;armSell=null;armAbandon=false;
+// WIDE (landscape screens, same query as the CSS): the hangar stays the phone layout on the left and the dealer is
+// docked on the right, always showing the shop or the mods (side), switched by tabs
+const WIDE=matchMedia('(min-width:820px) and (min-height:520px) and (orientation:landscape)');
+let side='shop';
+function dock(){const wide=WIDE.matches;dealer.classList.toggle('docked',wide);return wide}
+function setTab(t){const wide=dock();
+  if(wide&&t==='build')t=side;if(t!=='build')side=t;
+  tab=t;armSell=null;armAbandon=false;
   const open=t!=='build';
-  if(open&&dealer.hidden){dealer.hidden=false;requestAnimationFrame(()=>dealer.classList.add('open'))}
+  if(wide){dealer.hidden=$('hangar').hidden;dealer.classList.add('open')}
+  else if(open&&dealer.hidden){dealer.hidden=false;requestAnimationFrame(()=>dealer.classList.add('open'))}
   else if(!open&&!dealer.hidden){dealer.classList.remove('open');setTimeout(()=>{if(tab==='build')dealer.hidden=true},260)}
+  $('dtShop').setAttribute('aria-pressed',t==='shop');$('dtMods').setAttribute('aria-pressed',t==='mods');
   renderHangar();const r=R();if(!r||r.phase==='won'||r.phase==='over')return;if(r.boonOffer)showBoons();else if(r.packs&&r.packs.length)showPacks()}
 $('tShop').onclick=()=>setTab('shop');$('tMods').onclick=()=>setTab('mods');
 $('dealerX').onclick=$('dealerScrim').onclick=()=>setTab('build');
+$('dtShop').onclick=()=>setTab('shop');$('dtMods').onclick=()=>setTab('mods');
+// turning a tablet or resizing the window: re-dock (going narrow closes the drawer)
+WIDE.addEventListener('change',()=>{if($('hangar').hidden)return;if(!WIDE.matches){tab='build';dealer.classList.remove('open');dealer.hidden=true}setTab(tab)});
 function wxLine(id,s){return `<div class="wx"><b>${WEATHER[id].name}</b>${WEATHER[id].d(s)}</div>`}
 // the season's route: eight towns along a dashed road, storm clouds over stormy towns (all forecast from the start, so
 // builds can plan for them), done towns ticked, the plane over the current one
@@ -263,6 +276,7 @@ function renderHangar(){
   $('hCoins').textContent=fmt(r.coins);
   $('tShop').classList.toggle('fresh',r.phase==='shop');
   $('tModsL').textContent=`Mods ${r.mods.length}/${modSlots(r)}`;
+  $('dtMods').textContent=`Mods ${r.mods.length}/${modSlots(r)}`;$('dtShop').classList.toggle('fresh',r.phase==='shop');
   renderStrip();
   renderBuild();
   dbody.onclick=null;
@@ -329,7 +343,7 @@ function renderBuild(){
   bindDrag($('grid'));
   $('pal').onclick=e=>{const b=e.target.closest('button');if(b){sel=b.dataset.t;armClear=false;renderBuild()}};
   if(isRare(sel)&&!warns.length)$('blurb').innerHTML=`<span class="rarenote">${partName(sel)}: ${RARE[baseOf(sel)].d}</span>`;
-  $('clear').onclick=()=>{if(!armClear){armClear=true;renderBuild();clearTimeout(clearTimer);clearTimer=setTimeout(()=>{armClear=false;if(tab==='build'&&save.run)renderBuild()},3000);return}
+  $('clear').onclick=()=>{if(!armClear){armClear=true;renderBuild();clearTimeout(clearTimer);clearTimer=setTimeout(()=>{armClear=false;if(R())renderBuild()},3000);return}
     armClear=false;r.cells=r.cells.filter(x=>x.type==='cockpit');persist();renderBuild()};
 }
 // press and hold a part to pick it up; drop it on another square to move it there (swapping with whatever is there)
