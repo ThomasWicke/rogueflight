@@ -638,3 +638,29 @@ body.offline::after{content:"Reconnecting…";position:fixed;left:50%;top:calc(v
 .pname .icon{width:30px;height:30px;background:none;border:0;box-shadow:none;color:var(--muted)}
 .icon svg{width:20px;height:20px}
 .icon:active{transform:translate(1px,1px);box-shadow:1px 1px 0 var(--ink)}
+
+/* ---------- landscape screens (desktop, itch embed, tablets on their side): two columns ----------
+   Phones (portrait, or too short in landscape) keep the single column above. */
+@media (min-width:820px) and (min-height:520px) and (orientation:landscape){
+  /* home: the logo and the looping plane stay put on the left, the cards scroll on the right */
+  .bench.titlebench{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto 1fr;column-gap:40px;row-gap:0;
+    width:100%;max-width:1100px;margin:0 auto;padding:calc(var(--reserve) + 28px) 28px 28px}
+  .titlebench>.logo{grid-column:1;grid-row:1;position:sticky;top:12px;align-self:start;margin-top:40px}
+  .titlebench>.titlecv{grid-column:1;grid-row:2;position:sticky;top:230px;align-self:start;height:260px;margin:10px 0 0}
+  .titlebench>.tbody{grid-column:2;grid-row:1/span 2;max-width:520px;margin:0}
+  .logo .l1{font-size:72px}.logo .l2{font-size:82px}
+
+  /* hangar: show poster and craft stats in a side column, the workbench (grid beside the parts tray) in the main one */
+  #hangar{display:grid;grid-template-columns:300px minmax(0,1fr);grid-template-rows:auto auto minmax(0,1fr) auto;
+    grid-template-areas:"top top" "poster build" "craft build" "craft bar";column-gap:16px;max-width:1180px;margin:0 auto;padding:0 16px}
+  #hangar>.htop{grid-area:top;max-width:none;padding-left:0;padding-right:0}
+  #hangar>.poster{grid-area:poster;width:auto;max-width:none;margin:2px 0 12px}
+  #hangar>#bench{display:contents}
+  #bench>.card:first-child{grid-area:build;max-width:none;margin:0;overflow-y:auto;align-self:stretch;display:flex;flex-direction:column}
+  /* the grid as large as the height allows (7:5), the parts tray in one row under it */
+  #bench>.card:first-child>.grid,#bench>.card:first-child>.legend{width:min(100%,calc((100vh - 340px) * 1.4));min-width:300px;margin-left:auto;margin-right:auto}
+  #bench>.card:first-child>.grid{margin-top:8px;margin-bottom:4px}
+  #bench>.card:first-child>.pal{grid-template-columns:repeat(auto-fit,minmax(60px,1fr));margin-top:8px}
+  #bench>.card:nth-child(2){grid-area:craft;max-width:none;margin:0;align-self:start}
+  #hangar>.hbar{grid-area:bar;max-width:none;padding-left:0;padding-right:0}
+}
