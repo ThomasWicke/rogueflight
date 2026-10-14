@@ -223,12 +223,10 @@ const dealer=$('dealer'), dbody=$('dealerBody');
 // docked on the right, always showing the shop or the mods (side), switched by tabs
 const WIDE=matchMedia('(min-width:640px) and (orientation:landscape)');
 let side='shop';
-function dock(){const wide=WIDE.matches;dealer.classList.toggle('docked',wide);if(wide)requestAnimationFrame(dockTop);return wide}
-// the docked panel starts under the toolbar (level with the poster) and ends above the launch bar
-function dockTop(){if($('hangar').hidden)return;const st=document.documentElement.style;
-  st.setProperty('--dtop',Math.round($('hangar').querySelector('.htop').getBoundingClientRect().bottom+2)+'px');
-  st.setProperty('--dbot',Math.round(innerHeight-$('launch').getBoundingClientRect().top+14)+'px')}
-addEventListener('resize',()=>{if(WIDE.matches)dockTop()});
+// docked, the drawer lives inside the hangar as its right column (CSS grid); otherwise it goes back to overlay the page
+function dock(){const wide=WIDE.matches,h=$('hangar');dealer.classList.toggle('docked',wide);
+  if(wide&&dealer.parentNode!==h)h.insertBefore(dealer,h.querySelector('.hbar'));else if(!wide&&dealer.parentNode===h)document.body.insertBefore(dealer,h.nextSibling);
+  return wide}
 function setTab(t){const wide=dock();
   if(wide&&t==='build')t=side;if(t!=='build')side=t;
   tab=t;armSell=null;armAbandon=false;

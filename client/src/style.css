@@ -645,48 +645,48 @@ body.offline::after{content:"Reconnecting…";position:fixed;left:50%;top:calc(v
 .hmid{display:contents} /* poster + bench: one scroll area on sideways phones, plain children elsewhere */
 .dr-tabs{display:none}
 
-/* ---------- landscape screens (desktop, the itch.io embed, tablets on their side) ----------
-   Matches WIDE in ui.js (phones held sideways too); only the hangar changes (the home screen stays one column). Phones keep the layout above. */
+/* ---------- landscape screens (desktop, the itch.io embed, tablets and phones on their side) ----------
+   Matches WIDE in ui.js; only the hangar changes (the home screen stays one column). Phones held upright keep the layout above.
+   The hangar becomes a grid: toolbar across the top, the phone hangar (poster + bench) left, the shop / mods panel right
+   (ui.js moves the dealer drawer into #hangar), the launch bar across the bottom. The panel is only as tall as its
+   content and never taller than its row, so it can't run into the launch bar. */
 @media (min-width:640px) and (orientation:landscape){
-  /* the hangar column and the shop column float side by side, centered on the barn wall */
-  :root{--side:clamp(290px,31vw,400px);--lw:min(var(--lwmax,552px),calc(100vw - var(--side) - 40px - env(safe-area-inset-left,0px) - env(safe-area-inset-right,0px)));--x0:max(env(safe-area-inset-left,0px),calc((100vw - var(--lw) - 8px - var(--side)) / 2));--span:calc(var(--lw) - 8px + var(--side))}
-
-  /* hangar: the phone layout on the left, the shop / mods panel docked on the right (its tabs replace the bar's buttons) */
-  #hangar{padding-left:var(--x0);padding-right:calc(100vw - var(--x0) - var(--lw))}
+  :root{--side:clamp(290px,31vw,400px);--lw:552px;--gap:16px}
+  #hangar{display:grid;grid-template-columns:minmax(0,var(--lw)) var(--side);grid-template-rows:auto minmax(0,1fr) auto;
+    grid-template-areas:"top top" "mid side" "bar bar";column-gap:var(--gap);justify-content:center;
+    padding:0 max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px))}
+  #hangar>.htop{grid-area:top;max-width:none;width:auto;margin:0;padding-left:0;padding-right:0}
+  #hangar>.hmid{grid-area:mid;display:flex;flex-direction:column;min-height:0;min-width:0}
+  #hangar .poster{width:auto;max-width:none;margin:2px 0 10px;flex:none}
+  #hangar #bench{padding-left:0;padding-right:0}
+  #hangar #bench>*{max-width:none}
+  #hangar>.hbar{grid-area:bar;max-width:none;width:auto;margin:0;padding-left:0;padding-right:0;grid-template-columns:1fr}
   #hangar>.hbar .tool{display:none}
 
   /* the docked panel: Shop | Mods tabs, the offers scrolling below */
-  /* the panel starts level with the poster and ends above the launch bar (both set in ui.js), only as tall as its content */
-  /* the toolbar and the launch bar run across both cards (from the left card's edge to the panel's right edge) */
-  #hangar>.htop,#hangar>.hbar{width:var(--span);max-width:none;margin:0 0 0 16px;padding-left:0;padding-right:0}
-  #hangar>.hbar{grid-template-columns:1fr}
-  .drawer.docked{left:calc(var(--x0) + var(--lw) + 8px);right:auto;width:var(--side);top:var(--dtop,70px);bottom:auto;
-    max-height:calc(100vh - var(--dtop,70px) - var(--dbot,110px));flex-direction:column;align-items:stretch;z-index:5}
+  .drawer.docked{grid-area:side;position:static;inset:auto;width:auto;z-index:auto;align-self:start;max-height:100%;min-height:0;
+    display:flex;flex-direction:column;align-items:stretch;margin:2px 0 10px}
   .drawer.docked .dr-scrim,.drawer.docked .dr-grab,.drawer.docked .dr-x,.drawer.docked #dealerTitle{display:none}
-  .drawer.docked .dr-panel{max-width:none;height:auto;max-height:100%;min-height:0;flex:0 1 auto;transform:none;transition:none;border:var(--ol) solid var(--ink);border-radius:10px;
+  .drawer.docked .dr-panel{max-width:none;width:auto;height:auto;min-height:0;flex:0 1 auto;transform:none;transition:none;border:var(--ol) solid var(--ink);border-radius:10px;
     padding:12px 0 6px;box-shadow:6px 6px 0 var(--ink);overflow:hidden}
-  .drawer.docked .dr-body{flex:0 1 auto}
   .drawer.docked .dr-head{padding:0 16px 8px}
-  .drawer.docked .dr-body{padding:4px 12px 12px}
+  .drawer.docked .dr-body{flex:0 1 auto;min-height:0;padding:4px 12px 12px}
   .drawer.docked .dr-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%}
   .dr-tabs button{font-family:var(--display);font-size:16px;color:var(--ink);background:var(--canvas);border:2px solid var(--ink);border-radius:6px;padding:8px 6px 7px;box-shadow:2px 2px 0 var(--ink);position:relative}
   .dr-tabs button[aria-pressed="true"]{background:var(--brass);box-shadow:3px 3px 0 var(--ink);transform:translateY(-1px)}
   .dr-tabs button.fresh::after{content:"";position:absolute;top:-6px;right:-6px;width:14px;height:14px;border-radius:50%;background:var(--red);border:2px solid var(--ink)}
 }
 
-/* phones held sideways: too short for a fixed poster above the bench, so the left column scrolls as a whole between a
-   sticky toolbar and a sticky launch bar */
+/* phones held sideways: too short for a fixed poster above the bench, so poster and bench scroll together, and
+   everything is drawn at --z of its phone size (zoom) */
 @media (min-width:640px) and (orientation:landscape) and (max-height:560px){
-  /* everything drawn at --z of its phone size (zoom), the columns sized to match */
-  :root{--z:.66;--side:clamp(240px,32vw,320px);--lwmax:380px}
-  #hangar .hmid{display:flex;flex-direction:column;flex:1;min-height:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain}
-  #hangar>.htop,#hangar .poster,#hangar #bench,#hangar>.hbar{zoom:var(--z)}
+  :root{--z:.66;--side:clamp(240px,32vw,320px);--lw:380px;--gap:12px}
+  #hangar>.hmid{overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain}
+  #hangar>.htop,#hangar .poster,#hangar #bench,#hangar>.hbar,.drawer.docked .dr-panel{zoom:var(--z)}
   #hangar #bench{flex:none;overflow:visible;padding-bottom:8px}
-  #hangar>.htop,#hangar>.hbar{width:calc(var(--span) / var(--z));margin-left:calc(16px / var(--z))}
   #hangar>.htop{padding-top:calc(var(--reserve) / var(--z) + 8px);padding-bottom:6px}
   #hangar>.hbar{padding-top:8px;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px) / var(--z))}
-  #hangar .poster{margin-top:0;width:calc(100% - 32px / var(--z));flex:none}
-  .drawer.docked .dr-panel{zoom:var(--z)}
+  #hangar .poster{margin-top:0}
   /* flight: smaller buttons so the pad stays clear of the HUD, and away from the notch */
   .ctrl{padding-left:max(14px,env(safe-area-inset-left,0px));padding-right:max(14px,env(safe-area-inset-right,0px));padding-bottom:calc(10px + env(safe-area-inset-bottom,0px))}
   .ctrl .pad{gap:6px}
