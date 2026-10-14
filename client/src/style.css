@@ -645,10 +645,10 @@ body.offline::after{content:"Reconnecting…";position:fixed;left:50%;top:calc(v
 .dr-tabs{display:none}
 
 /* ---------- landscape screens (desktop, the itch.io embed, tablets on their side) ----------
-   Matches WIDE in ui.js; only the hangar changes (the home screen stays one column). Phones keep the layout above. */
-@media (min-width:820px) and (min-height:520px) and (orientation:landscape){
+   Matches WIDE in ui.js (phones held sideways too); only the hangar changes (the home screen stays one column). Phones keep the layout above. */
+@media (min-width:640px) and (orientation:landscape){
   /* the hangar column and the shop column float side by side, centered on the barn wall */
-  :root{--side:clamp(330px,31vw,400px);--lw:min(552px,calc(100vw - var(--side) - 40px));--x0:max(0px,calc((100vw - var(--lw) - 8px - var(--side)) / 2));--span:calc(var(--lw) - 8px + var(--side))}
+  :root{--side:clamp(290px,31vw,400px);--lw:min(var(--lwmax,552px),calc(100vw - var(--side) - 40px - env(safe-area-inset-left,0px) - env(safe-area-inset-right,0px)));--x0:max(env(safe-area-inset-left,0px),calc((100vw - var(--lw) - 8px - var(--side)) / 2));--span:calc(var(--lw) - 8px + var(--side))}
 
   /* hangar: the phone layout on the left, the shop / mods panel docked on the right (its tabs replace the bar's buttons) */
   #hangar{padding-left:var(--x0);padding-right:calc(100vw - var(--x0) - var(--lw))}
@@ -671,4 +671,25 @@ body.offline::after{content:"Reconnecting…";position:fixed;left:50%;top:calc(v
   .dr-tabs button{font-family:var(--display);font-size:16px;color:var(--ink);background:var(--canvas);border:2px solid var(--ink);border-radius:6px;padding:8px 6px 7px;box-shadow:2px 2px 0 var(--ink);position:relative}
   .dr-tabs button[aria-pressed="true"]{background:var(--brass);box-shadow:3px 3px 0 var(--ink);transform:translateY(-1px)}
   .dr-tabs button.fresh::after{content:"";position:absolute;top:-6px;right:-6px;width:14px;height:14px;border-radius:50%;background:var(--red);border:2px solid var(--ink)}
+}
+
+/* phones held sideways: too short for a fixed poster above the bench, so the left column scrolls as a whole between a
+   sticky toolbar and a sticky launch bar */
+@media (min-width:640px) and (orientation:landscape) and (max-height:560px){
+  /* everything drawn at --z of its phone size (zoom), the columns sized to match */
+  :root{--z:.66;--side:clamp(240px,32vw,320px);--lwmax:380px}
+  #hangar{overflow-y:auto;overscroll-behavior:contain}
+  #hangar>.htop,#hangar>.poster,#hangar>#bench,#hangar>.hbar{zoom:var(--z)}
+  #hangar>#bench{flex:none;overflow:visible;padding-bottom:8px}
+  #hangar>.htop,#hangar>.hbar{width:calc(var(--span) / var(--z));margin-left:calc(16px / var(--z))}
+  #hangar>.htop{position:sticky;top:0;z-index:4;padding-top:calc(var(--reserve) / var(--z) + 8px);padding-bottom:6px;background:linear-gradient(var(--barn2) 70%,rgba(0,0,0,0))}
+  #hangar>.hbar{position:sticky;bottom:0;z-index:4;padding-top:8px;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px) / var(--z));background:linear-gradient(rgba(0,0,0,0),var(--barn2) 35%)}
+  #hangar>.poster{margin-top:0;width:calc(100% - 32px / var(--z))}
+  .drawer.docked .dr-panel{zoom:var(--z)}
+  /* flight: smaller buttons so the pad stays clear of the HUD, and away from the notch */
+  .ctrl{padding-left:max(14px,env(safe-area-inset-left,0px));padding-right:max(14px,env(safe-area-inset-right,0px));padding-bottom:calc(10px + env(safe-area-inset-bottom,0px))}
+  .ctrl .pad{gap:6px}
+  .ctrl button{height:52px;width:96px;font-size:10.5px}
+  .ctrl button svg{width:20px;height:20px}
+  .ctrl #bFF{height:38px}
 }
