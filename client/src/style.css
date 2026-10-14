@@ -645,23 +645,10 @@ body.offline::after{content:"Reconnecting…";position:fixed;left:50%;top:calc(v
 .dr-tabs{display:none}
 
 /* ---------- landscape screens (desktop, the itch.io embed, tablets on their side) ----------
-   Matches WIDE in ui.js. Phones (portrait, or too short in landscape) keep the single column above. */
+   Matches WIDE in ui.js; only the hangar changes (the home screen stays one column). Phones keep the layout above. */
 @media (min-width:820px) and (min-height:520px) and (orientation:landscape){
   /* the hangar column and the shop column float side by side, centered on the barn wall */
   :root{--side:clamp(330px,31vw,400px);--lw:min(552px,calc(100vw - var(--side) - 40px));--x0:max(0px,calc((100vw - var(--lw) - 8px - var(--side)) / 2));--span:calc(var(--lw) - 8px + var(--side))}
-
-  /* home: a big logo with the looping plane on the left, held in view; the phone's cards in one column on the right */
-  .bench.titlebench{--lf:clamp(40px,calc((100vw - 600px) / 6),90px);grid-template-columns:auto minmax(0,460px);
-    justify-content:center;column-gap:64px;width:100%;margin:0;padding:calc(var(--reserve) + 56px) 32px 32px}
-  .bench.titlebench>*{max-width:none;margin:0}
-  .thero{grid-column:1;grid-row:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
-    position:sticky;top:0;height:calc(100vh - var(--reserve) - 88px)}
-  .thero .logo{margin:0}
-  .thero .logo .l1{font-size:var(--lf);text-shadow:7px 7px 0 var(--ink);-webkit-text-stroke:3px var(--ink)}
-  .thero .logo .l2{font-size:calc(var(--lf) * 1.16);text-shadow:7px 7px 0 var(--ink);-webkit-text-stroke:3px var(--ink)}
-  .thero .logo .ribbon{font-size:max(15px,calc(var(--lf) * .29));margin-top:14px}
-  .thero .titlecv{width:calc(var(--lf) * 5.8);height:min(32vh,280px);margin:8px 0 0}
-  .titlebench>#titleBody{grid-column:2;grid-row:1;align-self:start;align-content:start}
 
   /* hangar: the phone layout on the left, the shop / mods panel docked on the right (its tabs replace the bar's buttons) */
   #hangar{padding-left:var(--x0);padding-right:calc(100vw - var(--x0) - var(--lw))}
