@@ -398,7 +398,7 @@ function renderShop(){
 }
 function buy(kind,i){
   const r=R(),S=r.shop;const o=kind==='pack'?S.pack:S[kind==='part'?'parts':kind==='tune'?'tunes':'mods'][i];if(!o)return;
-  if(applyPurchase(r,kind,o)){sfx('buy');buzz(12);persist();renderHangar();if(kind==='pack')showPacks()}else sfx('error')
+  if(applyPurchase(r,kind,o)){sfx('buy');buzz(12);persist();if(kind==='pack'){setTab('build');showPacks()}else renderHangar()}else sfx('error')
 }
 function renderMods(){
   const r=R();
