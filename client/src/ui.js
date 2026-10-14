@@ -224,8 +224,10 @@ const dealer=$('dealer'), dbody=$('dealerBody');
 const WIDE=matchMedia('(min-width:820px) and (min-height:520px) and (orientation:landscape)');
 let side='shop';
 function dock(){const wide=WIDE.matches;dealer.classList.toggle('docked',wide);if(wide)requestAnimationFrame(dockTop);return wide}
-// the docked panel starts level with the show poster, under the coins bar
-function dockTop(){if(!$('hangar').hidden)document.documentElement.style.setProperty('--dtop',Math.round($('cstrip').getBoundingClientRect().top)+'px')}
+// the docked panel starts level with the show poster (under the toolbar) and ends above the launch bar
+function dockTop(){if($('hangar').hidden)return;const st=document.documentElement.style;
+  st.setProperty('--dtop',Math.round($('cstrip').getBoundingClientRect().top)+'px');
+  st.setProperty('--dbot',Math.round(innerHeight-$('launch').getBoundingClientRect().top+14)+'px')}
 addEventListener('resize',()=>{if(WIDE.matches)dockTop()});
 function setTab(t){const wide=dock();
   if(wide&&t==='build')t=side;if(t!=='build')side=t;
