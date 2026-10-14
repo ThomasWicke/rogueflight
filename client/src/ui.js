@@ -285,6 +285,7 @@ function renderHangar(){
   dbody.onclick=null;
   if(tab==='shop')renderShop();else if(tab==='mods')renderMods();
   $('launch').textContent=isOnline(r)?readyLabel():r.phase==='shop'?`START CONTRACT ${r.stage+1}`:'LAUNCH!';
+  $('launch').classList.toggle('long',$('launch').textContent.length>10); // a smaller size keeps long labels on one line
   $('launch').disabled=isOnline(r)&&(!me()||!me().alive);
 }
 
