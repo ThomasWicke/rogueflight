@@ -748,7 +748,8 @@ function draw(now){
   const list=F.online?(F.fl=flyers()):null, fo=list&&(F.settled||F.watch)&&F.pre<=0?focusOf(list):null, T=fo||S;
   const v=Math.hypot(T.vx,T.vy);
   const pre=F.pre>0;
-  const viewH=pre?50:Math.max(30,T.y*1.25+16,v*1.3);
+  // F.cine (set by the trailer capture): a close camera on the craft instead of keeping the ground in view
+  const viewH=pre?(F.cine?34:50):F.cine?Math.max(20,v*.55):Math.max(30,T.y*1.25+16,v*1.3);
   cam.sc=Math.exp(lerp(Math.log(cam.sc),Math.log(vh/viewH),pre?.25:.08));
   const sc=cam.sc;
   const tx=pre?-10:T.x+.16*vw/sc;
@@ -1290,7 +1291,7 @@ $('hSound').onclick=()=>{audio.setMuted(!audio.muted);syncSound()};
 syncSound();
 
 // dev only: inspect the running flight from the console (stripped from production builds)
-if(import.meta.env.DEV)window.__rf={F:()=>F,R,frame:n=>frame(n)};
+if(import.meta.env.DEV)window.__rf={F:()=>F,R,frame:n=>frame(n),ctl}; // ctl: tools/ and dev pages drive flights (e.g. the trailer capture)
 
 /* ---------- profile ---------- */
 const PENCIL='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l1-5L16 4l4 4L9 19z M14 6l4 4" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/></svg>';

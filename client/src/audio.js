@@ -761,7 +761,7 @@ function stats(buf, at = 0) {
   return { peak: r(peak), rms: r(Math.sqrt(sum / Math.max(1, (last + 1 - i0) * buf.numberOfChannels))), dur: r((last - i0) / buf.sampleRate), end: r(end), nan };
 }
 // kind 'sfx' (arg = name, opts.o = sfx opts), 'music' (arg = {mode, hype}) or 'engine' (arg = engine state).
-// opts.raw skips the compressor/limiter. Volumes are rendered at 1 (the loudest a player can set).
+// opts.raw skips the compressor/limiter, opts.buffer returns the rendered AudioBuffer instead of stats. Volumes are rendered at 1 (the loudest a player can set).
 async function render(kind, arg, opts = {}) {
   const OAC = W && (W.OfflineAudioContext || W.webkitOfflineAudioContext);
   if (!OAC) return null;
@@ -784,7 +784,8 @@ async function render(kind, arg, opts = {}) {
       fadeEngine(e, sec - 0.5);
     }
   } finally { G = keep; }
-  return stats(await c.startRendering(), AT);
+  const buf = await c.startRendering();
+  return opts.buffer ? buf : stats(buf, AT);   // opts.buffer: the AudioBuffer itself (trailer music)
 }
 
 // ---------- public API ----------
