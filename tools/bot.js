@@ -1,7 +1,7 @@
 // Balance harness: plays whole runs from the universal start with a scripted shopper, builder and pilot, then prints
 // how far runs get and the score spread per contract against its quota.
 //   node tools/bot.js [runs=20] [policy=climb|hands] [--seed=N] [--ceiling=N] [--storm=<weather id>|none] [--verbose]
-// --storm puts the same weather on every storm contract (3, 6, 8), or none at all, to compare storms.
+// --storm puts the same weather on every storm contract (3, 6, 8, and 5 from Difficulty 4), or none at all, to compare storms.
 // Pilots press the same buttons a player has: pitch is -1/0/+1, re-decided at most every 0.2 s, plus one throttle.
 //   climb  waits for flying speed, climbs at ~35° under power, then glides hands-off (a decent human).
 //          Throttle is picked per build (full or 60%), like a player who tried both.
@@ -227,12 +227,12 @@ function botShop(run, meta) {
 }
 
 /* ---------- runs ---------- */
-const reach = [], stageScores = {};
+const reach = [], stageScores = {}, stageCrash = {};
 const t0 = Date.now();
 for (let n = 0; n < RUNS; n++) {
   const meta = { bestStage: 8 };
   const run = newRun(CEIL, meta);
-  if (STORM && STORM !== 'none') for (let i = 0; i < CONTRACTS; i++) if (isStorm(i)) run.weather[i] = STORM;
+  if (STORM && STORM !== 'none') for (let i = 0; i < CONTRACTS; i++) if (isStorm(i, CEIL)) run.weather[i] = STORM;
   lastFlightFrac = 0;
   let craft = null, sig = '';
   let guard = 0;
@@ -254,7 +254,7 @@ for (let n = 0; n < RUNS; n++) {
     const f = summaryOf(S, K2), stg = run.stage;
     lastFlightFrac = S.t / st.flightTime;
     const out = settleFlight(run, meta, f);
-    (stageScores[stg] = stageScores[stg] || []).push(out.sc.total);
+    (stageScores[stg] = stageScores[stg] || []).push(out.sc.total); if (f.crashed) stageCrash[stg] = (stageCrash[stg] || 0) + 1;
     if (VERBOSE) console.log(`  c${stg + 1} f${out.flightNo} ${String(out.sc.total).padStart(6)} ${Math.round(f.dist)} m ×${out.sc.mult * out.sc.xm}${f.crashed ? ' crash' : ''}  ${out.contractScore}/${out.quota}  thr ${craft.thr}  ${wx || ''}`);
   }
   reach.push(run.stage);
@@ -265,5 +265,5 @@ for (const k in stageScores) {
   const a = stageScores[k].sort((x, y) => x - y);
   // of the runs that got to this contract, how many cleared it
   const got = reach.filter((x) => x >= +k).length, won = reach.filter((x) => x > +k).length;
-  console.log('contract', +k + 1, 'quota', quotaFor(+k, CEIL), 'cleared', `${won}/${got}`, 'flights', a.length, 'median', a[Math.floor(a.length / 2)], 'p80', a[Math.floor(a.length * 0.8)], 'max', a[a.length - 1]);
+  console.log('contract', +k + 1, 'quota', quotaFor(+k, CEIL), 'cleared', `${won}/${got}`, 'flights', a.length, 'median', a[Math.floor(a.length / 2)], 'p80', a[Math.floor(a.length * 0.8)], 'max', a[a.length - 1], 'crashes', `${stageCrash[k] || 0}/${a.length}`);
 }
