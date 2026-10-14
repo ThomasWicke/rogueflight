@@ -365,7 +365,7 @@ function step(S,K,st,dt,ctl){
   // push a flight can get is capped (S.gustE, as velocity it could add), so gusts cost height and make low flying and
   // landings risky; they cannot be ridden or farmed, whichever way the craft is moving
   if(st.gust){const gw=Math.sin(S.x/61+1.3)*Math.cos(S.t*.9+S.x/97)-.08,gF=m*st.gust*gw;
-    if(gF<=0)Fy+=gF;else if(S.gustE<17){Fy+=gF;S.gustE+=gF/m*dt}
+    if(gF<=0||S.gustE<17){Fy+=gF;S.gustE+=gF/m*dt} // net budget: sinking earns back room to rise, so the cap never turns gusts into a pure downdraft
     Ta+=.12*m*st.gust*Math.sin(S.t*1.7+S.x/43)}
   if(st.ceiling&&S.y>st.ceiling){Fy-=m*(14+.4*(S.y-st.ceiling));flag(S,'storm','Downdraft!')}
   {const k=(VAC+VAC2*v)*(1-Math.exp(-Math.max(0,S.y)/8500))*drag;Fx-=m*k*S.vx;Fy-=m*k*S.vy}
