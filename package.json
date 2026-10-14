@@ -1,6 +1,6 @@
 {
   "name": "wingnutcircus",
-  "version": "0.7.3",
+  "version": "0.7.4",
   "private": true,
   "type": "module",
   "description": "Roguelite flying-machine builder. Build a craft on a grid, fly it with real-ish physics, hit escalating score quotas.",

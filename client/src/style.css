@@ -678,7 +678,7 @@ body.offline::after{content:"Reconnecting…";position:fixed;left:50%;top:calc(v
 @media (min-width:640px) and (orientation:landscape) and (max-height:560px){
   /* everything drawn at --z of its phone size (zoom), the columns sized to match */
   :root{--z:.66;--side:clamp(240px,32vw,320px);--lwmax:380px}
-  #hangar{overflow-y:auto;overscroll-behavior:contain}
+  #hangar{overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y}
   #hangar>.htop,#hangar>.poster,#hangar>#bench,#hangar>.hbar{zoom:var(--z)}
   #hangar>#bench{flex:none;overflow:visible;padding-bottom:8px}
   #hangar>.htop,#hangar>.hbar{width:calc(var(--span) / var(--z));margin-left:calc(16px / var(--z))}
