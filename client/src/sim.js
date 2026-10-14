@@ -361,7 +361,7 @@ function step(S,K,st,dt,ctl){
     // smooth column: strongest in the middle, fading at the edges and near the top, so it lifts rather than kicks
     if(d<12){const b=Math.cos(d/12*Math.PI/2)**2*clamp((th.top-S.y)/25,0,1);Fy+=m*th.str*b}
     if(d<8&&!S.thSeen.has(tk)){S.thSeen.add(tk);S.thermals++;trick(S,'thermal')}}
-  // gusts shove the craft up and down and rock its nose. The air sinks a little more than it rises, and the total upward
+  // gusts shove the craft up and down and rock its nose. The air sinks a little more than it rises, and the net upward
   // push a flight can get is capped (S.gustE, as velocity it could add), so gusts cost height and make low flying and
   // landings risky; they cannot be ridden or farmed, whichever way the craft is moving
   if(st.gust){const gw=Math.sin(S.x/61+1.3)*Math.cos(S.t*.9+S.x/97)-.08,gF=m*st.gust*gw;
