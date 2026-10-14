@@ -642,6 +642,7 @@ body.offline::after{content:"Reconnecting…";position:fixed;left:50%;top:calc(v
 /* phones: the title's card groups simply stack */
 .tcol{display:grid;gap:16px;align-content:start}
 .thero{display:contents}
+.hmid{display:contents} /* poster + bench: one scroll area on sideways phones, plain children elsewhere */
 .dr-tabs{display:none}
 
 /* ---------- landscape screens (desktop, the itch.io embed, tablets on their side) ----------
@@ -678,13 +679,13 @@ body.offline::after{content:"Reconnecting…";position:fixed;left:50%;top:calc(v
 @media (min-width:640px) and (orientation:landscape) and (max-height:560px){
   /* everything drawn at --z of its phone size (zoom), the columns sized to match */
   :root{--z:.66;--side:clamp(240px,32vw,320px);--lwmax:380px}
-  #hangar{overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y}
-  #hangar>.htop,#hangar>.poster,#hangar>#bench,#hangar>.hbar{zoom:var(--z)}
-  #hangar>#bench{flex:none;overflow:visible;padding-bottom:8px}
+  #hangar .hmid{display:flex;flex-direction:column;flex:1;min-height:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain}
+  #hangar>.htop,#hangar .poster,#hangar #bench,#hangar>.hbar{zoom:var(--z)}
+  #hangar #bench{flex:none;overflow:visible;padding-bottom:8px}
   #hangar>.htop,#hangar>.hbar{width:calc(var(--span) / var(--z));margin-left:calc(16px / var(--z))}
-  #hangar>.htop{position:sticky;top:0;z-index:4;padding-top:calc(var(--reserve) / var(--z) + 8px);padding-bottom:6px;background:linear-gradient(var(--barn2) 70%,rgba(0,0,0,0))}
-  #hangar>.hbar{position:sticky;bottom:0;z-index:4;padding-top:8px;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px) / var(--z));background:linear-gradient(rgba(0,0,0,0),var(--barn2) 35%)}
-  #hangar>.poster{margin-top:0;width:calc(100% - 32px / var(--z))}
+  #hangar>.htop{padding-top:calc(var(--reserve) / var(--z) + 8px);padding-bottom:6px}
+  #hangar>.hbar{padding-top:8px;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px) / var(--z))}
+  #hangar .poster{margin-top:0;width:calc(100% - 32px / var(--z));flex:none}
   .drawer.docked .dr-panel{zoom:var(--z)}
   /* flight: smaller buttons so the pad stays clear of the HUD, and away from the notch */
   .ctrl{padding-left:max(14px,env(safe-area-inset-left,0px));padding-right:max(14px,env(safe-area-inset-right,0px));padding-bottom:calc(10px + env(safe-area-inset-bottom,0px))}
