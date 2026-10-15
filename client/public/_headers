@@ -1,5 +1,8 @@
 # Cloudflare Pages headers. The service worker and the HTML must never be served stale,
 # otherwise installed copies of the game would not pick up new deploys.
+# /assets/* keeps the Pages default (revalidate on every load). It used to be immutable for a year: during the 0.7.9
+# deploy a request for a new bundle got the SPA fallback (index.html) on wingnut-circus.com, the zone cached that HTML as
+# the script for a year and the game would not start until the cache was purged. With 404.html missing files 404 instead.
 /sw.js
   Cache-Control: no-cache
 /index.html
@@ -8,5 +11,3 @@
   Cache-Control: no-cache
 /manifest.webmanifest
   Content-Type: application/manifest+json
-/assets/*
-  Cache-Control: public, max-age=31536000, immutable
