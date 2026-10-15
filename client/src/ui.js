@@ -27,10 +27,10 @@ import { initGuide, openGuide } from './guide.js';
 const KEY='rogueflight-1'; // storage keys keep the game's original id (RogueFlight) so saves survive the rename
 const META0={runs:0,wins:0,bestStage:0,bestFlight:0,deepest:0,level:0};
 // save.run: the main run; save.daily: a daily or random puzzle in progress; save.online: the run of the live room save.room
-// arriving from the old address (see MOVED): take over the save it handed over in the URL fragment, unless this
-// browser already has one here. The fragment never reaches any server.
+// arriving from the old address (see MOVED): take over the save (and the cloud-save login, so the device stays on its
+// account) handed over in the URL fragment, unless this browser already has one here. The fragment never reaches any server.
 {const m=location.hash.match(/^#move=(.+)$/);if(m){try{const d=JSON.parse(decodeURIComponent(escape(atob(m[1]))));
-  for(const [k,v] of [[KEY,d.save],['rogueflight-client',d.client],['rogueflight-audio',d.audio]])if(v&&!localStorage.getItem(k))localStorage.setItem(k,v)}catch(_){}
+  for(const [k,v] of [[KEY,d.save],['rogueflight-client',d.client],['rogueflight-audio',d.audio],['rogueflight-auth',d.auth]])if(v&&!localStorage.getItem(k))localStorage.setItem(k,v)}catch(_){}
   history.replaceState(null,'',location.pathname+location.search)}}
 // t: when this device last changed the save (cloud sync keeps the newer copy); cloud.rev: the server's revision we hold
 let save=(()=>{try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s&&s.meta)return {meta:{...META0,...s.meta},run:s.run||null,daily:s.daily||null,online:s.online||null,room:s.room||null,t:s.t||0,cloud:s.cloud||{rev:0}}}catch(e){}return {meta:{...META0},run:null,daily:null,online:null,room:null}})();
@@ -118,7 +118,7 @@ function runCode(r){if(!r)return '';const L=t=>t==='cockpit'?'c':t[0];
 // the game's home: copies hosted elsewhere (itch.io, a future app) send telemetry and invite links here
 // HOME: where copies hosted elsewhere (itch.io) send telemetry and invite links. MOVED: once wingnut-circus.com serves
 // the game, set it here; the old addresses (OLD_HOSTS) then send players over with their save
-const HOME='https://wingnut-circus.pages.dev', MOVED=null, OLD_HOSTS=['rogueflight.pages.dev','wingnut-circus.pages.dev'],
+const HOME='https://wingnut-circus.com', MOVED='https://wingnut-circus.com', OLD_HOSTS=['rogueflight.pages.dev','wingnut-circus.pages.dev','www.wingnut-circus.com'],
   ATHOME=/(^|\.)rogueflight\.pages\.dev$|(^|\.)wingnut-circus\.pages\.dev$|(^|\.)wingnut-circus\.com$|^localhost$|^127\.0\.0\.1$/.test(location.hostname);
 const homeURL=p=>(ATHOME?location.origin:HOME)+p;
 function clientId(){try{let id=localStorage.getItem('rogueflight-client');if(!id){id=Math.random().toString(36).slice(2)+Date.now().toString(36);localStorage.setItem('rogueflight-client',id)}return id}catch(_){return ''}}
@@ -1338,7 +1338,7 @@ function showClaim(){
 /* ================= boot ================= */
 // moving house: the old address sends players to the new one, carrying their save in the URL fragment
 if(MOVED&&OLD_HOSTS.includes(location.hostname)&&location.hostname!==new URL(MOVED).hostname){let p='';try{p=btoa(unescape(encodeURIComponent(JSON.stringify({save:localStorage.getItem(KEY),
-  client:localStorage.getItem('rogueflight-client'),audio:localStorage.getItem('rogueflight-audio')}))))}catch(_){}location.replace(MOVED+'/'+location.search+(p?'#move='+p:''))}
+  client:localStorage.getItem('rogueflight-client'),audio:localStorage.getItem('rogueflight-audio'),auth:localStorage.getItem('rogueflight-auth')}))))}catch(_){}location.replace(MOVED+'/'+location.search+(p?'#move='+p:''))}
 show('title');renderTitle();
 cloudStart();
 // an invite link (?room=CODE) drops straight into that room's lobby

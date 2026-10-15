@@ -55,6 +55,7 @@ let token = null;
 try { token = localStorage.getItem(TOKEN_KEY); } catch (_) {}
 const setToken = (t) => { token = t; try { t ? localStorage.setItem(TOKEN_KEY, t) : localStorage.removeItem(TOKEN_KEY); } catch (_) {} };
 async function ensureAccount() {
+  if (!token) { try { token = localStorage.getItem(TOKEN_KEY); } catch (_) {} }   // a login handed over by a move (see MOVED in ui.js) arrives after this module loaded
   if (token) return token;
   const res = await fetch(SERVER + '/api/auth/sign-in/anonymous', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
   const t = res.ok && res.headers.get('set-auth-token');
