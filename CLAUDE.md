@@ -127,6 +127,9 @@ Code style is dense (many one-line functions, short names: `S` flight state, `K`
 - One human data point: the player won all 8 contracts on their first serious run with a light, strong-prop glider (before quotas 6–8 were raised by about 20%). A balloon-heavy build later died to thin air on contract 6; that loss motivated revealing storms early.
 - Additive per-part mods (Wingman +0.3 per wing, Fuel Hauler +0.4 per tank) stack strongly with big builds.
 
+## Legal
+- `client/public/imprint-and-privacy-policy.html` (served at /imprint-and-privacy-policy, linked as Imprint and Privacy in the title footer): German imprint (§ 5 DDG) and GDPR privacy policy for Thomas Wicke. Keep the privacy part in sync when the game starts storing anything new (it lists: Cloudflare hosting, local storage keys, guest accounts with session IP/user agent, link codes, rate-limit IP counters, run telemetry with the random device id, daily leaderboard nicknames, room nicknames and positions).
+
 ## Accounts and cloud saves
 - Every player is a guest account (no personal data). The game signs in on first start, keeps the token in localStorage (`rogueflight-auth`) and uploads the save (`meta`, `run`, `daily`; not rooms) a few seconds after each change and when the app goes to the background. On start the newer copy wins (device `save.t` vs server `t`; `save.cloud.rev` guards overwrites). The Profile card on the title (name with an edit button, avatar) has a settings button that opens "Your progress": the sync state, "Use on another device" makes a link code, "Enter a code" takes that account's progress onto this device.
 - On iPhones a home-screen app and Safari have separate storage, and deleting the home-screen app deletes its storage: the cloud save plus a link code is how progress survives that.

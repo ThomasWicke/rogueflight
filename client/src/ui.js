@@ -162,7 +162,8 @@ function renderTitle(){
     <dl class="stats"><dt>Runs</dt><dd>${m.runs}</dd><dt>Wins</dt><dd>${m.wins}</dd><dt>Most contracts in a run</dt><dd>${m.deepest||m.bestStage}</dd><dt>Best score</dt><dd>${fmt(m.bestFlight)}</dd>${m.level?`<dt>Highest Difficulty</dt><dd>${m.level}</dd>`:''}</dl>
     <div class="row" style="margin-top:12px"><span class="label">Unlocks</span><span class="hint">contracts in one run</span></div>
     <ul class="unl">${UNLOCKS.map(u=>{const d=m.bestStage>=u.at;return `<li class="${d?'done':''}"><i>${d?'\u2713':u.at}</i><span>${u.text}</span></li>`}).join('')}</ul></div>`;
-  h+=`<p class="ver">v${__VERSION__}</p></div>`;
+  const legal=homeURL('/imprint-and-privacy-policy');
+  h+=`<p class="ver">v${__VERSION__} · <a href="${legal}#imprint" target="_blank" rel="noopener">Imprint</a> · <a href="${legal}#privacy" target="_blank" rel="noopener">Privacy</a></p></div>`;
   $('titleBody').innerHTML=h;
   startTitleScene();
   $('howto').onclick=openGuide;
