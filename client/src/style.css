@@ -256,19 +256,21 @@ button:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
 .pk-back:nth-child(1){transform:translate(-14px,10px) rotate(-8deg)}
 .pk-back:nth-child(2){transform:translate(14px,8px) rotate(7deg)}
 .pk-layer{position:absolute;inset:0}
-.pk-face{position:absolute;inset:0;overflow:hidden;background-color:var(--wood);
-  background-image:linear-gradient(rgba(34,40,58,.0) 0 0),repeating-linear-gradient(0deg,transparent 0 34px,rgba(34,40,58,.55) 34px 36px),repeating-linear-gradient(90deg,rgba(138,84,40,.0) 0 22px,rgba(138,84,40,.25) 22px 23px),var(--grain);
-  background-size:auto,auto,auto,160px 160px;box-shadow:inset 0 0 0 3px var(--ink),inset 0 0 0 11px var(--wood2),inset 0 0 0 13px var(--ink)}
-/* lid seam and nails */
-.pk-face::before{content:"";position:absolute;left:0;right:0;top:32px;height:4px;background:var(--ink)}
-.pk-face::after{content:"";position:absolute;inset:6px;background:radial-gradient(circle,var(--ink) 1.6px,transparent 2px) 0 0/100% 100%;
-  -webkit-mask:radial-gradient(circle at 4px 4px,#000 3px,transparent 3.5px),radial-gradient(circle at calc(100% - 4px) 4px,#000 3px,transparent 3.5px),radial-gradient(circle at 4px calc(100% - 4px),#000 3px,transparent 3.5px),radial-gradient(circle at calc(100% - 4px) calc(100% - 4px),#000 3px,transparent 3.5px);
-  mask:radial-gradient(circle at 4px 4px,#000 3px,transparent 3.5px),radial-gradient(circle at calc(100% - 4px) 4px,#000 3px,transparent 3.5px),radial-gradient(circle at 4px calc(100% - 4px),#000 3px,transparent 3.5px),radial-gradient(circle at calc(100% - 4px) calc(100% - 4px),#000 3px,transparent 3.5px)}
-.pk-brace{position:absolute;left:4%;right:4%;top:50%;height:16px;margin-top:8px;background:var(--wood2);border-block:3px solid var(--ink);transform:rotate(-40deg)}
-.pk-band{position:absolute;left:20%;right:20%;top:112px;height:30px;background:var(--paper);color:var(--red);border:3px solid var(--ink);
-  font-family:var(--display);font-size:17px;letter-spacing:.14em;display:grid;place-items:center;transform:rotate(-2deg);box-shadow:2px 2px 0 rgba(34,40,58,.4)}
-.pk-mark{position:absolute;left:50%;top:46px;width:58px;height:58px;margin-left:-29px;border-radius:50%;border:3px solid var(--ink);background:var(--brass);
-  display:grid;place-items:center;font-family:var(--display);font-size:38px;color:var(--ink);line-height:1;box-shadow:2px 2px 0 rgba(34,40,58,.4)}
+.pk-face{position:absolute;inset:0;overflow:hidden;border-radius:5px;background-color:#c69c63;
+  background-image:linear-gradient(118deg,transparent 46%,rgba(34,40,58,.10) 47%,transparent 49%),linear-gradient(64deg,transparent 60%,rgba(255,255,255,.12) 61%,transparent 64%),var(--grain);
+  background-size:auto,auto,160px 160px;box-shadow:inset 0 0 0 3px var(--ink),inset -10px -10px 0 rgba(34,40,58,.12)}
+/* rare: purple paper with brass corner caps */
+.pk-face.rare{background-color:#7a4fa0;
+  background-image:linear-gradient(135deg,#e9a93b 0 17px,#22283a 17px 20px,transparent 20px),linear-gradient(225deg,#e9a93b 0 17px,#22283a 17px 20px,transparent 20px),linear-gradient(315deg,#e9a93b 0 17px,#22283a 17px 20px,transparent 20px),linear-gradient(45deg,#e9a93b 0 17px,#22283a 17px 20px,transparent 20px),linear-gradient(64deg,transparent 60%,rgba(255,255,255,.14) 61%,transparent 64%),var(--grain);
+  background-size:auto,auto,auto,auto,auto,160px 160px}
+/* the string, crossed under the seal */
+.pk-str{position:absolute;background:#efe0b8;border:2px solid var(--ink)}
+.pk-str.v{top:-3px;bottom:-3px;left:50%;width:10px;margin-left:-5px;border-block:0}
+.pk-str.h{left:-3px;right:-3px;top:58%;height:10px;margin-top:-5px;border-inline:0}
+.pk-seal{position:absolute;left:50%;top:58%;width:58px;height:58px;margin:-29px 0 0 -29px;border-radius:47% 53% 50% 48%/52% 46% 54% 48%;
+  background:#d2402f;border:3px solid var(--ink);color:#7d1f16;display:grid;place-items:center;
+  box-shadow:inset 0 0 0 5px #b8341f,inset 2px 3px 0 6px rgba(255,255,255,.18),2px 3px 0 rgba(34,40,58,.35)}
+.pk-seal svg{width:34px;height:34px}
 .pk-sheen{position:absolute;inset:0;background:linear-gradient(105deg,transparent 38%,rgba(255,255,255,.3) 50%,transparent 62%);background-size:300% 100%;animation:pk-sheen 2.8s ease-in-out infinite}
 .pk-hint{position:absolute;bottom:4%;font-family:var(--display);font-size:14px;letter-spacing:.1em;color:var(--paper);text-shadow:2px 2px 0 var(--ink);animation:pulse 1.6s ease-in-out infinite;pointer-events:none}
 .pk-reveal{display:grid;justify-items:center;gap:6px;pointer-events:none}
@@ -333,9 +335,9 @@ button:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
 .gr-flights{display:flex;justify-content:space-between;align-items:center}
 .gr-packs{display:flex;align-items:center;justify-content:center;gap:12px}
 .gr-pack{position:relative;width:66px;height:94px;border-radius:4px;overflow:hidden;transform:rotate(-6deg);border:2px solid var(--ink);box-shadow:3px 3px 0 var(--ink)}
-.gr-pack .pk-face{box-shadow:inset 0 0 0 2px var(--ink),inset 0 0 0 6px var(--wood2),inset 0 0 0 7px var(--ink)}.gr-pack .pk-face::before{top:14px;height:2px}.gr-pack .pk-face::after{display:none}.gr-pack .pk-brace{height:7px;border-width:2px}
-.gr-pack .pk-mark{top:24px;width:28px;height:28px;margin-left:-14px;font-size:16px;border-width:2px}
-.gr-pack .pk-band{top:62px;height:14px;font-size:8px;letter-spacing:.1em;border-width:2px}
+.gr-pack .pk-face{box-shadow:inset 0 0 0 2px var(--ink),inset -5px -5px 0 rgba(34,40,58,.12)}
+.gr-pack .pk-str.v{width:6px;margin-left:-3px;border-width:1.5px}.gr-pack .pk-str.h{height:6px;margin-top:-3px;border-width:1.5px}
+.gr-pack .pk-seal{width:24px;height:24px;margin:-12px 0 0 -12px;border-width:2px;box-shadow:inset 0 0 0 3px #b8341f}
 .gr-arrow{width:36px;height:18px;fill:none;stroke:var(--paper);stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
 .gr-four{display:grid;grid-template-columns:repeat(2,40px);gap:6px}
 .gr-four img,.gr-four span{width:40px;height:40px;border-radius:6px;background:var(--paper);border:2px solid var(--ink)}
@@ -741,3 +743,6 @@ body.offline::after{content:"Reconnecting…";position:fixed;left:50%;top:calc(v
 .hmods{display:flex;flex-wrap:wrap;gap:4px}
 .hmods img{width:34px;height:34px}
 .hentry .hint{margin:0}
+
+/* storm pictograms next to storm names */
+.wxi{width:1.15em;height:1.15em;vertical-align:-.22em;margin-right:.3em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}

@@ -65,6 +65,23 @@ function silhouette(ctx,v,shape,color,base,height,par,seed){
   }
 }
 
+/* ---------- painted layers (sprite test, 0.8.1) ----------
+   A biome may swap its two code-drawn hill silhouettes for painted sprite layers (generated concept art, cut out with
+   tools/art/key_layer.py). They are anchored to the ground line in screen pixels like the silhouettes, scroll at the same
+   parallax speeds and repeat mirrored, so the seams always match. Until an image has loaded, the silhouette is drawn. */
+// URLs written out literally so Vite bundles the files (it only rewrites static new URL('...', import.meta.url) calls)
+const LAYERS={meadow:{far:new URL('./assets/meadow-far.webp',import.meta.url).href,near:new URL('./assets/meadow-near.webp',import.meta.url).href}};
+const SPR={};
+if(typeof Image!=='undefined')for(const k in LAYERS){SPR[k]={};for(const l in LAYERS[k]){const im=new Image();im.decoding='async';im.src=LAYERS[k][l];SPR[k][l]=im}}
+const ready=im=>im&&im.complete&&im.naturalWidth>0;
+function paintedLayer(ctx,v,im,h,par){
+  const gy=v.Y(0),w=h*im.naturalWidth/im.naturalHeight,off=v.camX*v.sc*par,k=Math.floor(off/w);
+  for(let i=0,x=-(off-k*w);x<v.vw;i++,x+=w){
+    if((k+i)&1){ctx.save();ctx.translate(x+w,0);ctx.scale(-1,1);ctx.drawImage(im,0,gy-h+3,w,h);ctx.restore()}
+    else ctx.drawImage(im,x,gy-h+3,w,h);
+  }
+}
+
 /* ---------- props (world space, meters; y up from the ground) ---------- */
 // each prop is drawn in local meters with y down and the ground at y=0; lw keeps the ink line constant on screen
 function cow(g,lw,t,k){
@@ -217,6 +234,22 @@ function clouds(ctx,v,b,night){
 }
 
 /* ---------- thermals: shimmering columns with a hawk riding them ---------- */
+// above about 4 km a sea of cloud tops (at 3.6 km) rolls in below the craft (Cloud nine is at 5 km); it fades in with altitude and
+// hides the ground. Puffs sit at fixed world positions, sized in meters, so they scroll and zoom like the world.
+function cloudSea(ctx,v){
+  const alt=v.camY;if(alt<3900)return;
+  const a=clamp((alt-3900)/800,0,1),top=v.Y(3600);if(top>v.vh+40)return;
+  const step=260,k0=Math.floor(v.left/step)-2,k1=Math.ceil(v.right/step)+2;
+  ctx.save();ctx.globalAlpha=a;
+  // body: a soft band from the cloud tops down off the screen
+  const g=ctx.createLinearGradient(0,top,0,Math.min(v.vh,top+v.vh*.5));g.addColorStop(0,'#fbf5e8');g.addColorStop(1,'#d9dfe6');
+  ctx.fillStyle=g;ctx.fillRect(0,top+8,v.vw,v.vh-top);
+  ctx.fillStyle='#fbf5e8';ctx.strokeStyle=INK;ctx.lineWidth=2.5;
+  for(const pass of [0,1])for(let k=k0;k<=k1;k++){const h=hs(k*4.1+9),r=(150+h*230)*v.sc,x=v.X(k*step+hs(k*1.7)*120),y=top+18*v.sc+(1-h)*60*v.sc;
+    ctx.beginPath();ctx.arc(x,y,r,Math.PI,0);if(pass)ctx.fill();else ctx.stroke()}
+  ctx.fillRect(0,top+30*v.sc,v.vw,v.vh);
+  ctx.restore();
+}
 function thermals(ctx,v,st){
   const {X,Y,sc,left,right,now}=v, gy=Y(0);
   if((right-left)/120>300)return;
@@ -273,8 +306,11 @@ function drawWorld(ctx,v){
   stormFx(ctx,v,v.st,v.wx);
   const gy=v.Y(0);
   if(gy<v.vh+260){
-    silhouette(ctx,v,b.far[1],grey?mix(b.far[0],'#8a96a6',grey*.6):b.far[0],70,90,.05,1.3);
-    silhouette(ctx,v,b.near[1],grey?mix(b.near[0],'#7a8696',grey*.5):b.near[0],34,50,.12,4.1);
+    const sp=SPR[b.name];
+    if(sp&&ready(sp.far))paintedLayer(ctx,v,sp.far,clamp(v.vh*.3,110,250),.05);
+    else silhouette(ctx,v,b.far[1],grey?mix(b.far[0],'#8a96a6',grey*.6):b.far[0],70,90,.05,1.3);
+    if(sp&&ready(sp.near))paintedLayer(ctx,v,sp.near,clamp(v.vh*.26,90,215),.12);
+    else silhouette(ctx,v,b.near[1],grey?mix(b.near[0],'#7a8696',grey*.5):b.near[0],34,50,.12,4.1);
     if(night){ // lit windows in the near skyline
       ctx.fillStyle='rgba(255,215,122,.8)';for(let i=0;i<40;i++){const x=((hs(i*5.7)*v.vw*1.5-v.camX*v.sc*.12)%(v.vw+40)+v.vw+40)%(v.vw+40)-20,y=gy-10-hs(i*2.9)*48;ctx.fillRect(x,y,3,4)}}
     // ground: two bands with grass tufts along the edge
@@ -294,6 +330,7 @@ function drawWorld(ctx,v){
     if(v.targets)targets(ctx,v);
   }
   thermals(ctx,v,v.st);
+  cloudSea(ctx,v);
 }
 // the grain over everything (call last, before the HUD)
 function drawGrain(ctx,vw,vh){ctx.fillStyle=halftonePattern(ctx);ctx.fillRect(0,0,vw,vh)}

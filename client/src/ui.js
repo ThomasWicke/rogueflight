@@ -243,6 +243,15 @@ $('dealerX').onclick=$('dealerScrim').onclick=()=>setTab('build');
 $('dtShop').onclick=()=>setTab('shop');$('dtMods').onclick=()=>setTab('mods');
 // turning a tablet or resizing the window: re-dock (going narrow closes the drawer)
 WIDE.addEventListener('change',()=>{if($('hangar').hidden)return;if(!WIDE.matches){tab='build';dealer.classList.remove('open');dealer.hidden=true}setTab(tab)});
+// one small pictogram per storm, drawn in the text colour
+const WXI={headwind:'<path d="M3 8h11a3 3 0 1 0-3-3M3 13h15a3 3 0 1 1-3 3M3 18h7"/>',
+  ceiling:'<path d="M7 14.5a4 4 0 0 1 .4-8A5 5 0 0 1 17 8a3.3 3.3 0 0 1 0 6.5z"/><path d="M12.5 15l-2.2 3.6h3L11 22"/>',
+  thin:'<path d="M2.5 19l6.5-10 4 6 2.5-3.2L21.5 19z"/><path d="M5 5h.01M10 3.5h.01M17 5.5h.01"/>',
+  gusts:'<path d="M3 9c2.5-3.5 5 3.5 7.5 0s5 3.5 7.5 0c1-1.4 2-1.4 3 0M3 15.5c2.5-3.5 5 3.5 7.5 0s5 3.5 7.5 0"/>',
+  cargo:'<path d="M3.5 6.5h17v11h-17z"/><path d="M3.5 7l8.5 6 8.5-6"/>',
+  ration:'<path d="M7 4h7l4 4v12.5H7z"/><path d="M7 13.5h11"/><path d="M10 7.5h4"/>',
+  short:'<path d="M3 19.5l8.5-7M14 10.5l2.5-2"/><path d="M3 19.5h18M6 19.5v-2"/>'};
+const wxIcon=id=>WXI[id]?`<svg class="wxi" viewBox="0 0 24 24" aria-hidden="true">${WXI[id]}</svg>`:'';
 function wxLine(id,s){return `<div class="wx"><b>${WEATHER[id].name}</b>${WEATHER[id].d(s)}</div>`}
 // the season's route: eight towns along a dashed road, storm clouds over stormy towns (all forecast from the start, so
 // builds can plan for them), done towns ticked, the plane over the current one
@@ -256,10 +265,10 @@ function routeStrip(r){
     if(done)h+=`<path d="M${x(i)-3} ${y(i)}l2.4 2.6 4.4-5" class="rtick"/>`;
     if(w)h+=`<g class="rcloud" transform="translate(${x(i)} ${y(i)-15})"><title>${WEATHER[w].name}: ${WEATHER[w].d(severity(r,i))}</title><path d="M-8 3a4 4 0 0 1 2-7a5 5 0 0 1 9-1a4 4 0 0 1 5 5a3 3 0 0 1-1 3z"/><path d="M-1 4l-2 5 3-1-1 4" class="rbolt"/></g>`;}
   // tap the route to see what the storms are (phones have no hover)
-  const names=[];for(let i=r.stage;i<n;i++){const w=weatherOf(r,i);if(w)names.push(`<b>${i+1}</b> ${WEATHER[w].name}: ${WEATHER[w].d(severity(r,i))}`)}
+  const names=[];for(let i=r.stage;i<n;i++){const w=weatherOf(r,i);if(w)names.push(`<b>${i+1}</b> ${wxIcon(w)}${WEATHER[w].name}: ${WEATHER[w].d(severity(r,i))}`)}
   return `<svg class="route" viewBox="0 0 ${W} 40" role="button" tabindex="0" aria-label="Route: contract ${r.stage+1} of ${n}. Tap for storms">${h}</svg>${names.length?`<div class="pnext" hidden>${names.join('<br>')}</div>`:''}`;
 }
-function forecast(r){const out=[];for(let i=r.stage+1;i<CONTRACTS;i++){const w=weatherOf(r,i);if(w)out.push(`<span title="${WEATHER[w].d(severity(r,i))}"><b>${i+1}</b>${WEATHER[w].name}</span>`)}
+function forecast(r){const out=[];for(let i=r.stage+1;i<CONTRACTS;i++){const w=weatherOf(r,i);if(w)out.push(`<span title="${WEATHER[w].d(severity(r,i))}"><b>${i+1}</b>${wxIcon(w)}${WEATHER[w].name}</span>`)}
   return out.length?`<div class="fcast">${out.join('')}</div>`:''}
 // the show poster: town, which show of the season, the crowd target with a thermometer, ticket stubs for flights left
 function renderStrip(){
@@ -269,7 +278,7 @@ function renderStrip(){
     $('cstrip').innerHTML=`<div class="prow"><div class="ptown"><small>${r.ranked?'Daily #'+r.day:'Random puzzle'}</small>${t.town}</div>${stubs}</div><div class="cbar"><i style="transform:scaleX(0)"></i><span>Score ${fmt(r.score)}</span></div>`;return}
   const sub=`Contract ${r.stage+1}${r.endless?' · endless':' of '+CONTRACTS}`;
   const stubs=`<span class="fpips" aria-label="${FLIGHTS-r.flight} flights left">${Array.from({length:FLIGHTS},(_,i)=>`<i class="${i<r.flight?'used':''}"></i>`).join('')}</span>`;
-  const storm=w?`<div class="pstorm"><b>${WEATHER[w].name}</b>${WEATHER[w].d(severity(r,r.stage))}</div>`:'';
+  const storm=w?`<div class="pstorm"><b>${wxIcon(w)}${WEATHER[w].name}</b>${WEATHER[w].d(severity(r,r.stage))}</div>`:'';
   const p=r.phase==='shop'?0:Math.min(1,r.score/q);
   $('cstrip').innerHTML=`<div class="prow"><div class="ptown">${r.phase==='shop'?'<small>Next</small>':''}${t.town}</div>${r.phase==='shop'?'':stubs}</div>
     <div class="cbar"><i style="transform:scaleX(${p})"></i><span>Score ${r.phase==='shop'?'target '+fmt(q):fmt(r.score)+' / '+fmt(q)}</span></div>${storm}${routeStrip(r)}`;
@@ -506,8 +515,11 @@ const PW=178,PH=164,CAP=34,TEAR=3;
 const zig=(n,y0,y1)=>Array.from({length:n+1},(_,i)=>`${PW*i/n}px ${i%2?y1:y0}px`);
 const CLIP_CAP=`polygon(${[...zig(2,0,0),...zig(10,CAP,CAP+TEAR).reverse()].join(',')})`;
 const CLIP_BODY=`polygon(${[...zig(10,CAP,CAP+TEAR),...zig(2,PH,PH).reverse()].join(',')})`;
-const FACE='<div class="pk-face"><div class="pk-brace"></div><div class="pk-mark">?</div><div class="pk-band">PARTS</div><div class="pk-sheen"></div></div>';
-const packLayers=()=>`<div class="pk-layer pk-cap" style="clip-path:${CLIP_CAP};-webkit-clip-path:${CLIP_CAP}">${FACE}</div><div class="pk-layer pk-body" style="clip-path:${CLIP_BODY};-webkit-clip-path:${CLIP_BODY}">${FACE}</div>`;
+// a parcel in kraft paper tied with string, closed with a red wax seal stamped with the goat; a rare part comes in
+// purple paper with brass corners (packs are rolled when granted, so the wrapping can show it)
+const SEAL='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.2 7.5C6.5 5 6.8 2.6 8.6 2.4c1 0 1.2 1.6 1.1 3.6M15.8 7.5c1.7-2.5 1.4-4.9-.4-5.1-1 0-1.2 1.6-1.1 3.6" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><path d="M4.6 9.6l3.5.7M19.4 9.6l-3.5.7" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/><path d="M7.8 8.3h8.4l-1 7.6c-.5 3.1-5.9 3.1-6.4 0z" fill="currentColor"/><path d="M10.4 18.6l1.6 3 1.6-3z" fill="currentColor"/></svg>';
+const FACE=rare=>`<div class="pk-face${rare?' rare':''}"><i class="pk-str v"></i><i class="pk-str h"></i><div class="pk-seal">${SEAL}</div><div class="pk-sheen"></div></div>`;
+const packLayers=rare=>`<div class="pk-layer pk-cap" style="clip-path:${CLIP_CAP};-webkit-clip-path:${CLIP_CAP}">${FACE(rare)}</div><div class="pk-layer pk-body" style="clip-path:${CLIP_BODY};-webkit-clip-path:${CLIP_BODY}">${FACE(rare)}</div>`;
 let PK=null;
 const pkStage=$('pkStage'), pkTray=$('pkTray');
 const ms=t=>reduceMotion()?1:t;
@@ -521,10 +533,10 @@ function showPacks(){
   dealPack();
 }
 function dealPack(){
-  const left=R().packs.length;
+  const P=R().packs,left=P.length;
   pkStage.className='pk-stage';
   pkStage.innerHTML=`<div class="pk-rays"><i></i></div><div class="pk-glow"></div>
-    <div class="pk-pile">${Array.from({length:Math.min(2,left-1)},()=>`<div class="pk-back">${packLayers()}</div>`).join('')}<button class="pack" type="button" aria-label="Open pack">${packLayers()}</button></div>
+    <div class="pk-pile">${Array.from({length:Math.min(2,left-1)},(_,i)=>`<div class="pk-back">${packLayers(isRare(P[i+1]))}</div>`).join('')}<button class="pack" type="button" aria-label="${isRare(P[0])?'Open rare pack':'Open pack'}">${packLayers(isRare(P[0]))}</button></div>
     <div class="pk-reveal" hidden><img alt=""><h3></h3><small></small></div>
     <span class="pk-hint">TAP</span><div class="pk-flash"></div>`;
   anim(pkStage.querySelector('.pk-pile'),[{transform:'translateY(-60px) scale(.8)',opacity:0},{transform:'none',opacity:1}],{duration:420,easing:'cubic-bezier(.2,1.5,.4,1)'});
@@ -640,7 +652,7 @@ function startFlight(o={}){
   ctl.pitch=0;ctl.boost=false;
   show('flight');setThr(1);$('thr').style.visibility=(K.counts.rocket||K.counts.prop)?'visible':'hidden';$('bPop').style.visibility=K.counts.balloon?'visible':'hidden';
   $('toast').innerHTML='';$('toast').style.opacity=0;syncFF();
-  const fw=$('fWx');fw.hidden=!w;if(w)fw.textContent='Storm · '+WEATHER[w].name;
+  const fw=$('fWx');fw.hidden=!w;if(w)fw.innerHTML=wxIcon(w)+'Storm · '+WEATHER[w].name;
   resize();F.cam.sc=vh/40;
   try{navigator.wakeLock&&navigator.wakeLock.request('screen').catch(()=>{})}catch(_){}
   sfx('creak',{amount:1});
@@ -723,7 +735,7 @@ function pilotMood(){
   const S=F.S,v=Math.hypot(S.vx,S.vy),t=performance.now()/1000;
   if(S.crashed)return 'crash';
   if(F.pre>0)return 'focus';
-  if(S.done)return S.landed?'cheer':'sad';
+  if(S.done)return S.landed?'bow':'sad';
   if(F.loopT&&t-F.loopT<1.6&&S.loops>=2)return 'dizzy';
   if((F.cheer||0)>.5)return 'cheer';
   if(!S.touch&&((v<11&&S.vy<-4)||(S.y<14&&S.vy<-11)))return 'scared';
@@ -787,7 +799,14 @@ function draw(now){
     ctx.fillStyle=p.k==='fire'?`rgba(255,${Math.round(140+100*p.life)},60,${p.life})`:p.k==='debris'?`rgba(90,70,50,${p.life})`:p.k==='pop'?`rgba(255,90,78,${p.life})`:p.k==='gold'?`rgba(255,196,60,${p.life})`:`rgba(240,240,240,${p.life*.5})`;
     ctx.beginPath();ctx.arc(px,py,r,0,7);ctx.fill()}
   const cx=X(S.x),cy=Y(S.y);
-  if(F.boom>=0){F.boom+=1/60;const R2=20+F.boom*260;ctx.strokeStyle=`rgba(255,255,255,${Math.max(0,1-F.boom*1.6)})`;ctx.lineWidth=3;ctx.beginPath();ctx.arc(cx,cy,R2,0,7);ctx.stroke();if(F.boom>.7)F.boom=-1}
+  // Redline: a brass shockwave with a white ring behind it and speed streaks flying out
+  if(F.boom>=0){F.boom+=1/60;const b=F.boom,R2=24+b*340,a=Math.max(0,1-b*1.3);
+    ctx.save();ctx.lineCap='round';
+    ctx.strokeStyle=`rgba(233,169,59,${a})`;ctx.lineWidth=Math.max(1,9*(1-b));ctx.beginPath();ctx.arc(cx,cy,R2,0,7);ctx.stroke();
+    ctx.strokeStyle=`rgba(255,250,235,${a*.8})`;ctx.lineWidth=3;ctx.beginPath();ctx.arc(cx,cy,R2*.72,0,7);ctx.stroke();
+    ctx.strokeStyle=`rgba(255,236,190,${a})`;ctx.lineWidth=2.5;ctx.beginPath();
+    for(let i=0;i<14;i++){const ang=i/14*6.283+.2,r0=R2*.8,r1=R2*1.15;ctx.moveTo(cx+Math.cos(ang)*r0,cy+Math.sin(ang)*r0);ctx.lineTo(cx+Math.cos(ang)*r1,cy+Math.sin(ang)*r1)}
+    ctx.stroke();ctx.restore();if(b>.8)F.boom=-1}
   if(F.debris)drawDebris(X,Y,sc,now);
   if(list)drawFlyers(list,X,Y,sc,now,fo);
   if(!S.crashed&&!F.watch){

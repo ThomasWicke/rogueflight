@@ -18,6 +18,10 @@ const INK = '#22283a', PAPER2 = '#e6d4ae', CANVAS = '#fbf5e8',
 const FUR = '#f9f2e4', FUR2 = '#e5d4b4', HORN = '#dcc59a', HORN2 = '#b59c6e',
   LEATHER = '#7d4a2a', LEATHER2 = '#5a331d', PINK = '#ec9c8c', MOUTH = '#5e2230',
   GLASS_DARK = '#2e3650', TAPE = '#d9d8cb', SOOT = 'rgba(34,40,58,.42)';
+// accent colours a part is drawn with: red trim, wooden crate, tin tank. Rare parts swap them for purple enamel, pale
+// balsa and copper for the duration of one drawPart call (see drawPart), so every part shares one rare look.
+const ENAMEL = '#7a4fa0', BALSA = '#e3c48f', COPPER = '#d08a4e';
+let ACC = RED, CRATE = WOOD, TANKC = TIN;
 const SHADE = 'rgba(34,40,58,.17)', SHADE2 = 'rgba(34,40,58,.32)', HI = 'rgba(255,255,255,.5)';
 
 // constant dash patterns (no per-frame allocation)
@@ -76,10 +80,11 @@ function mount(g, x, y, w, h, lw, c) {
 // stay legible), o.frac fuel 0..1 (tank), o.on engine firing (prop blur / rocket flame), o.mood (cockpit).
 export function drawPart(g, type, t, o) {
   o = o || {}; t = t || 0;
-  // rare variants ('wing+' or o.rare): the same part with a brass sparkle in the corner
+  // rare variants ('wing+' or o.rare): purple enamel trim, balsa crate or copper tank, plus a brass sparkle in the corner
   let rare = !!o.rare; if (type && type.endsWith('+')) { type = type.slice(0, -1); rare = true; }
   const lw = Math.min(o.lw || .05, .12), fine = lw < .075; // fine = enough pixels (>~33 px/cell) for grain, stitches, rivets
   g.save(); g.lineJoin = 'round'; g.lineCap = 'round'; ink(g, lw);
+  if (rare) { ACC = ENAMEL; CRATE = BALSA; TANKC = COPPER; }
   switch (type) {
     case 'cockpit': cockpit(g, t, lw, fine, o.mood || 'idle'); break;
     case 'frame': frame(g, lw, fine); break;
@@ -90,6 +95,7 @@ export function drawPart(g, type, t, o) {
     case 'balloon': balloon(g, lw, fine); break;
   }
   if (rare) rareMark(g, lw);
+  ACC = RED; CRATE = WOOD; TANKC = TIN;
   g.restore();
 }
 // a four-point brass sparkle at the top right of the cell, outlined in ink so it reads on any part
@@ -106,7 +112,7 @@ function rareMark(g, lw) {
 function crateOutline(g) { g.beginPath(); g.moveTo(-.5, -.49); g.lineTo(.495, -.5); g.lineTo(.5, .495); g.lineTo(-.495, .5); g.closePath(); }
 const CX0 = -.31, CY0 = -.31, CX1 = .32, CY1 = .325; // inner opening of the crate
 function frame(g, lw, fine) {
-  crateOutline(g); g.fillStyle = WOOD; g.fill();
+  crateOutline(g); g.fillStyle = CRATE; g.fill();
   // rim shading: bottom and right boards darker, top edge highlight
   g.save(); crateOutline(g); g.clip();
   g.fillStyle = SHADE; g.beginPath(); g.moveTo(.5, -.5); g.lineTo(CX1, CY0); g.lineTo(CX1, CY1); g.lineTo(CX0, CY1); g.lineTo(-.5, .5); g.lineTo(.5, .5); g.closePath(); g.fill();
@@ -119,7 +125,7 @@ function frame(g, lw, fine) {
   g.fillStyle = SHADE2; g.fillRect(CX0, CY0, CX1 - CX0, .07); g.fillRect(CX0, CY0, .06, CY1 - CY0); // rim casts shade inside
   // diagonal brace, bottom-left to top-right
   g.beginPath(); g.moveTo(CX0 - .2, CY1 + .12); g.lineTo(CX1 + .12, CY0 - .2); g.lineTo(CX1 + .2, CY0 - .12); g.lineTo(CX0 - .12, CY1 + .2); g.closePath();
-  g.fillStyle = WOOD; g.fill(); ink(g, lw); g.stroke();
+  g.fillStyle = CRATE; g.fill(); ink(g, lw); g.stroke();
   g.fillStyle = SHADE; g.beginPath(); g.moveTo(CX0 - .15, CY1 + .17); g.lineTo(CX1 + .17, CY0 - .15); g.lineTo(CX1 + .2, CY0 - .12); g.lineTo(CX0 - .12, CY1 + .2); g.closePath(); g.fill();
   if (fine) { detail(g, WOOD2, lw * .45); grain(g, CX0 + .05, CY1 - .03, CX1 - .12, .03); }
   g.restore();
@@ -145,7 +151,7 @@ function tank(g, lw, fine, frac) {
   // brass filler cap at the top right (behind the body)
   rr(g, .18, -.47, .17, .1, .03); fillStroke(g, BRASS);
   if (fine) { detail(g, 'rgba(255,255,255,.7)', lw * .5); seg(g, .21, -.45, .27, -.45); ink(g, lw); }
-  tankBody(g); g.fillStyle = TIN; g.fill();
+  tankBody(g); g.fillStyle = TANKC; g.fill();
   g.save(); g.clip();
   g.fillStyle = SHADE; g.fillRect(.28, -.5, .3, 1); g.fillRect(-.5, .3, 1, .2);
   g.fillStyle = HI; g.fillRect(-.37, -.4, .065, .7);
@@ -206,7 +212,7 @@ function wing(g, lw, fine) {
   g.save(); g.clip();
   // shade along the lower surface, red leading-edge band (slightly tilted)
   g.fillStyle = PAPER2; g.beginPath(); g.moveTo(-.5, -.13); g.bezierCurveTo(-.2, -.12, .2, -.13, .5, -.15); g.lineTo(.5, 0); g.lineTo(-.5, 0); g.closePath(); g.fill();
-  g.fillStyle = RED; g.beginPath(); g.moveTo(.25, -.4); g.lineTo(.6, -.4); g.lineTo(.6, 0); g.lineTo(.29, 0); g.closePath(); g.fill();
+  g.fillStyle = ACC; g.beginPath(); g.moveTo(.25, -.4); g.lineTo(.6, -.4); g.lineTo(.6, 0); g.lineTo(.29, 0); g.closePath(); g.fill();
   g.fillStyle = SHADE; g.beginPath(); g.moveTo(.29, -.14); g.bezierCurveTo(.36, -.15, .4, -.17, .6, -.2); g.lineTo(.6, 0); g.lineTo(.29, 0); g.closePath(); g.fill();
   // highlight along the top
   detail(g, 'rgba(255,255,255,.9)', lw * .7); g.beginPath(); g.moveTo(-.18, -.2); g.bezierCurveTo(-.05, -.25, .06, -.26, .17, -.26); g.stroke();
@@ -247,7 +253,7 @@ function prop(g, t, lw, fine, on) {
   g.save(); g.clip();
   g.fillStyle = SHADE; g.fillRect(-.5, .08, 1, .2);
   g.fillStyle = HI; g.fillRect(-.5, -.17, 1, .05);
-  g.fillStyle = RED; g.fillRect(.02, -.25, .1, .5); // cowl band
+  g.fillStyle = ACC; g.fillRect(.02, -.25, .1, .5); // cowl band
   g.fillStyle = SHADE; g.fillRect(.02, .08, .1, .2);
   if (fine) { detail(g, 'rgba(34,40,58,.5)', lw * .6); for (let x = -.33; x < -.05; x += .08) seg(g, x, -.13, x, .13); }
   g.restore();
@@ -269,7 +275,7 @@ function prop(g, t, lw, fine, on) {
   } else { blade(g, hx, -.41, lw, fine); blade(g, hx, .41, lw, fine); }
   // spinner
   g.beginPath(); g.moveTo(.28, -.1); g.quadraticCurveTo(.44, -.075, .455, 0); g.quadraticCurveTo(.44, .075, .28, .1); g.closePath();
-  fillStroke(g, RED);
+  fillStroke(g, ACC);
   dot(g, .34, -.05, .022, 'rgba(255,255,255,.7)');
 }
 
@@ -317,7 +323,7 @@ function rocket(g, t, lw, fine, on) {
   // paper tube with tilted red stripes
   tube(g); g.fillStyle = CANVAS; g.fill();
   g.save(); g.clip();
-  g.fillStyle = RED;
+  g.fillStyle = ACC;
   for (let x = -.42; x < .3; x += .17) { g.beginPath(); g.moveTo(x, .2); g.lineTo(x + .07, .2); g.lineTo(x + .15, -.2); g.lineTo(x + .08, -.2); g.closePath(); g.fill(); }
   g.fillStyle = SHADE; g.fillRect(-.4, .06, .7, .14);
   g.fillStyle = HI; g.fillRect(-.4, -.14, .7, .04);
@@ -329,7 +335,7 @@ function rocket(g, t, lw, fine, on) {
   g.beginPath(); g.rect(.015, -.19, .09, .38); fillStroke(g, TIN);
   g.fillStyle = SHADE; g.fillRect(.015, .06, .09, .13); ink(g, lw); g.stroke();
   // nose cone, then the nose mount: a stub and a plate on the +x edge
-  cone(g); g.fillStyle = RED; g.fill();
+  cone(g); g.fillStyle = ACC; g.fill();
   g.save(); g.clip(); g.fillStyle = 'rgba(34,40,58,.2)'; g.fillRect(.2, .05, .3, .15); g.restore();
   ink(g, lw); cone(g); g.stroke();
   g.beginPath(); g.rect(.37, -.04, .09, .08); fillStroke(g, TIN2);
@@ -353,12 +359,12 @@ function balloon(g, lw, fine) {
   // string tied to a plate on the bottom edge (its only socket)
   detail(g, INK, lw * .55); g.beginPath(); g.moveTo(0, .3); g.quadraticCurveTo(-.06, .37, .01, .44); g.stroke();
   mount(g, -.08, .44, .16, .06, lw);
-  bal(g, .42); g.fillStyle = RED; g.fill();
+  bal(g, .42); g.fillStyle = ACC; g.fill();
   g.save(); g.clip();
   // gores: nested lenses alternate cream and red
   g.save(); g.translate(.02, 0);
   bal(g, .27); g.fillStyle = CANVAS; g.fill();
-  bal(g, .11); g.fillStyle = RED; g.fill();
+  bal(g, .11); g.fillStyle = ACC; g.fill();
   g.restore();
   // shade crescent on the lower right
   g.fillStyle = SHADE; g.beginPath(); g.rect(-.6, -.6, 1.2, 1.2);
@@ -401,6 +407,8 @@ function cockpit(g, t, lw, fine, mood) {
   // the goat, big: its face is the main feedback channel; shoulders hide behind the tub wall
   const s = .76;
   g.save(); g.translate(-.06, -.13); g.scale(s, s);
+  // after a clean landing the goat bows to the crowd: a slow nod forward and back, then a pause
+  if (mood === 'bow') { const k = Math.max(0, Math.sin(t * 2.4)); g.translate(0, .42); g.rotate(k * .5); g.translate(0, -.42); mood = 'grin'; }
   drawPilot(g, mood, t, { lw: lw / s * .85, scarf: .8, compact: true });
   g.restore();
   ink(g, lw);

@@ -10,7 +10,7 @@ const artRun = () => `<div class="gr-run">
   <div class="gr-pips">${Array.from({ length: 8 }, (_, i) => `<i class="${i < 2 ? 'done' : i === 2 ? 'now storm' : i === 5 || i === 7 ? 'storm' : ''}">${i + 1}</i>`).join('')}</div>
   <div class="gr-flights"><span class="label">Contract 3</span><span class="fpips"><i class="used"></i><i class="used"></i><i></i></span></div>
   <div class="cbar"><i style="transform:scaleX(.72)"></i><span>1,440 / 2,000</span></div></div>`;
-const artPacks = () => `<div class="gr-packs"><div class="gr-pack"><div class="pk-face"><div class="pk-brace"></div><div class="pk-mark">?</div><div class="pk-band">PARTS</div></div></div>
+const artPacks = () => `<div class="gr-packs"><div class="gr-pack"><div class="pk-face"><i class="pk-str v"></i><i class="pk-str h"></i><div class="pk-seal"></div></div></div>
   <svg class="gr-arrow" viewBox="0 0 40 20" aria-hidden="true"><path d="M2 10h30M26 4l8 6-8 6"/></svg>
   <div class="gr-four">${img('tank')}${img('wing')}${img('prop')}<span>?</span></div></div>
   <div class="gr-row"><span class="label">Contract 1</span><b>4 packs</b><span class="label">Then</span><b>1 per contract</b></div>`;

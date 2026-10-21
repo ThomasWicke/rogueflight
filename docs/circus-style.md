@@ -34,6 +34,8 @@ Design brief with the reasoning: https://claude.ai/artifact/Vcut2B3oqPzFQHH3y1YK
 | good | `#4fa35b` | success, "sold out" |
 | rare | `#7a4fa0` | rare enamel |
 
+Rare parts: purple enamel (`rare` #7a4fa0) replaces the red trim, the crate turns pale balsa, the tank copper, plus the brass sparkle.
+
 Rarity is encoded by **material and shape**, never color alone: common = paper decal (torn-edge rectangle),
 uncommon = tin plate (rounded rect with rivets), rare = enamel badge (shield/circle with brass rim).
 
