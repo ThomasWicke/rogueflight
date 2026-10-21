@@ -40,8 +40,18 @@ function halftonePattern(ctx){
 }
 
 /* ---------- silhouettes (screen space, parallax) ---------- */
+// Parallax offsets in screen pixels, advanced by how far the camera moved this frame at the current zoom. Computing them
+// as camX*sc*par directly made the layers slide backwards whenever the camera zoomed out faster than it moved forward
+// (a fast dive into a landing: the zoom follows the speed). A jump of more than a few screens (a new flight) resets them.
+const PAR={cam:null,off:{}};
+function parStep(v){
+  const dx=PAR.cam==null?Infinity:v.camX-PAR.cam;PAR.cam=v.camX;
+  if(!isFinite(dx)||Math.abs(dx*v.sc)>v.vw*4){PAR.off={};return}
+  for(const k in PAR.off)PAR.off[k]+=dx*v.sc*k;
+}
+const parOff=(v,par)=>PAR.off[par]??(PAR.off[par]=v.camX*v.sc*par);
 function silhouette(ctx,v,shape,color,base,height,par,seed){
-  const {vw}=v, gy=v.Y(0), off=v.camX*v.sc*par;
+  const {vw}=v, gy=v.Y(0), off=parOff(v,par);
   ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(-10,gy+2);
   const H=height;
   if(shape==='hills'||shape==='dunes'){
@@ -70,13 +80,37 @@ function silhouette(ctx,v,shape,color,base,height,par,seed){
    tools/art/key_layer.py --tile, which makes each strip repeat seamlessly). They are anchored to the ground line in screen
    pixels like the silhouettes, scroll at the same parallax speeds and repeat side by side. Until an image has loaded, the
    silhouette is drawn. */
-// URLs written out literally so Vite bundles the files (it only rewrites static new URL('...', import.meta.url) calls)
-const LAYERS={meadow:{far:new URL('./assets/meadow-far.webp',import.meta.url).href,near:new URL('./assets/meadow-near.webp',import.meta.url).href}};
+// URLs written out literally so Vite bundles the files (it only rewrites static new URL('...', import.meta.url) calls).
+// Images load per town on first use (preloadLayers when the hangar opens), not all at start.
+const LAYERS={
+  meadow:{far:new URL('./assets/meadow-far.webp',import.meta.url).href,near:new URL('./assets/meadow-near.webp',import.meta.url).href},
+  river:{far:new URL('./assets/river-far.webp',import.meta.url).href,near:new URL('./assets/river-near.webp',import.meta.url).href},
+  coast:{far:new URL('./assets/coast-far.webp',import.meta.url).href,near:new URL('./assets/coast-near.webp',import.meta.url).href},
+  canyon:{far:new URL('./assets/canyon-far.webp',import.meta.url).href,near:new URL('./assets/canyon-near.webp',import.meta.url).href},
+  orchard:{far:new URL('./assets/orchard-far.webp',import.meta.url).href,near:new URL('./assets/orchard-near.webp',import.meta.url).href},
+  mountains:{far:new URL('./assets/mountains-far.webp',import.meta.url).href,near:new URL('./assets/mountains-near.webp',import.meta.url).href},
+  city:{far:new URL('./assets/city-far.webp',import.meta.url).href,near:new URL('./assets/city-near.webp',import.meta.url).href},
+  night:{far:new URL('./assets/night-far.webp',import.meta.url).href,near:new URL('./assets/night-near.webp',import.meta.url).href},
+};
 const SPR={};
-if(typeof Image!=='undefined')for(const k in LAYERS){SPR[k]={};for(const l in LAYERS[k]){const im=new Image();im.decoding='async';im.src=LAYERS[k][l];SPR[k][l]=im}}
+function layersOf(name){
+  if(SPR[name]!==undefined)return SPR[name];
+  if(!LAYERS[name]||typeof Image==='undefined')return SPR[name]=null;
+  const o={};for(const l in LAYERS[name]){const im=new Image();im.decoding='async';im.src=LAYERS[name][l];o[l]=im}
+  return SPR[name]=o;
+}
+const preloadLayers=stage=>{layersOf(biomeOf(stage).name)};
 const ready=im=>im&&im.complete&&im.naturalWidth>0;
-function paintedLayer(ctx,v,im,h,par){
-  const gy=v.Y(0),w=h*im.naturalWidth/im.naturalHeight,off=v.camX*v.sc*par,k=Math.floor(off/w);
+// storm weather greys the sky and the code-drawn hills; painted layers get the same wash, baked once per image and colour
+const TINT=new Map();
+function tinted(im,col,a){
+  if(!a)return im;const key=im.src+col+a;let c=TINT.get(key);
+  if(!c){c=document.createElement('canvas');c.width=im.naturalWidth;c.height=im.naturalHeight;const g=c.getContext('2d');
+    g.drawImage(im,0,0);g.globalCompositeOperation='source-atop';g.globalAlpha=a;g.fillStyle=col;g.fillRect(0,0,c.width,c.height);TINT.set(key,c)}
+  return c;
+}
+function paintedLayer(ctx,v,src,h,par,col,a){
+  const im=tinted(src,col,a),gy=v.Y(0),w=h*src.naturalWidth/src.naturalHeight,off=parOff(v,par),k=Math.floor(off/w);
   // +.5 px overlap so subpixel scaling never opens a hairline between tiles
   for(let x=-(off-k*w);x<v.vw;x+=w)ctx.drawImage(im,x,gy-h+3,w+.5,h);
 }
@@ -268,7 +302,7 @@ function stormFx(ctx,v,st,wx){
   const {vw,vh,now,Y}=v;
   if(st.ceiling){const cy=Y(st.ceiling);if(cy>-40){
     const g=ctx.createLinearGradient(0,cy-160,0,cy+30);g.addColorStop(0,'rgba(44,50,64,.95)');g.addColorStop(1,'rgba(64,72,88,0)');ctx.fillStyle=g;ctx.fillRect(0,0,vw,cy+30);
-    ctx.fillStyle='#3a4152';ctx.beginPath();ctx.moveTo(0,0);for(let x=0;x<=vw+30;x+=26){const u=x+v.camX*v.sc*.3;ctx.lineTo(x,cy-6-Math.abs(Math.sin(u*.021))*20)}ctx.lineTo(vw,0);ctx.closePath();ctx.fill();
+    ctx.fillStyle='#3a4152';ctx.beginPath();ctx.moveTo(0,0);for(let x=0;x<=vw+30;x+=26){const u=x+parOff(v,.3);ctx.lineTo(x,cy-6-Math.abs(Math.sin(u*.021))*20)}ctx.lineTo(vw,0);ctx.closePath();ctx.fill();
     ctx.strokeStyle=INK;ctx.lineWidth=2.5;ctx.stroke();
     if(Math.random()<.012){ctx.strokeStyle='#ffe08a';ctx.lineWidth=3;ctx.beginPath();let x=Math.random()*vw,y=cy;ctx.moveTo(x,y);for(let i=0;i<5;i++){x+=(Math.random()-.5)*40;y+=26;ctx.lineTo(x,y)}ctx.stroke()}}}
   if(wx==='headwind'||wx==='gusts'){
@@ -283,6 +317,7 @@ function stormFx(ctx,v,st,wx){
 /* ---------- the whole backdrop ---------- */
 // v: {vw, vh, sc, X, Y, camX, camY, left, right, now, stage, wx, st, best, hype, cheer}
 function drawWorld(ctx,v){
+  parStep(v);
   const b=biomeOf(v.stage), night=b.name==='night', alt=v.camY;
   // sky: biome colors, darkening toward deep blue with altitude, storm-grey under weather fronts
   const a1=clamp(alt/5000,0,1), a2=clamp((alt-5000)/30000,0,1);
@@ -292,7 +327,7 @@ function drawWorld(ctx,v){
   const sky=ctx.createLinearGradient(0,0,0,v.vh);sky.addColorStop(0,top);sky.addColorStop(1,bot);ctx.fillStyle=sky;ctx.fillRect(0,0,v.vw,v.vh);
   // stars at night or high up
   const starA=night?Math.max(.8-a1*.2,.6):clamp((alt-4000)/20000,0,1);
-  if(starA>0){ctx.fillStyle=`rgba(255,248,225,${starA})`;for(let i=0;i<120;i++){const sx=((hs(i*1.7)*v.vw*1.3-v.camX*v.sc*.0004)%v.vw+v.vw)%v.vw,sy=hs(i*3.3)*v.vh*.8;const s=hs(i)*1.8+.6;ctx.fillRect(sx,sy,s,s)}}
+  if(starA>0){ctx.fillStyle=`rgba(255,248,225,${starA})`;for(let i=0;i<120;i++){const sx=((hs(i*1.7)*v.vw*1.3-parOff(v,.0004))%v.vw+v.vw)%v.vw,sy=hs(i*3.3)*v.vh*.8;const s=hs(i)*1.8+.6;ctx.fillRect(sx,sy,s,s)}}
   // sun or moon: a flat disc with a soft halo
   if(!grey){const [fx,fy,col,moon]=b.sun,sx=v.vw*fx,sy=v.RES+v.vh*fy;
     const hg=ctx.createRadialGradient(sx,sy,6,sx,sy,110);hg.addColorStop(0,moon?'rgba(243,236,210,.35)':'rgba(255,236,190,.65)');hg.addColorStop(1,'rgba(255,236,190,0)');ctx.fillStyle=hg;ctx.fillRect(sx-110,sy-110,220,220);
@@ -305,13 +340,13 @@ function drawWorld(ctx,v){
   stormFx(ctx,v,v.st,v.wx);
   const gy=v.Y(0);
   if(gy<v.vh+260){
-    const sp=SPR[b.name];
-    if(sp&&ready(sp.far))paintedLayer(ctx,v,sp.far,clamp(v.vh*.3,110,250),.05);
+    const sp=layersOf(b.name);
+    if(sp&&ready(sp.far))paintedLayer(ctx,v,sp.far,clamp(v.vh*.3,110,250),.05,'#8a96a6',+(grey*.6).toFixed(2));
     else silhouette(ctx,v,b.far[1],grey?mix(b.far[0],'#8a96a6',grey*.6):b.far[0],70,90,.05,1.3);
-    if(sp&&ready(sp.near))paintedLayer(ctx,v,sp.near,clamp(v.vh*.26,90,215),.12);
+    if(sp&&ready(sp.near))paintedLayer(ctx,v,sp.near,clamp(v.vh*.26,90,215),.12,'#7a8696',+(grey*.5).toFixed(2));
     else silhouette(ctx,v,b.near[1],grey?mix(b.near[0],'#7a8696',grey*.5):b.near[0],34,50,.12,4.1);
-    if(night){ // lit windows in the near skyline
-      ctx.fillStyle='rgba(255,215,122,.8)';for(let i=0;i<40;i++){const x=((hs(i*5.7)*v.vw*1.5-v.camX*v.sc*.12)%(v.vw+40)+v.vw+40)%(v.vw+40)-20,y=gy-10-hs(i*2.9)*48;ctx.fillRect(x,y,3,4)}}
+    if(night&&!(sp&&ready(sp.near))){ // lit windows in the near skyline (painted layers bring their own)
+      ctx.fillStyle='rgba(255,215,122,.8)';for(let i=0;i<40;i++){const x=((hs(i*5.7)*v.vw*1.5-parOff(v,.12))%(v.vw+40)+v.vw+40)%(v.vw+40)-20,y=gy-10-hs(i*2.9)*48;ctx.fillRect(x,y,3,4)}}
     // ground: two bands with grass tufts along the edge
     ctx.fillStyle=b.ground;ctx.fillRect(0,gy,v.vw,Math.max(0,v.vh-gy));
     ctx.fillStyle=b.ground2;ctx.fillRect(0,gy+Math.max(6,.8*v.sc),v.vw,Math.max(0,v.vh-gy));
@@ -334,4 +369,4 @@ function drawWorld(ctx,v){
 // the grain over everything (call last, before the HUD)
 function drawGrain(ctx,vw,vh){ctx.fillStyle=halftonePattern(ctx);ctx.fillRect(0,0,vw,vh)}
 
-export { BIOMES, biomeOf, drawWorld, drawGrain };
+export { BIOMES, biomeOf, drawWorld, drawGrain, preloadLayers };

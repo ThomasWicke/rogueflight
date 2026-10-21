@@ -1,0 +1,6 @@
+Size: square 1:1 (1024x1024)
+References: icon-7-fall-blue.jpg, 02-goat-sheet.jpg
+
+App icon artwork for a mobile game, square 1:1 (1024x1024), full bleed to every edge with no border, no frame, no rounded corners and no drop shadow (the phone rounds the corners itself). Composition and energy like the first attached image: one character filling most of the square, cropped close and boldly, a huge readable emotion, dynamic angle, on a bold flat background colour with only a few simple shapes, crystal clear at 60 pixels. The character is the goat pilot from the second attached image: a young goat with small curled horns, a brown leather flying cap with ear flaps, round brass goggles and a long red scarf. Drawing style: thick dark navy outlines (#22283a), flat colours with one shade band and one highlight, polished premium indie game art. Absolutely no text, letters, numbers or logos.
+
+The goat at the top of a loop, upside down from our view, mouth wide open in a whoop of pure joy, goggles flashing, scarf whipping in a big curve across the square, a brass dashed loop trail sweeping behind. Barn red background (#d2402f).

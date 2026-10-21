@@ -16,7 +16,7 @@ import {
 } from './sim.js';
 import { getDaily, postDaily, newRoomCode, connectRoom, cloudGet, cloudPut, linkCode, claimCode } from './net.js';
 import { botFlight, planBot, cellsOf } from './bots.js';
-import { drawWorld, drawGrain, biomeOf } from './world.js';
+import { drawWorld, drawGrain, biomeOf, preloadLayers } from './world.js';
 import { audio } from './audio.js';
 import { drawPart, drawPilot, drawParachute } from './art.js';
 import { decalURL } from './decals.js';
@@ -286,6 +286,7 @@ function renderStrip(){
 }
 function renderHangar(){
   const r=R();if(!r)return;
+  preloadLayers(r.stage); // this town's painted backdrop, so it is ready by launch
   $('hCeil').textContent='Difficulty '+r.level;$('hCeil').hidden=!r.level;
   $('hCoins').textContent=fmt(r.coins);
   $('tShop').classList.toggle('fresh',r.phase==='shop');
