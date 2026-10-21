@@ -75,7 +75,7 @@ function silhouette(ctx,v,shape,color,base,height,par,seed){
   }
 }
 
-/* ---------- painted layers (sprite test, 0.8.1) ----------
+/* ---------- painted layers (every town since 0.10) ----------
    A biome may swap its two code-drawn hill silhouettes for painted sprite layers (generated concept art, cut out with
    tools/art/key_layer.py --tile, which makes each strip repeat seamlessly). They are anchored to the ground line in screen
    pixels like the silhouettes, scroll at the same parallax speeds and repeat side by side. Until an image has loaded, the
@@ -169,6 +169,7 @@ function cabin(g,lw){g.strokeStyle=INK;g.lineWidth=lw;g.fillStyle=WOOD;g.fillRec
   g.strokeStyle=INK;g.fillStyle='#5a3a24';g.beginPath();g.moveTo(-2.7,-2.6);g.lineTo(0,-4.4);g.lineTo(2.7,-2.6);g.closePath();g.fill();g.stroke()}
 const PROP_SIZE={cow:2.6,hay:1.5,tree:7,apple:6,pine:11,windmill:15,fence:4.4,barn:8,house:6,cactus:5,rock:2,skull:3,grass:1.5,hut:3.6,lighthouse:20,lamp:4.8,billboard:5.6,cabin:5};
 
+const SMALL_PROPS=new Set(['grass','rock']);
 function drawProp(g,type,lw,t,k,night){
   switch(type){
     case 'cow':return cow(g,lw,t,k);case 'hay':return hay(g,lw);case 'tree':return tree(g,lw,k,night?'#2c4a3a':null);
@@ -354,9 +355,12 @@ function drawWorld(ctx,v){
     if(v.sc>2){ctx.strokeStyle=b.ground2;ctx.lineWidth=2;ctx.beginPath();const sp=Math.max(10,1.4*v.sc),off=((v.camX*v.sc)%sp+sp)%sp;
       for(let x=-off;x<v.vw;x+=sp){ctx.moveTo(x,gy+1);ctx.lineTo(x+3,gy-4)}ctx.stroke()}
     // props along the ground, skipped when too small to see
+    // over a painted backdrop only small ground clutter stays (it shows speed); the code-drawn trees, barns, lighthouses
+    // and lamps would clash with the painted ones
+    const painted=sp&&ready(sp.near);
     if(v.sc>1.1){const seg=30,lw=2.5;
       for(let k=Math.floor(v.left/seg)-1;k<=Math.ceil(v.right/seg)+1;k++){if(k<1)continue;const h=hs(k*7.3+v.stage*1.7);if(h>.55)continue;
-        const type=pickProp(b.props,hs(k*3.9+v.stage));if(!type)continue;const size=PROP_SIZE[type]||3;if(size*v.sc<6)continue;
+        const type=pickProp(b.props,hs(k*3.9+v.stage));if(!type||painted&&!SMALL_PROPS.has(type))continue;const size=PROP_SIZE[type]||3;if(size*v.sc<6)continue;
         const x=k*seg+hs(k*1.3)*18;const px=v.X(x);if(px<-size*v.sc*2||px>v.vw+size*v.sc*2)continue;
         ctx.save();ctx.translate(px,gy);ctx.scale(v.sc,v.sc);drawProp(ctx,type,lw/v.sc,v.now/1000,k,night);ctx.restore()}}
     launchSite(ctx,v,b);
