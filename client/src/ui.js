@@ -398,7 +398,7 @@ function renderShop(){
     return `<button class="buy" type="button" data-kind="${kind}" data-i="${i}" ${p>r.coins||!canBuy(r,kind,o)?'disabled':''}><i class="cn"></i>${p}</button>`};
   // an owned mod on offer is an upgrade: show the level it would reach (a sold one already shows its new level)
   const mods=S.mods.length?S.mods.map((o,i)=>{const L=lv[o.id]||0,up=!!L&&!o.sold;return `<div class="${o.sold?'sold':''}">${modCard(o.id,btn('mod',i,o),o.sold?Math.max(1,L):L+1,up)}</div>`}).join(''):'<p class="hint">\u2014</p>';
-  const tunes=S.tunes.map((o,i)=>{const T=TUNES[o.k],L=r.tune[o.k]||0;return `<div class="offer${o.sold?' sold':''}"><div class="glyph C" aria-hidden="true">+</div><div><h3>${T.name}</h3><p>${T.d} \u00b7 Lv ${L+1}${T.max?'/'+T.max:''}</p></div>${btn('tune',i,o)}</div>`}).join('');
+  const tunes=S.tunes.map((o,i)=>{const T=TUNES[o.k],L=r.tune[o.k]||0;return `<div class="offer${o.sold?' sold':''}"><div class="glyph C" aria-hidden="true">+</div><div><h3>${T.name}</h3><p>${T.d} \u00b7 Lv ${o.sold?L:L+1}${T.max?'/'+T.max:''}</p></div>${btn('tune',i,o)}</div>`}).join('');
   const parts=S.parts.map((o,i)=>`<div class="offer${o.sold?' sold':''}"><img alt="" src="${ICON[o.t]}"><div><h3>${PARTS[o.t].name}</h3><p>${owned(o.t)} owned</p></div>${btn('part',i,o)}</div>`).join('')
     +(S.pack?`<div class="offer rarepack${S.pack.sold?' sold':''}"><div class="glyph R" aria-hidden="true">★</div><div><h3>Rare parts pack</h3><p>A random rare part</p></div>${btn('pack',0,S.pack)}</div>`:'');
   const rc=rerollCost(r);
