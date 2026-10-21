@@ -67,8 +67,9 @@ function silhouette(ctx,v,shape,color,base,height,par,seed){
 
 /* ---------- painted layers (sprite test, 0.8.1) ----------
    A biome may swap its two code-drawn hill silhouettes for painted sprite layers (generated concept art, cut out with
-   tools/art/key_layer.py). They are anchored to the ground line in screen pixels like the silhouettes, scroll at the same
-   parallax speeds and repeat mirrored, so the seams always match. Until an image has loaded, the silhouette is drawn. */
+   tools/art/key_layer.py --tile, which makes each strip repeat seamlessly). They are anchored to the ground line in screen
+   pixels like the silhouettes, scroll at the same parallax speeds and repeat side by side. Until an image has loaded, the
+   silhouette is drawn. */
 // URLs written out literally so Vite bundles the files (it only rewrites static new URL('...', import.meta.url) calls)
 const LAYERS={meadow:{far:new URL('./assets/meadow-far.webp',import.meta.url).href,near:new URL('./assets/meadow-near.webp',import.meta.url).href}};
 const SPR={};
@@ -76,10 +77,8 @@ if(typeof Image!=='undefined')for(const k in LAYERS){SPR[k]={};for(const l in LA
 const ready=im=>im&&im.complete&&im.naturalWidth>0;
 function paintedLayer(ctx,v,im,h,par){
   const gy=v.Y(0),w=h*im.naturalWidth/im.naturalHeight,off=v.camX*v.sc*par,k=Math.floor(off/w);
-  for(let i=0,x=-(off-k*w);x<v.vw;i++,x+=w){
-    if((k+i)&1){ctx.save();ctx.translate(x+w,0);ctx.scale(-1,1);ctx.drawImage(im,0,gy-h+3,w,h);ctx.restore()}
-    else ctx.drawImage(im,x,gy-h+3,w,h);
-  }
+  // +.5 px overlap so subpixel scaling never opens a hairline between tiles
+  for(let x=-(off-k*w);x<v.vw;x+=w)ctx.drawImage(im,x,gy-h+3,w+.5,h);
 }
 
 /* ---------- props (world space, meters; y up from the ground) ---------- */
