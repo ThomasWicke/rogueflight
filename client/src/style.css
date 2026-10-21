@@ -719,3 +719,12 @@ body.offline::after{content:"Reconnecting…";position:fixed;left:50%;top:calc(v
   .ctrl button svg{width:20px;height:20px}
   .ctrl #bFF{height:38px}
 }
+
+/* keyboard hints on the flight buttons, only where there is a mouse (desktop, itch) */
+.kcap{display:none}
+@media (hover:hover) and (pointer:fine){
+  .ctrl .kcap{display:block;position:absolute;top:-8px;right:-8px;min-width:20px;padding:1px 5px;border:2px solid var(--ink);border-radius:5px;background:var(--paper);
+    color:var(--ink);font:900 10px/14px var(--body);letter-spacing:0;text-align:center;box-shadow:1px 1px 0 var(--ink);pointer-events:none}
+  .ctrl button,#thr{position:relative}
+  #thr .kcap{top:auto;bottom:6px;right:50%;transform:translateX(50%);white-space:nowrap}
+}

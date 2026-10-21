@@ -619,7 +619,14 @@ function syncFF(){const b=$('bFF');b.classList.toggle('on',!!save.meta.ff);b.set
 $('bFF').addEventListener('click',()=>{save.meta.ff=!save.meta.ff;persist();syncFF();buzz(10)});
 hold('bPop',()=>{if(F&&!F.S.burst&&F.K.counts.balloon){F.S.burst=true;F.S.events.push('burst')}},()=>{});
 const keys={};
-window.addEventListener('keydown',e=>{if(!F)return;keys[e.key]=1;sync(e)});
+// keyboard (desktop, itch): arrows or W/S pitch, left/right or A/D throttle, Space pops balloons, F fast-forward.
+// The throttle slider handles its own arrows while it has focus, so those are skipped here.
+window.addEventListener('keydown',e=>{if(!F||e.metaKey||e.ctrlKey||e.altKey)return;keys[e.key]=1;sync(e);if(e.repeat&&e.key!=='ArrowLeft'&&e.key!=='ArrowRight')return;
+  const k=e.key.length===1?e.key.toLowerCase():e.key,onThr=document.activeElement===$('thr');
+  if(!onThr&&(k==='ArrowRight'||k==='d')){setThr(ctl.throttle+.1);e.preventDefault()}
+  else if(!onThr&&(k==='ArrowLeft'||k==='a')){setThr(ctl.throttle-.1);e.preventDefault()}
+  else if(k===' '&&$('bPop').style.visibility!=='hidden'&&!F.S.burst&&F.K.counts.balloon){F.S.burst=true;F.S.events.push('burst')}
+  else if(k==='f'&&!F.online)$('bFF').click()});
 window.addEventListener('keyup',e=>{keys[e.key]=0;sync(e)});
 function sync(e){if(!F)return;const up=keys.ArrowUp||keys.w||keys.W,dn=keys.ArrowDown||keys.s||keys.S;ctl.pitch=up?1:dn?-1:0;if(e&&[' ','ArrowUp','ArrowDown'].includes(e.key))e.preventDefault()}
 
