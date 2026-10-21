@@ -728,3 +728,16 @@ body.offline::after{content:"Reconnecting…";position:fixed;left:50%;top:calc(v
   .ctrl button,#thr{position:relative}
   #thr .kcap{top:auto;bottom:6px;right:50%;transform:translateX(50%);white-space:nowrap}
 }
+
+/* history (title → Profile → History) */
+.hbtn{padding:4px 10px;font-size:12.5px}
+.hlist{display:grid;gap:10px;overflow-y:auto;min-height:0}
+.hentry{border:2px solid var(--ink);border-radius:6px;background:var(--canvas);padding:10px 12px;display:grid;gap:8px;box-shadow:2px 2px 0 var(--ink)}
+.htitle{font-family:var(--display);font-weight:400;font-size:15px;color:var(--ink)}
+.hbody{display:flex;gap:12px;align-items:center}
+.hcraft{display:grid;flex:none;background:#2f4a52;border:2px solid var(--ink);border-radius:5px;padding:4px;gap:1px}
+.hcraft img{width:100%;aspect-ratio:1;display:block}
+.hres{display:grid;gap:3px;font-size:13.5px;color:var(--ink)}
+.hmods{display:flex;flex-wrap:wrap;gap:4px}
+.hmods img{width:34px;height:34px}
+.hentry .hint{margin:0}

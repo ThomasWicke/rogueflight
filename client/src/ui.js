@@ -131,7 +131,7 @@ function reportRun(r,finished){
       won:mode==='run'||mode==='team'?r.stage>=CONTRACTS:false,host:import.meta.env.MODE==='itch'?'itch':location.hostname,flights:r.log.length,finished:!!finished,data});
     const url=homeURL('/api/run');if(!(navigator.sendBeacon&&navigator.sendBeacon(url,body)))fetch(url,{method:'POST',body,keepalive:true,mode:ATHOME?'same-origin':'no-cors'}).catch(()=>{})}catch(_){}
 }
-function endRun(){if(slot!=='run'){leaveMode();return}reportRun(save.run,true);save.meta.runs=(save.meta.runs||0)+1;save.run=null;persist();veil.hidden=true;armAbandon=false;show('title');renderTitle()}
+function endRun(){if(slot!=='run'){leaveMode();return}reportRun(save.run,true);addHistory(save.run);save.meta.runs=(save.meta.runs||0)+1;save.run=null;persist();veil.hidden=true;armAbandon=false;show('title');renderTitle()}
 
 /* ================= title ================= */
 let pickLevel=save.meta.level||0;
@@ -158,7 +158,7 @@ function renderTitle(){
     <div class="profile"><img class="avatar" alt="" src="${avatarURL()}"><div class="pname"><strong>${esc(m.name||'Pilot')}</strong>
       <button class="icon" id="nameEdit" type="button" aria-label="Change name">${PENCIL}</button></div>
       <button class="icon" id="profSet" type="button" aria-label="Settings">${GEAR}</button></div>
-    <div class="row" style="margin-top:14px"><span class="label">Stats</span></div>
+    <div class="row" style="margin-top:14px"><span class="label">Stats</span>${(m.history||[]).length?'<button class="ghost hbtn" id="histBtn" type="button">History</button>':''}</div>
     <dl class="stats"><dt>Runs</dt><dd>${m.runs}</dd><dt>Wins</dt><dd>${m.wins}</dd><dt>Most contracts in a run</dt><dd>${m.deepest||m.bestStage}</dd><dt>Best score</dt><dd>${fmt(m.bestFlight)}</dd>${m.level?`<dt>Highest Difficulty</dt><dd>${m.level}</dd>`:''}</dl>
     <div class="row" style="margin-top:12px"><span class="label">Unlocks</span><span class="hint">contracts in one run</span></div>
     <ul class="unl">${UNLOCKS.map(u=>{const d=m.bestStage>=u.at;return `<li class="${d?'done':''}"><i>${d?'\u2713':u.at}</i><span>${u.text}</span></li>`}).join('')}</ul></div>`;
@@ -169,6 +169,7 @@ function renderTitle(){
   $('howto').onclick=openGuide;
   $('libBtn').onclick=()=>openLibrary();
   bindModeCards();
+  {const hb=$('histBtn');if(hb)hb.onclick=showHistory}
   $('nameEdit').onclick=editName;$('profSet').onclick=showSettings;
   if(r){
     $('cont').onclick=()=>{armAbandon=false;slot='run';openHangar()};
@@ -1052,7 +1053,7 @@ function showDailyEnd(){
 }
 // leave a puzzle or a room's run and go back to the title (the main run stays untouched)
 function leaveMode(){
-  if(slot==='daily'){const r=save.daily;if(r&&r.ranked&&r.log.length&&r.phase!=='done'){r.phase='done';completeDaily(r)}if(r&&r.phase!=='done')reportRun(r,true);save.daily=null}
+  if(slot==='daily'){const r=save.daily;if(r&&r.ranked&&r.log.length&&r.phase!=='done'){r.phase='done';completeDaily(r)}if(r&&r.phase!=='done')reportRun(r,true);addHistory(r);save.daily=null}
   else if(slot==='online'){leaveRoom();return}
   slot='run';persist();veil.hidden=true;armAbandon=false;show('title');renderTitle();
 }
@@ -1300,6 +1301,43 @@ syncSound();
 
 // dev only: inspect the running flight from the console (stripped from production builds)
 if(import.meta.env.DEV)window.__rf={F:()=>F,R,frame:n=>frame(n),ctl}; // ctl: tools/ and dev pages drive flights (e.g. the trailer capture)
+
+/* ---------- history: finished runs and puzzles ----------
+   save.meta.history, newest first, at most HIST_MAX (it rides along in the cloud save). Each entry keeps the build, mods
+   and tunings of the last flight, and the result: contract reached and best single flight for a run, total for a puzzle. */
+const HIST_MAX=40;
+function addHistory(r){
+  if(!r||!r.log||!r.log.length)return;
+  const s=r.log[r.log.length-1].s||{}, daily=r.mode==='daily';
+  const e={k:daily?(r.ranked?'daily':'puzzle'):'run',t:Date.now(),cells:s.cells||'c22',mods:s.mods||[],tune:s.tune||{},flights:r.log.length};
+  if(daily){e.day=r.day;e.total=r.total||r.score||0}
+  else Object.assign(e,{lv:r.level||0,cleared:r.stage,endless:!!r.endless,best:Math.max(...r.log.map(l=>l.score)),town:townOf(r.seed,r.stage).town,lost:r.phase==='over'});
+  const h=save.meta.history=save.meta.history||[];h.unshift(e);if(h.length>HIST_MAX)h.length=HIST_MAX;
+}
+// the craft cropped to its parts, drawn with the bench icons
+function miniCraft(code){
+  const cells=cellsOf(code),xs=cells.map(c=>c.c),ys=cells.map(c=>c.r),x0=Math.min(...xs),y0=Math.min(...ys),w=Math.max(...xs)-x0+1,h=Math.max(...ys)-y0+1;
+  return `<div class="hcraft" style="grid-template-columns:repeat(${w},1fr);grid-template-rows:repeat(${h},1fr);width:${Math.min(132,w*26)}px">${cells.map(c=>
+    `<img alt="" src="${ICON[c.type+(c.rare?'+':'')]}" style="grid-column:${c.c-x0+1};grid-row:${c.r-y0+1}">`).join('')}</div>`;
+}
+function histEntry(e){
+  const date=new Date(e.t).toLocaleDateString(undefined,{day:'numeric',month:'short'});
+  const rank=e.k==='daily'&&save.meta.daily&&save.meta.daily[e.day]&&save.meta.daily[e.day].rank;
+  const title=e.k==='run'?`Run${e.lv?' · Difficulty '+e.lv:''}`:e.k==='daily'?`Daily puzzle #${e.day}`:'Random puzzle';
+  const result=e.k!=='run'?`Total score <b>${fmt(e.total)}</b>${rank?` · rank ${rank}`:''}`
+    :e.cleared>=CONTRACTS?`<b>Won</b>${e.endless&&e.cleared>CONTRACTS?` · endless to contract ${e.cleared+(e.lost?1:0)}`:''}`
+    :`Reached contract <b>${e.cleared+1}</b> of ${CONTRACTS} · ${esc(e.town)}`;
+  const mods=e.mods.map(x=>{const [id,l]=x.split(':');return MODS[id]?`<img alt="${esc(MODS[id].name)}" title="${esc(MODS[id].name)}${l?' Lv '+l:''}" src="${decalURL(id,40,+l||1)}">`:''}).join('');
+  const tune=Object.entries(e.tune).filter(([k,L])=>L>0&&TUNES[k]).map(([k,L])=>`${TUNES[k].name} ${L}`).join(' · ');
+  return `<div class="hentry"><div class="row"><b class="htitle">${title}</b><span class="hint">${date}</span></div>
+    <div class="hbody">${miniCraft(e.cells)}<div class="hres"><div>${result}</div>${e.k==='run'?`<div>Best flight <b>${fmt(e.best)}</b></div>`:''}</div></div>
+    ${mods?`<div class="hmods">${mods}</div>`:''}${tune?`<p class="hint">${tune}</p>`:''}</div>`;
+}
+function showHistory(){
+  const h=save.meta.history||[];
+  sheet.className='sheet';sheet.innerHTML=`<span class="label">History</span><div class="hlist">${h.map(histEntry).join('')}</div><button class="big" id="hOk" type="button">Close</button>`;
+  veil.hidden=false;$('hOk').onclick=()=>{veil.hidden=true};
+}
 
 /* ---------- profile ---------- */
 const PENCIL='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l1-5L16 4l4 4L9 19z M14 6l4 4" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/></svg>';

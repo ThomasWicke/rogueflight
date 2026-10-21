@@ -136,6 +136,9 @@ Code style is dense (many one-line functions, short names: `S` flight state, `K`
 - On iPhones a home-screen app and Safari have separate storage, and deleting the home-screen app deletes its storage: the cloud save plus a link code is how progress survives that.
 - Later: Sign in with Apple attaches to the same account (Better Auth social provider). See docs/security.md.
 
+## History
+- `save.meta.history` (newest first, at most `HIST_MAX`=40, synced with the cloud save): one entry per finished run (`endRun`) and puzzle (`leaveMode`), with the last flight's build (`cells` code), mods with levels and tunings, and the result: run = Difficulty, contracts cleared, town, best single flight, endless/lost; daily = day and total (rank shown while `meta.daily` still holds it); random puzzle = total. Opened from the History button in the Profile card's Stats row (`showHistory`, `miniCraft` draws the cropped build with the bench icons). Added in 0.8.0 after a Reddit request, so older runs are not in it.
+
 ## Modes
 - **Run** (`save.run`): the main 8-contract run, unchanged.
 - **Daily puzzle** (`save.daily`, mode `'daily'`): one contract, 3 flights, 100 coins, no storms, seed `dailySeed(dailyNumber())` (day 1 = 2026-10-11 UTC). The score is the sum of the 3 flights. Ranked on the first try: the result is stored in `meta.daily[day]` and `meta.dailyPending` until the server has it, with the nickname `meta.name`. After the first finished daily, **Random puzzle** (unranked, any seed) appears.
