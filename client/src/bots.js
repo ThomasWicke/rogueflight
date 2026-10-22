@@ -4,7 +4,7 @@
 // Each bot has a style (propeller glider, rocket climber, balloon glider) and a skill, both fixed for the whole game.
 // Builds grow every round; before each flight the bot test-flies a few pilot settings (pilot.js) and keeps the best,
 // more of them the better it is. planBot() does that work, so callers can spread it over frames.
-import { stats, weatherFx, makeCraft, craftCounts } from './sim.js';
+import { stats, weatherFx, makeCraft, craftCounts, coinSalt } from './sim.js';
 import { tunePilot, makePilot } from './pilot.js';
 
 const NAMES = ['Baron', 'Ace', 'Biscuit', 'Wobbles', 'Duchess', 'Rivets', 'Pip', 'Marigold', 'Captain Hay', 'Sprocket'];
@@ -37,7 +37,7 @@ function botFlight(seed, round, i, flightTime) {
   const tune = style === 'glider' ? { prop: Math.ceil(tl / 2), wing: Math.floor(tl / 3), fuel: Math.floor(tl / 3), light: Math.floor(tl / 4) }
     : style === 'booster' ? { prop: Math.ceil(tl / 3), rocket: Math.ceil(tl / 3), fuel: Math.floor(tl / 3), wing: Math.floor(tl / 4) }
     : { prop: Math.ceil(tl / 3), balloon: Math.floor(tl / 3), wing: Math.floor(tl / 3), fuel: Math.floor(tl / 4) };
-  const st = stats(tune, {}, weatherFx(null, 0)); st.flightTime = flightTime || 120;
+  const st = stats(tune, {}, weatherFx(null, 0)); st.flightTime = flightTime || 120; st.coinSalt = coinSalt(seed); // the room's coins
   const cells = cellsOf(BUILDS[style][tier]);
   return { style, skill, cells, st, K: makeCraft(cells, st), rnd: r, tries: 4 + Math.round(skill * 10), maxPop: round < 2 ? 120 : round < 3 ? 260 : round < 5 ? 520 : 800,
     ctx: { lv: {}, boons: {}, flightIdx: 0, cleared: round, coins: 0, ...craftCounts(cells) } };

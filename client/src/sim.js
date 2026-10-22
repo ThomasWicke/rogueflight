@@ -307,7 +307,11 @@ const groundY=x=>x<0?20:0;
 const COINSEG=40, COINR=3;
 function thermalSeg(k,st){if(k<1||hs(k*3.1)>.35)return null;return{cx:k*120+30+hs(k*7.7)*60,top:(70+hs(k*1.9)*60)*(1+.5*(st.thermal-1)),str:6*st.thermal*st.grav}}
 // coins thin out with distance so a long flight is not an endless money printer
-function coinAt(k){if(k<1)return null;const x=k*COINSEG+20;const p=x<1500?.5:.5*1500/x;if(hs(k*5.3)>p)return null;return{x,y:3+hs(k*9.1)*(25+Math.min(300,x*.03))}}
+// salt: from the run's seed (coinSalt), so a run keeps the same coins on every flight (a route worth learning) but each run
+// lays out new ones; daily puzzles and rooms share a seed, so everyone there gets the same coins. Until 0.12.3 every run had
+// the same coins and players learned the opening sequence by heart.
+function coinAt(k,salt=0){if(k<1)return null;const x=k*COINSEG+20;const p=x<1500?.5:.5*1500/x;if(hs(k*5.3+salt)>p)return null;return{x,y:3+hs(k*9.1+salt*1.7)*(25+Math.min(300,x*.03))}}
+const coinSalt=seed=>((seed>>>0)%9973)/9.973;
 
 /* ---------- flight ---------- */
 function newFlight(K,st){
@@ -443,7 +447,7 @@ function step(S,K,st,dt,ctl){
   // coins
   const R=COINR*st.magnetR, lo=Math.min(px0,S.x)-R, hi=Math.max(px0,S.x)+R;
   let k0=Math.floor(lo/COINSEG), k1=Math.floor(hi/COINSEG);if(k1-k0>400)k0=k1-400;
-  if(isFinite(k0)&&isFinite(k1))for(let k=k0;k<=k1;k++){if(S.got.has(k))continue;const cn=coinAt(k);if(!cn)continue;
+  if(isFinite(k0)&&isFinite(k1))for(let k=k0;k<=k1;k++){if(S.got.has(k))continue;const cn=coinAt(k,st.coinSalt||0);if(!cn)continue;
     if(segDist(cn.x,cn.y,px0,py0,S.x,S.y)<R){S.got.add(k);S.coins++;S.events.push('coin');(S.coinFx=S.coinFx||[]).push(cn)}}
   // records
   const nv=gs;
@@ -601,6 +605,7 @@ function flightStats(run){const w=weatherOf(run,run.stage),fx=weatherFx(w,severi
   // live rooms fly together, so their flights are short: 2 minutes, +20 s per Flight permit
   if(isOnline(run))st.flightTime=ONLINE_TIME+20*Math.min(run.tune.time||0,TUNES.time.max);
   st.drag*=Math.pow(.92,b('drag'));st.grav*=Math.pow(.92,b('grav'));const fm=Math.pow(1.12,b('fuel'));st.tankFuel*=fm;st.reserve*=fm;
+  st.coinSalt=coinSalt(run.seed||0);
   return st}
 // opts.seed fixes everything random in the run; opts.mode: 'run' (default), 'daily' (one contract, 100 coins, no storms),
 // 'team' (a live room: the team's flights add up toward the target, the room decides clears) or 'elim' (a live room: one
@@ -691,7 +696,7 @@ export {
   TUNES, tuneCost, RARITY, MODS, WEATHER, weatherFx, START, UNLOCKS,
   modUnlocked, QUOTA, quotaFor, isStorm, weatherOf, stats, DIRS,
   SOCK, STRUCT, linkage, connected, balanceOf, makeCraft, hs, groundY,
-  COINSEG, COINR, thermalSeg, coinAt, newFlight, segDist, flag, step,
+  COINSEG, COINR, thermalSeg, coinAt, coinSalt, newFlight, segDist, flag, step,
   popBalloons, summaryOf, scoreFlight, trickVal, wpick, PART_W, rollMods, rollTunes, genShop,
   rerollShop, priceOf, offerPrice, rerollCost, sellValue, newRun, craftCounts, flightCtx, dropRemovedMods, settleFlight,
   PACKS, FIRST_PACKS, rollPacks, grantPacks, openPack, RARE, RARE_CHANCE, RARE_PACK_PRICE, isRare, baseOf, partName,

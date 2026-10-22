@@ -5,7 +5,7 @@ import {
   newRun, stats, weatherFx, makeCraft, newFlight, step, popBalloons, summaryOf, scoreFlight, settleFlight,
   quotaFor, openPack, PACKS, FIRST_PACKS, rollTunes, thermalSeg, G0, repeats, rerollShop, applyPurchase, offerPrice, rollMods,
   isStorm, grantPacks, flightStats, MODMAX, pickBoon, rollBoons, modSlots, dailySeed, clearContract, ONLINE_TIME, SIM_DT,
-  craftCounts, flightCtx, dropRemovedMods, MODS, trickVal, distBonus, distMilestones, altBonus, flightCoins, landingShare,
+  craftCounts, flightCtx, dropRemovedMods, MODS, trickVal, coinAt, coinSalt, distBonus, distMilestones, altBonus, flightCoins, landingShare,
 } from '../client/src/sim.js';
 import { botFlight, planBot, BUILDS, cellsOf } from '../client/src/bots.js';
 
@@ -396,4 +396,15 @@ test('Understudy multiplies per empty slot; a removed mod (Bullseye) is taken ou
   assert.deepEqual(run.mods, ['stunt']); assert.equal(run.modLv.bullseye, undefined); assert.ok(refund > 2); assert.equal(run.coins, 10 + refund);
   assert.deepEqual(run.shop.mods.map(o => o.id), ['stunt']); assert.deepEqual(run.boonOffer.map(o => o.id), ['coins']);
   assert.equal(dropRemovedMods(run), 0);
+});
+
+test('coins: the same on every flight of a run, different between runs, shared by a seed', () => {
+  const lay = salt => Array.from({ length: 60 }, (_, k) => { const c = coinAt(k + 1, salt); return c ? c.x + ':' + c.y.toFixed(1) : '-'; }).join(' ');
+  const a = coinSalt(12345), b = coinSalt(98765);
+  assert.equal(lay(a), lay(coinSalt(12345)));
+  assert.notEqual(lay(a), lay(b));
+  const n = salt => Array.from({ length: 400 }, (_, k) => coinAt(k + 1, salt)).filter(Boolean).length;
+  assert.ok(Math.abs(n(a) - n(b)) < 40, 'about as many coins either way');
+  const run = newRun(0, {}, { seed: 777 });
+  assert.equal(flightStats(run).coinSalt, coinSalt(777));
 });

@@ -5,7 +5,7 @@ import {
   TUNES, tuneCost, RARITY, MODS, WEATHER, weatherFx, START, UNLOCKS,
   modUnlocked, QUOTA, quotaFor, isStorm, weatherOf, stats, DIRS,
   SOCK, STRUCT, linkage, connected, balanceOf, makeCraft, hs, groundY,
-  COINSEG, COINR, thermalSeg, coinAt, newFlight, segDist, flag, step,
+  COINSEG, COINR, thermalSeg, coinAt, coinSalt, newFlight, segDist, flag, step,
   popBalloons, summaryOf, scoreFlight, trickVal, wpick, PART_W, rollMods, rollTunes, genShop,
   rerollShop, priceOf, offerPrice, rerollCost, sellValue, newRun, craftCounts, flightCtx, dropRemovedMods, settleFlight,
   PACKS, FIRST_PACKS, rollPacks, grantPacks, openPack, RARE, RARE_CHANCE, RARE_PACK_PRICE, isRare, baseOf, partName,
@@ -837,13 +837,12 @@ function draw(now){
     ctx.beginPath();ctx.arc(X(S.x),Y(S.y),R0,0,7);ctx.stroke();ctx.restore()}
   if((right-left)/COINSEG<700){
     // coins sit where the sim has them, so whatever is inside the magnet ring really is collected
-    for(let k=Math.floor(left/COINSEG)-1;k<=Math.ceil(right/COINSEG)+1;k++){if(S.got.has(k))continue;const cn=coinAt(k);if(!cn)continue;
+    for(let k=Math.floor(left/COINSEG)-1;k<=Math.ceil(right/COINSEG)+1;k++){if(S.got.has(k))continue;const cn=coinAt(k,st.coinSalt||0);if(!cn)continue;
       const px=X(cn.x),py=Y(cn.y);if(py<-20||py>vh+20)continue;
-      const r=Math.max(3,.8*sc),sq=Math.abs(Math.cos(now/300+k));
-      ctx.fillStyle='#ffb020';ctx.beginPath();ctx.ellipse(px,py,r*(.35+.65*sq),r,0,0,7);ctx.fill();ctx.strokeStyle='#b87300';ctx.lineWidth=Math.max(1,r*.18);ctx.stroke()}}
+      drawCoin(px,py,Math.max(3.5,.8*sc),Math.abs(Math.cos(now/300+k)),now/1000+k)}}
   // collected coins fly from where they were into the craft (the magnet's pull, made visible)
   for(const c of F.flyCoins){const k=Math.min(1,c.t/.28),e=k*k,px=X(c.x+(S.x-c.x)*e),py=Y(c.y+(S.y-c.y)*e),r=Math.max(3,.8*sc)*(1-.5*k);
-    ctx.fillStyle='#ffb020';ctx.beginPath();ctx.arc(px,py,r,0,7);ctx.fill();ctx.strokeStyle='#b87300';ctx.lineWidth=Math.max(1,r*.18);ctx.stroke()}
+    drawCoin(px,py,r,1,0,true)}
   if(F.trail.length>1){ctx.lineCap='round';for(let i=1;i<F.trail.length;i++){const a=F.trail[i-1],b=F.trail[i];ctx.strokeStyle='rgba(255,255,255,'+(.5*i/F.trail.length)+')';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(X(a.x),Y(a.y));ctx.lineTo(X(b.x),Y(b.y));ctx.stroke()}}
   for(const p of F.parts){const px=X(p.x),py=Y(p.y),r=Math.max(1,p.r*sc);
     ctx.fillStyle=p.k==='fire'?`rgba(255,${Math.round(140+100*p.life)},60,${p.life})`:p.k==='debris'?`rgba(90,70,50,${p.life})`:p.k==='pop'?`rgba(255,90,78,${p.life})`:p.k==='gold'?`rgba(255,196,60,${p.life})`:`rgba(240,240,240,${p.life*.5})`;
@@ -874,6 +873,18 @@ function draw(now){
     ctx.restore()
   }
   drawGrain(ctx,vw,vh);
+}
+// a coin, spinning (sq = 1 face on, 0 edge on): a soft cream halo so it reads on golden fields and busy painted towns,
+// an ink outline like everything else, a gold face with a darker rim and a white glint (until 0.12.3: amber on amber,
+// which vanished over the meadow's wheat)
+function drawCoin(px,py,r,sq,t,bare){
+  const rx=r*(.35+.65*sq);
+  if(!bare){const R=r*2.3,g=ctx.createRadialGradient(px,py,r*.6,px,py,R);g.addColorStop(0,`rgba(255,248,225,${.55+.15*Math.sin(t*4)})`);g.addColorStop(1,'rgba(255,248,225,0)');
+    ctx.fillStyle=g;ctx.beginPath();ctx.arc(px,py,R,0,7);ctx.fill()}
+  ctx.beginPath();ctx.ellipse(px,py,rx,r,0,0,7);ctx.fillStyle='#b97d1c';ctx.fill();
+  ctx.beginPath();ctx.ellipse(px-rx*.08,py-r*.08,rx*.82,r*.82,0,0,7);ctx.fillStyle='#ffc93c';ctx.fill();
+  ctx.beginPath();ctx.ellipse(px,py,rx,r,0,0,7);ctx.strokeStyle='#22283a';ctx.lineWidth=Math.max(1.5,r*.22);ctx.stroke();
+  if(sq>.35&&r>4){ctx.beginPath();ctx.ellipse(px-rx*.35,py-r*.38,rx*.18,r*.24,.5,0,7);ctx.fillStyle='rgba(255,255,255,.85)';ctx.fill()}
 }
 // the others in the sky: translucent planes with a name tag, or a tag at the screen edge pointing to them
 function drawFlyers(list,X,Y,sc,now,fo){
