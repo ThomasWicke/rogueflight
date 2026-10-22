@@ -4,9 +4,12 @@
 set -e
 RUNS="$1"; PY="${PY:-$HOME/Github Repositories/local-image-gen/ComfyUI/venv/bin/python}"
 cd "$(dirname "$0")/../.."; OUT=client/src/assets
-"$PY" tools/art/key_layer.py $OUT/meadow-far.webp "$RUNS/plx-meadow-far.png" "$RUNS/plx3-meadow-far-b.png" --tile --morph --band=360
-"$PY" tools/art/key_layer.py $OUT/meadow-near.webp "$RUNS/plx2-meadow-near.png" "$RUNS/plx3-meadow-near-b.png" --tile --height=430
-for t in river coast canyon orchard mountains city night; do
+# picked versions (2026-10-22): version 2 for meadow, river and canyon (v2a-/v2b- images), version 1 for the rest
+for t in meadow river canyon; do
+  "$PY" tools/art/key_layer.py $OUT/$t-far.webp "$RUNS/v2a-$t-far.png" "$RUNS/v2b-$t-far.png" --tile --morph --band=360
+  "$PY" tools/art/key_layer.py $OUT/$t-near.webp "$RUNS/v2a-$t-near.png" "$RUNS/v2b-$t-near.png" --tile --height=400
+done
+for t in coast orchard mountains city night; do
   "$PY" tools/art/key_layer.py $OUT/$t-far.webp "$RUNS/plx-$t-far-a.png" "$RUNS/plx-$t-far-b.png" --tile --morph --band=360
   "$PY" tools/art/key_layer.py $OUT/$t-near.webp "$RUNS/plx-$t-near-a.png" "$RUNS/plx-$t-near-b.png" --tile --height=400
 done
