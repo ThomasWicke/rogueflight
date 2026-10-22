@@ -6,7 +6,9 @@ import {
   quotaFor, openPack, PACKS, FIRST_PACKS, rollTunes, thermalSeg, G0, repeats, rerollShop, applyPurchase, offerPrice, rollMods,
   isStorm, grantPacks, flightStats, MODMAX, pickBoon, rollBoons, modSlots, dailySeed, clearContract, ONLINE_TIME, SIM_DT,
   craftCounts, flightCtx, dropRemovedMods, MODS, trickVal, coinAt, coinSalt, distBonus, distMilestones, altBonus, flightCoins, landingShare,
+  kick, speedSteps, groundY,
 } from '../client/src/sim.js';
+import { makePilot } from '../client/src/pilot.js';
 import { botFlight, planBot, BUILDS, cellsOf } from '../client/src/bots.js';
 
 // 'c22 p32 w21 t23' -> cockpit at (2,2), prop at (3,2), wing at (2,1), tank at (2,3)
@@ -322,13 +324,13 @@ test('0.5 mods: Long Haul counts landed minutes, Magpie the coins of the run, In
   const f = (o) => ({ dist: 2000, maxY: 50, maxV: 30, coins: 4, loops: 0, passes: 0, thermals: 0, landed: true, fuelFrac: 0, t: 130, ...o });
   const lab = (fl, lv, ctx = {}) => Object.fromEntries(scoreFlight(fl, { lv, ...ctx }).lines.map((l) => [l.label, l.v]));
   assert.equal(lab(f({}), { longhaul: 1 })['Long Haul'], 0.6); assert.equal(lab(f({ landed: false, crashed: true }), { longhaul: 1 })['Long Haul'], undefined);
-  assert.equal(lab(f({}), { magpie: 1 }, { coinsRun: 96 })['Magpie'], 1);
+  assert.equal(lab(f({}), { magpie: 1 }, { coinsRun: 96 })['Magpie'], 2);
   const meta = { bestStage: 8 }, run = newRun(0, meta, { seed: 5 }); run.mods = ['investor', 'overachiever']; run.modLv = { investor: 1, overachiever: 2 };
   const coins0 = run.coins, out = settleFlight(run, meta, f({ dist: 3000 }));
   assert.ok(out.cleared && out.sc.total >= 3000);
   const invest = Math.min(4, Math.floor(out.sc.total / 1000)), over = Math.min(10, 2 * Math.floor((out.sc.total - 500) / 500 * 10));
   assert.equal(out.over, over);
-  assert.equal(run.coins - coins0, 3 + 4 + invest + over + out.reward + out.interest);
+  assert.equal(run.coins - coins0, 3 + 4 + invest + over + out.reward);
   assert.equal(run.coinsRun, 4);
 });
 
@@ -365,9 +367,9 @@ test('distance milestones: the altitude ladder at 5x the spacing, a landing bonu
   assert.equal(base(scoreFlight(f, { lv: {} })), 5000 + 2750 + 2750);
   assert.equal(base(scoreFlight({ ...f, landed: false, crashed: true }, { lv: {} })), 5000);
   assert.equal(base(scoreFlight({ ...f, landed: false }, { lv: {} })), 5000);
-  assert.equal(base(scoreFlight({ ...f, landed: false }, { lv: { parachute: 1 } })), 5000 + 2750);
+  assert.equal(base(scoreFlight({ ...f, landed: false }, { lv: { parachute: 1 } })), 5000 + 550);
   assert.equal(base(scoreFlight({ ...f, landed: false, crashed: true }, { lv: { parachute: 3 } })), 5000);
-  assert.equal(landingShare({ landed: false }, { lv: { parachute: 2 } }), 0.6);
+  assert.equal(landingShare({ landed: false }, { lv: { parachute: 2 } }), 0.2);
 });
 
 test('0.12 coin mods: altitude and distance milestones on a landing, top speed, tricks, each capped', () => {
@@ -376,8 +378,8 @@ test('0.12 coin mods: altitude and distance milestones on a landing, top speed, 
   assert.equal(flightCoins({ skywriter: 1 }, f), 2);                    // 100 and 250 m
   assert.equal(flightCoins({ mileage: 1 }, f), 3);                      // 500, 1250, 2500 m
   assert.equal(flightCoins({ mileage: 1 }, { ...f, landed: false }), 0);
-  assert.equal(flightCoins({ bounty: 1 }, f), 3);                       // 650 km/h: 4 full hundreds over 200, capped at 3
-  assert.equal(flightCoins({ bounty: 2 }, f), 4);
+  assert.equal(flightCoins({ bounty: 1 }, f), 3);                       // 650 km/h: 10 full 50s over 150, capped at 3
+  assert.equal(flightCoins({ bounty: 3 }, { ...f, maxV: 420 / 3.6 }), 5); // 420 km/h: 5 full 50s
   assert.equal(flightCoins({ tipjar: 1 }, f), 3);                       // 6 tricks, capped at 3
   assert.equal(flightCoins({ tipjar: 3 }, f), 6);
   const run = newRun(0, {}); run.mods = ['tipjar']; run.modLv = { tipjar: 3 };
@@ -407,4 +409,53 @@ test('coins: the same on every flight of a run, different between runs, shared b
   assert.ok(Math.abs(n(a) - n(b)) < 40, 'about as many coins either way');
   const run = newRun(0, {}, { seed: 777 });
   assert.equal(flightStats(run).coinSalt, coinSalt(777));
+});
+
+test('engines push only for the fuel left: Dive Recycler refills no longer keep an empty plane cruising', () => {
+  const dist = (mods) => fly('c22 t12 w21 p32', { mods, ctl: makePilot({ thr: 1, climb: 15 }) }).S.maxX;
+  const plain = dist([]), recycled = dist(['recycler']);
+  assert.ok(recycled > plain, 'the refill still helps');
+  assert.ok(recycled < plain * 1.6, `Recycler ${Math.round(recycled)} m vs ${Math.round(plain)} m without (it was about 6x)`);
+});
+
+test('0.13 reworks: Greaser on top of the touchdown, Crash Test by impact speed, Speed Trap in 50 km/h steps, Piggy Bank per flight', () => {
+  const f = (o) => ({ dist: 1000, maxY: 50, maxV: 30, coins: 0, loops: 0, passes: 0, thermals: 0, landed: true, fuelFrac: 0, ...o });
+  const lab = (fl, lv, ctx = {}) => Object.fromEntries(scoreFlight(fl, { lv, ...ctx }).lines.map((l) => [l.label, l.v]));
+  const g = lab(f({}), { greaser: 1 }); assert.equal(g['Clean touchdown'], 0.5); assert.equal(g['Greaser touchdown'], 1.15);
+  assert.equal(lab(f({ landed: false, crashed: true, impactV: 310 / 3.6 }), { crashtest: 1 })['Crash Test'], 1.5);
+  assert.equal(lab(f({ landed: false, crashed: true, impactV: 60 / 3.6 }), { crashtest: 3 })['Crash Test'], undefined);
+  assert.equal(speedSteps({ maxV: 199 / 3.6 }), 0); assert.equal(speedSteps({ maxV: 260 / 3.6 }), 2);
+  assert.equal(lab(f({ maxV: 260 / 3.6 }), { speedtrap: 1 })['Speed Trap'], 0.3);
+  const meta = { bestStage: 8 }, run = newRun(0, meta, { seed: 3 }); run.mods = ['piggy']; run.modLv = { piggy: 1 }; run.coins = 20;
+  const out = settleFlight(run, meta, f({ dist: 100 }));
+  assert.equal(out.pay, 3 + 3); assert.equal(run.coins, 26);
+});
+
+test('0.13 mods: Engine Room, Mechanic, Hot Streak and Storm Chaser count the right things', () => {
+  const f = (o) => ({ dist: 1000, maxY: 50, maxV: 30, coins: 0, loops: 0, passes: 0, thermals: 0, landed: true, fuelFrac: 0, ...o });
+  const lab = (fl, lv, ctx = {}) => Object.fromEntries(scoreFlight(fl, { ...ctx, lv }).lines.map((l) => [l.label, l.v]));
+  assert.equal(lab(f({}), { engineroom: 1 }, { engines: 2 })['Engine Room'], 0.6);
+  assert.equal(lab(f({ hotT: 12.7 }), { hotstreak: 1 })['Hot Streak'], 1.2);
+  assert.equal(lab(f({ hotT: 90 }), { hotstreak: 1 })['Hot Streak'], 3);
+  const meta = { bestStage: 8 }, run = newRun(0, meta, { seed: 4 }); run.tune = { prop: 2, fuel: 3 };
+  assert.equal(flightCtx(run).tunes, 5); assert.equal(lab(f({}), { mechanic: 1 }, flightCtx(run))['Mechanic'], 0.25);
+  assert.equal(flightCtx(run).storm, false); run.stage = 2; assert.equal(flightCtx(run).storm, true);
+  assert.equal(lab(f({}), { stormchaser: 1 }, flightCtx(run))['Storm Chaser'], 1.3);
+  run.stage = 1; assert.equal(lab(f({}), { stormchaser: 1 }, flightCtx(run))['Storm Chaser'], undefined);
+  // the Hot Streak clock runs only above 300 km/h
+  const st = stats({}, {}, weatherFx(null, 0)), K = makeCraft(layout('c22 t12 w21 p32'), st), S = newFlight(K, st);
+  Object.assign(S, { x: 100, y: 300, vx: 100, vy: 0, th: 0 });
+  for (let i = 0; i < 120; i++) step(S, K, st, SIM_DT, { pitch: 0, throttle: 1 });
+  assert.ok(S.hotT > 0.5 && S.hotT <= 1.01);
+});
+
+test('Ground Effect stretches a low glide; Slingshot kicks once along the nose', () => {
+  // a pilot holding 6-8 m over the ground
+  const low = () => { let nx = 0, cmd = 0; return (S) => { if (S.t >= nx) { nx = S.t + 0.2; const h = S.y - groundY(S.x); cmd = S.t < 0.6 ? 1 : h > 8 && S.vy > -3 ? -1 : h < 6 && S.vy < 1 ? 1 : 0; } return { pitch: cmd, throttle: 1 }; }; };
+  const skim = (mods) => fly('c22 t12 w21 p32', { mods, ctl: low() }).S.maxX;
+  assert.ok(skim(['groundeffect']) > skim([]) * 1.15);
+  const st = stats({}, { sling: 1 }, weatherFx(null, 0)), K = makeCraft(layout('c22 f12 f32 w11 w21 w31'), st), S = newFlight(K, st);
+  Object.assign(S, { vx: 20, vy: 0, th: 0 });
+  assert.ok(kick(S, st)); assert.ok(Math.abs(S.vx - (20 + 15 * MODS.sling.v[0])) < 1e-9); assert.equal(kick(S, st), false);
+  const st0 = stats({}, {}, weatherFx(null, 0)); assert.equal(kick(newFlight(K, st0), st0), false);
 });

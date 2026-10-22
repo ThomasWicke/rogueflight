@@ -6,11 +6,11 @@ import {
   modUnlocked, QUOTA, quotaFor, isStorm, weatherOf, stats, DIRS,
   SOCK, STRUCT, linkage, connected, balanceOf, makeCraft, hs, groundY,
   COINSEG, COINR, thermalSeg, coinAt, coinSalt, newFlight, segDist, flag, step,
-  popBalloons, summaryOf, scoreFlight, trickVal, wpick, PART_W, rollMods, rollTunes, genShop,
+  popBalloons, kick, summaryOf, scoreFlight, trickVal, speedSteps, wpick, PART_W, rollMods, rollTunes, genShop,
   rerollShop, priceOf, offerPrice, rerollCost, sellValue, newRun, craftCounts, flightCtx, dropRemovedMods, settleFlight,
   PACKS, FIRST_PACKS, rollPacks, grantPacks, openPack, RARE, RARE_CHANCE, RARE_PACK_PRICE, isRare, baseOf, partName,
   MODMAX, modLevels, modVal, modDesc, modPrice, canBuy, applyPurchase, sellMod, flightStats, repeats, severity,
-  MAX_CEILING, CEILING_RULES, ceilingRules, REDLINE, CLOUD9, ALT_STEP, altBonus, altMilestones, altReached,
+  MAX_CEILING, CEILING_RULES, ceilingRules, REDLINE, CLOUD9, RAM_V, HOT_V, ALT_STEP, altBonus, altMilestones, altReached,
   distBonus, distMilestones, distReached, landingShare, flightCoins,
   BOONS, rollBoons, boonDesc, pickBoon, modSlots,
   DAILY_COINS, dailyNumber, dailySeed, SIM_DT, isOnline, ONLINE_TIME, clearContract,
@@ -677,15 +677,20 @@ function setThr(v){ctl.throttle=clamp(Math.round(v*100)/100,0,1);const p=Math.ro
 const FF_SPEED=2, FF_PITCH=.5, ffOn=()=>!!(save.meta.ff&&F&&!F.online);
 function syncFF(){const b=$('bFF');b.classList.toggle('on',!!save.meta.ff);b.setAttribute('aria-pressed',String(!!save.meta.ff));b.style.visibility=F&&F.online?'hidden':'visible'}
 $('bFF').addEventListener('click',()=>{save.meta.ff=!save.meta.ff;persist();syncFF();buzz(10)});
-hold('bPop',()=>{if(F&&!F.S.burst&&F.K.counts.balloon){F.S.burst=true;F.S.events.push('burst')}},()=>{});
+// the right-hand action button: POP while balloons are up, then KICK once with Slingshot (a catapult shove in the air)
+const POP_HTML=$('bPop').innerHTML, KICK_HTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18L18 6M9 6h9v9"/><path d="M3 12l3-3M12 21l3-3"/></svg>KICK<kbd class="kcap" aria-hidden="true">Space</kbd>';
+function act(){if(!F)return;if(F.K.counts.balloon&&!F.S.burst){F.S.burst=true;F.S.events.push('burst')}else if(F.pre<=0)kick(F.S,F.st)}
+function syncAct(){const b=$('bPop'),pop=F.K.counts.balloon&&!F.S.burst,m=pop?'pop':F.st.kick&&!F.S.kicked&&!F.S.done?'kick':'';
+  if(m===b.dataset.m)return;b.dataset.m=m;b.style.visibility=m?'visible':'hidden';if(m){b.innerHTML=m==='pop'?POP_HTML:KICK_HTML;b.setAttribute('aria-label',m==='pop'?'Pop balloons':'Kick')}}
+hold('bPop',act,()=>{});
 const keys={};
-// keyboard (desktop, itch): arrows or W/S pitch, left/right or A/D throttle, Space pops balloons, F fast-forward.
+// keyboard (desktop, itch): arrows or W/S pitch, left/right or A/D throttle, Space pops balloons (or kicks), F fast-forward.
 // The throttle slider handles its own arrows while it has focus, so those are skipped here.
 window.addEventListener('keydown',e=>{if(!F||e.metaKey||e.ctrlKey||e.altKey)return;keys[e.key]=1;sync(e);if(e.repeat&&e.key!=='ArrowLeft'&&e.key!=='ArrowRight')return;
   const k=e.key.length===1?e.key.toLowerCase():e.key,onThr=document.activeElement===$('thr');
   if(!onThr&&(k==='ArrowRight'||k==='d')){setThr(ctl.throttle+.1);e.preventDefault()}
   else if(!onThr&&(k==='ArrowLeft'||k==='a')){setThr(ctl.throttle-.1);e.preventDefault()}
-  else if(k===' '&&$('bPop').style.visibility!=='hidden'&&!F.S.burst&&F.K.counts.balloon){F.S.burst=true;F.S.events.push('burst')}
+  else if(k===' '&&$('bPop').style.visibility!=='hidden')act()
   else if(k==='f'&&!F.online)$('bFF').click()});
 window.addEventListener('keyup',e=>{keys[e.key]=0;sync(e)});
 function sync(e){if(!F)return;const up=keys.ArrowUp||keys.w||keys.W,dn=keys.ArrowDown||keys.s||keys.S;ctl.pitch=up?1:dn?-1:0;if(e&&[' ','ArrowUp','ArrowDown'].includes(e.key))e.preventDefault()}
@@ -697,7 +702,7 @@ function startFlight(o={}){
     ctx:flightCtx(r),quota:r.mode==='daily'||o.online?null:quotaFor(r.stage,r.level),already:r.score,bestDist:r.bestDist||0};
   $('flight').classList.remove('watching');$('fSpec').hidden=true;
   ctl.pitch=0;ctl.boost=false;
-  show('flight');setThr(1);$('thr').style.visibility=(K.counts.rocket||K.counts.prop)?'visible':'hidden';$('bPop').style.visibility=K.counts.balloon?'visible':'hidden';
+  show('flight');setThr(1);$('thr').style.visibility=(K.counts.rocket||K.counts.prop)?'visible':'hidden';$('bPop').dataset.m='-';syncAct();$('fMark').hidden=!F.ctx.lv.frugal;
   $('toast').innerHTML='';$('toast').style.opacity=0;syncFF();
   const fw=$('fWx');fw.hidden=!w;if(w)fw.innerHTML=wxIcon(w)+'Storm · '+WEATHER[w].name;
   resize();F.cam.sc=vh/40;
@@ -745,6 +750,7 @@ function frame(now){
       else if(e==='pass')F.cheer=1,sfx('pass'),toast('Low pass',nth(S.passes,trickVal(F.ctx,'pass')));
       else if(e==='thermal')F.cheer=.6,sfx('thermal'),toast('Thermal',`+${num(trickVal(F.ctx,'thermal'))} mult`);
       else if(e==='burst')sfx('pop'),toast('Balloons burst','');
+      else if(e==='kick'){F.cheer=.6;sfx('launch');buzz(20);toast('Kick','');for(let j=0;j<10;j++)F.parts.push({x:S.x,y:S.y,vx:-S.vx*.2+(Math.random()-.5)*8,vy:-S.vy*.2+(Math.random()-.5)*8,life:.7,r:.3,k:'smoke'})}
       else if(e==='Redline'){F.boom=0;F.cheer=1;sfx('redline');sfx('cheer',{intensity:.9});buzz(40);toast('Redline',has('sonic')?`×${num(mv('sonic'))} score`:'+1 mult')}
       else if(e==='Cloud nine')F.cheer=1,sfx('cheer',{intensity:.9}),toast('Cloud nine',has('escape')?`×${num(mv('escape'))} score`:'+2 mult');
       else if(e==='Downdraft!')toast('Downdraft','The storm pushes you down');
@@ -910,7 +916,7 @@ function hud(dt){
   elV.textContent=fmtV(Math.hypot(P.vx,P.vy));
   // flight clock: a flight ends at st.flightTime (5 min + Flight permits), so slow climbers can plan their descent
   {const rem=Math.max(0,Math.ceil(F.st.flightTime-S.t));elTm.lastChild.textContent=Math.floor(rem/60)+':'+String(rem%60).padStart(2,'0');elTm.className='ftime'+(rem<=20?' crit':rem<=60?' warn':'')}
-  if(S.burst&&$('bPop').style.visibility!=='hidden')$('bPop').style.visibility='hidden';
+  syncAct();
   elFF.hidden=true;
   const sum=summaryOf(S,K),sc=scoreFlight(sum,F.ctx);F.live=sc.total;
   F.hype=clamp((sc.mult*sc.xm-1)/4,0,1);audio.hype(F.hype);
@@ -966,7 +972,7 @@ function showResults(out,S,f){
   let btn='',next='',result='';
   // one result line: sold out (with the bonus), or what is still needed; the gate cash rides along
   if(out.cleared){btn=out.won?'Continue':'Next contract';next=out.won?'won':'shop';preloadMap();
-    result=`<div id="tySold" class="soldout" hidden>Contract cleared! <small>+${out.reward+out.interest+out.pay+(out.over||0)} coins</small></div>`+(out.unlocks&&out.unlocks.length?`<p class="hint">Unlocked: <strong>${out.unlocks.join(', ')}</strong></p>`:'');}
+    result=`<div id="tySold" class="soldout" hidden>Contract cleared! <small>+${out.reward+out.pay+(out.over||0)} coins</small></div>`+(out.unlocks&&out.unlocks.length?`<p class="hint">Unlocked: <strong>${out.unlocks.join(', ')}</strong></p>`:'');}
   else if(out.failed){btn='Run summary';next='over';result=`<p class="tres warn">No flights left · +${out.pay} coins</p>`}
   else if(out.dailyDone){btn='See results';next='daily';result=`<p class="tres">Puzzle complete · +${out.pay} coins</p>`}
   else{const left=FLIGHTS-out.flightNo;btn='Continue';next='hangar';result=`<p class="tres">${isFinite(q)?fmt(q-out.contractScore)+' to target · ':''}${plural(left,'flight')} left · +${out.pay} coins</p>`}
@@ -1339,11 +1345,11 @@ function showRound(keep){
   if(team){
     const before=res.teamScore-res.scores.reduce((t,s)=>t+s.score,0),q=res.target;
     verdict=`<div class="cbar${res.cleared?' done':''}"><i style="transform:scaleX(${Math.min(1,res.teamScore/q)})"></i><span>Team ${fmt(res.teamScore)} / ${fmt(q)}</span></div>`+
-      (res.cleared?`<div class="soldout">Contract cleared!${r.lastClear?` <small>+${r.lastClear.reward+r.lastClear.interest} coins</small>`:''}</div>`:res.failed?'<p class="tres warn">No flights left</p>':`<p class="tres">${fmt(q-res.teamScore)} to target · ${plural(FLIGHTS-res.flight,'flight')} left</p>`);
+      (res.cleared?`<div class="soldout">Contract cleared!${r.lastClear?` <small>+${r.lastClear.reward} coins</small>`:''}</div>`:res.failed?'<p class="tres warn">No flights left</p>':`<p class="tres">${fmt(q-res.teamScore)} to target · ${plural(FLIGHTS-res.flight,'flight')} left</p>`);
     if(ROOM.phase==='over'){btn='Run summary';next='over'}
   }else{
     const iOut=outIds.includes(clientId()),win=ROOM.phase==='over'&&ROOM.over&&ROOM.over.winner===clientId();
-    verdict=win?'<div class="soldout">You win!</div>':iOut?'<p class="tres warn">You are out</p>':r.out?'':`<p class="tres">You made the cut${r.lastClear?` · +${r.lastClear.reward+r.lastClear.interest} coins`:''}</p>`;
+    verdict=win?'<div class="soldout">You win!</div>':iOut?'<p class="tres warn">You are out</p>':r.out?'':`<p class="tres">You made the cut${r.lastClear?` · +${r.lastClear.reward} coins`:''}</p>`;
     if(ROOM.phase==='over'){btn='Final results';next='over'}else if(r.out){btn='Keep watching'}
   }
   sheet.className='sheet roundsheet';

@@ -192,6 +192,8 @@ button:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
 .srow .need.ok{color:var(--good)}
 .fuel{height:12px;border-radius:3px;background:var(--paper2);border:2px solid var(--ink);overflow:hidden;position:relative}
 .fuel i{position:absolute;inset:0;background:repeating-linear-gradient(-45deg,var(--brass) 0 6px,#f0b84f 6px 12px);transform-origin:left center}
+/* Frugal: land with at least this much fuel left */
+.fuel .fmark{position:absolute;left:30%;top:0;bottom:0;width:3px;margin-left:-1px;background:var(--ink)}
 .fuelrow{display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:center;font-family:var(--display);font-size:12px;color:var(--ink)}
 .fuelrow>span{background:var(--paper);border:2px solid var(--ink);border-radius:4px;padding:1px 6px}
 .ffw{color:var(--red)}

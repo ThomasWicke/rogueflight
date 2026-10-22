@@ -7,7 +7,7 @@ const MAXMODS=5, FLIGHTS=3, CONTRACTS=8, FLIGHT_TIME=120, DAILY_COINS=100;
 const SIM_DT=1/120;
 // style goals a dedicated build can reach: Redline (500 km/h, needs a strong rocket build) and Cloud nine (5 km, balloons
 // with Weather Envelope Lv 2+, or balloons then rockets). The old sound barrier and 100 km were out of reach for any craft.
-const REDLINE=500/3.6, CLOUD9=5000;
+const REDLINE=500/3.6, CLOUD9=5000, RAM_V=400/3.6, HOT_V=300/3.6;
 // altitude milestones: peak height pays flat bonuses added to the base (so multipliers apply). ALT_AT are the heights,
 // ALT_PAY what each adds; past the table a milestone every ALT_STEP m adds ALT_MORE more than the one before.
 // It is a landing bonus: only a landing collects it (ALT_CRASH / ALT_AIR are what a crash or a flight that ends in the
@@ -83,25 +83,25 @@ const tuneCost=L=>4+2*L;
 const MODMAX=3;
 const RARITY={C:{name:'Common',w:60,price:5},U:{name:'Uncommon',w:30,price:7},R:{name:'Rare',w:10,price:10}};
 const MODS={
-  overclock:{name:'Overclock',r:'C',tag:'Engine',d:'Props: ×{v} thrust, ×2.5 fuel burn.',v:[1.5,1.8,2.1],how:'Always on while your propellers run: more push, but the tanks empty much sooner.'},
+  overclock:{name:'Overclock',r:'C',tag:'Engine',d:'Props: ×{v} thrust, ×1.8 fuel burn.',v:[1.5,1.8,2.1],how:'Always on while your propellers run: more push, but the tanks empty much sooner.'},
   afterburner:{name:'Afterburner',r:'R',tag:'Engine',d:'Rockets +{v%} thrust per 100 m/s, up to ×4.',v:[.2,.3,.4],lock:4,how:'Rockets get stronger the faster you already fly. Build up speed, then let the rockets roar.'},
   solar:{name:'Solar Wings',r:'R',tag:'Engine',d:'Above 1 km, wings push without fuel ({v%} of a prop).',v:[.2,.3,.4],lock:6,how:'Climb above 1 km and your wings push you forward, even with empty tanks.'},
   secondwind:{name:'Second Wind',r:'C',tag:'Fuel',d:'Empty tanks refill to {v%}, once.',v:[.3,.5,.7],how:'The first time your fuel runs out, the tanks refill by this much.'},
   recycler:{name:'Dive Recycler',r:'U',tag:'Fuel',d:'Falling refills fuel, up to {v%}.',v:[.3,.5,.7],how:'Every time you sink or dive, a little fuel flows back in.'},
-  ramscoop:{name:'Ram Scoop',r:'R',tag:'Fuel',d:'Above 540 km/h, air refills fuel. Rate ×{v}.',v:[1.5,2,2.5],lock:4,how:'Fly faster than 540 km/h and the rushing air refills your tanks.'},
+  ramscoop:{name:'Ram Scoop',r:'R',tag:'Fuel',d:'Above 400 km/h, air refills fuel. Rate ×{v}.',v:[1.5,2,2.5],lock:4,how:'Fly faster than 400 km/h and the rushing air refills your tanks.'},
   burnoff:{name:'Burn-off',r:'U',tag:'Body',d:'Up to {v%} lighter as fuel burns.',v:[.2,.3,.4],how:'Your craft gets lighter as it burns fuel. Best with several tanks.'},
   slipstream:{name:'Slipstream',r:'U',tag:'Body',d:'Drag ×{v}.',v:[.75,.6,.5],how:'Always on: less air drag, so you keep your speed longer.'},
   antigrav:{name:'Antigravity Coil',r:'R',tag:'Body',d:'Gravity ×{v}.',v:[.8,.65,.55],lock:6,how:'Always on: lighter gravity. Easier climbs, longer glides.'},
   gyro:{name:'Gyroscope',r:'C',tag:'Control',d:'Trim and steering +{v%}.',v:[.5,1,1.5],how:'Always on: a steadier nose and quicker response to NOSE UP / NOSE DOWN.'},
   bounce:{name:'Rubber Hull',r:'U',tag:'Control',d:'No crashes. Bounces +{v} mult.',v:[.1,.2,.3],how:'Hard landings bounce instead of crashing. Every big bounce adds mult.'},
-  sling:{name:'Slingshot',r:'C',tag:'Launch',d:'Launch ×{v}, 10° steeper.',v:[1.3,1.6,1.9],how:'The catapult throws you faster and a bit steeper.'},
-  thermal:{name:'Thermal Rider',r:'C',tag:'Air',d:'Thermals lift ×{v}. +{w} mult each.',v:[1.2,1.4,1.6],w:[.15,.25,.35],how:'Fly through the rising air columns (thermals). They lift you harder and each one adds mult.'},
+  sling:{name:'Slingshot',r:'C',tag:'Launch',d:'Launch ×{v}, 10° steeper. One kick in the air.',v:[1.3,1.6,1.9],how:'The catapult throws you faster and a bit steeper, and once per flight the KICK button gives you another catapult shove in the air, the way your nose points.'},
+  thermal:{name:'Thermal Rider',r:'C',tag:'Air',d:'Thermals lift ×{v}. +{w} mult each.',v:[1.2,1.4,1.6],w:[.2,.3,.4],how:'Fly through the rising air columns (thermals). They lift you harder and each one adds mult.'},
   envelope:{name:'Weather Envelope',r:'U',tag:'Air',d:'Balloons +{v}% lift, burst at {w} km.',v:[20,40,60],w:[4,6,8],how:'Balloons lift more and burst much higher before they pop.'},
   odometer:{name:'Odometer',r:'C',tag:'Score',d:'+{v} base.',v:[100,150,250],how:'Adds flat meters to every flight, before the multipliers.'},
   wingman:{name:'Wingman',r:'C',tag:'Score',d:'+{v} mult per wing.',v:[.2,.3,.4],how:'Counts the wings bolted to your craft.'},
   hauler:{name:'Fuel Hauler',r:'U',tag:'Score',d:'+{v} mult per fuel tank.',v:[.25,.4,.55],how:'Counts the fuel tanks bolted to your craft.'},
   altimeter:{name:'Altimeter',r:'U',tag:'Score',d:'+{v} mult per km of altitude.',v:[.3,.5,.8],how:'Counts your highest point: every full km of height adds mult.'},
-  speedtrap:{name:'Speed Trap',r:'C',tag:'Score',d:'+{v} mult per 100 km/h over 200.',v:[.3,.5,.7],how:'Counts your top speed: every 100 km/h above 200 adds mult.'},
+  speedtrap:{name:'Speed Trap',r:'C',tag:'Score',d:'+{v} mult per 50 km/h over 150.',v:[.15,.25,.35],how:'Counts your top speed: every 50 km/h above 150 adds mult.'},
   duster:{name:'Crop Duster',r:'C',tag:'Score',d:'Low passes +{v} mult.',v:[.5,.75,1],how:'Fly low (under 4 m) and fast for a second, then climb back above 8 m. That is a low pass.'},
   stunt:{name:'Stunt Pilot',r:'U',tag:'Score',d:'Loops +{v} mult.',v:[1,1.5,2],how:'Turn a full circle in the air: hold NOSE UP until you go over the top and come round. That is a loop.'},
   collector:{name:'Coin Collector',r:'C',tag:'Score',d:'Coins +{v} mult each.',v:[.15,.25,.35],how:'Fly through the gold coins along the route.'},
@@ -111,18 +111,18 @@ const MODS={
   minimal:{name:'Minimalist',r:'R',tag:'Score',d:'×{v} with 6 parts or fewer.',v:[2,2.5,3],lock:8,how:'Fly a craft of 6 parts or fewer, cockpit included.'},
   sonic:{name:'Overdrive',r:'U',tag:'Score',d:'Redline ×{v} instead of +1.',v:[1.5,2,2.5],how:'Reach Redline (500 km/h) and the whole flight’s score is multiplied.'},
   escape:{name:'Escape Plan',r:'R',tag:'Score',d:'Cloud nine ×{v} instead of +2.',v:[2,2.5,3],lock:8,how:'Reach Cloud nine: climb to 5 km in one flight. Then the whole flight’s score is multiplied. Hard: think balloons with Weather Envelope, or Antigravity with lots of thrust.'},
-  greaser:{name:'Greaser',r:'U',tag:'Score',d:'Touchdown ×{v} instead of +0.5.',v:[1.25,1.5,1.75],how:'Land without crashing: roll to a stop on the ground. The whole flight’s score is multiplied.'},
-  crashtest:{name:'Crash Test',r:'U',tag:'Score',d:'Crash +{v} mult. Dive in hard.',v:[1,2,3],how:'Crash. When a flight is ending anyway, nose down and dive in.'},
+  greaser:{name:'Greaser',r:'U',tag:'Score',d:'Touchdown also ×{v}.',v:[1.15,1.3,1.5],how:'Land without crashing: roll to a stop on the ground. The touchdown mult still counts, and the whole flight’s score is multiplied on top.'},
+  crashtest:{name:'Crash Test',r:'U',tag:'Score',d:'Crash: +{v} mult per 100 km/h of impact.',v:[.5,.75,1],how:'Crash, and the faster you hit the ground the more it pays. When a flight is ending anyway, climb, point the nose down and dive in.'},
   logbook:{name:'Logbook',r:'R',tag:'Score',d:'×{v} more per contract cleared.',v:[.15,.25,.35],lock:8,how:'Grows with every contract cleared this run. Does nothing on contract 1, so daily puzzles never offer it.',noDaily:1},
   compound:{name:'Compound Interest',r:'R',tag:'Score',d:'×0.05 per coin held, up to ×{v}.',v:[2,3,4],lock:8,how:'Counts the coins you hold when the flight ends: 20 coins = ×2. Spend less, score more.'},
-  piggy:{name:'Piggy Bank',r:'C',tag:'Coins',d:'+1 coin per 5 held after a contract, up to {v}.',v:[3,5,7],how:'When you clear a contract, you earn interest on the coins you hold.'},
+  piggy:{name:'Piggy Bank',r:'C',tag:'Coins',d:'+1 coin per 5 held after each flight, up to {v}.',v:[3,5,7],how:'After every flight you earn interest on the coins you hold.'},
   coupon:{name:'Coupon Book',r:'U',tag:'Coins',d:'Shop prices −{v}%.',v:[15,25,35],how:'Everything in the shop costs less.'},
   magnet:{name:'Coin Magnet',r:'C',tag:'Coins',d:'Pulls in coins from ×{v} as far.',v:[2,2.5,3],how:'Grabs coins from farther away, so you can collect them without hitting them dead on.'},
   // added in 0.4: niches for balloons, gliders, dives, rockets, frames and low flying, plus run-long mods
   silent:{name:'Silent Flight',r:'U',tag:'Score',d:'×{v} with no propeller or rocket.',v:[1.5,1.75,2],how:'Fly a craft with no propeller and no rocket bolted on: rise on balloons, pop them, glide down.'},
   bouquet:{name:'Balloon Bouquet',r:'C',tag:'Score',d:'+{v} mult per balloon.',v:[.2,.3,.4],how:'Counts the balloons bolted to your craft at launch, even after they pop.'},
   hedgehop:{name:'Hedgehopper',r:'U',tag:'Score',d:'×{v} if you never climb above 30 m.',v:[1.5,2,2.5],how:'Stay low the whole flight: never higher than 30 m. Pairs well with low passes.'},
-  touchgo:{name:'Touch and Go',r:'C',tag:'Score',d:'Touch-and-gos +{v} mult.',v:[.4,.6,.8],how:'Touch the ground gently while flying fast, then lift off again and climb above 3 m. Each one pays a bit less.'},
+  touchgo:{name:'Touch and Go',r:'C',tag:'Score',d:'Touch-and-gos +{v} mult.',v:[1,1.5,2],how:'Touch the ground gently while flying fast, then lift off again and climb above 2 m. Each one pays a bit less.'},
   showboat:{name:'Showboat',r:'C',tag:'Score',d:'+{v} mult per trick chained within 10 s.',v:[.2,.3,.4],how:'Do a loop, low pass, thermal or touch-and-go within 10 seconds of the last one to chain it. Each link pays a bit less.'},
   flyer:{name:'Frequent Flyer',r:'U',tag:'Score',d:'+{v} mult per landing in a row. A crash resets it.',v:[.1,.15,.2],how:'Counts your landings without a crash in between, across the whole run (flights that end in the air keep the count).'},
   fanclub:{name:'Fan Club',r:'U',tag:'Score',d:'+{v} mult per loop flown this run.',v:[.03,.05,.07],how:'Every loop this run adds to it for good (up to 3 loops per flight count).'},
@@ -137,14 +137,20 @@ const MODS={
   longhaul:{name:'Long Haul',r:'U',tag:'Score',d:'+{v} mult per full minute in the air, if you land.',v:[.3,.4,.5],how:'Every full minute between the catapult and the landing adds mult. Flight permits give you more minutes; a crash or running out of time pays nothing.'},
   investor:{name:'Investor',r:'U',tag:'Coins',d:'+1 coin per 1,000 points, up to {v} a flight.',v:[4,6,8],how:'After each flight, its score pays coins: one per full 1,000 points.'},
   overachiever:{name:'Overachiever',r:'U',tag:'Coins',d:'Clearing a contract: +{v} coins per 10% over the target, up to {w}.',v:[1,2,3],w:[6,10,14],how:'When a contract clears, every full 10% your contract score is above the target pays coins. Not in daily puzzles or rooms.',noDaily:1},
-  magpie:{name:'Magpie',r:'R',tag:'Score',d:'+{v} mult per coin collected this run.',v:[.01,.015,.02],how:'Every coin you fly through this run adds to it for good. Coins get rarer the farther out you fly.'},
+  magpie:{name:'Magpie',r:'R',tag:'Score',d:'+{v} mult per coin collected this run.',v:[.02,.03,.04],how:'Every coin you fly through this run adds to it for good. Coins get rarer the farther out you fly.'},
   sponsor:{name:'Sponsor Decal',r:'C',tag:'Coins',d:'+{v} coins per flight.',v:[2,3,4],how:'Extra coins after every flight, whatever happens.'},
   // added in 0.12: coins for the other builds (height, distance, speed, tricks), and a way to keep part of the landing bonus
   skywriter:{name:'Skywriter',r:'U',tag:'Coins',d:'+1 coin per altitude milestone, up to {v}, if you land.',v:[4,7,10],how:'Climb past 100, 250, 500, 750, 1000 m and on: every height you pass pays a coin after a landing.'},
   mileage:{name:'Mileage Club',r:'U',tag:'Coins',d:'+1 coin per distance milestone, up to {v}, if you land.',v:[4,7,10],how:'Fly past 500, 1250, 2500, 3750, 5000 m and on: every mark you pass pays a coin after a landing.'},
-  bounty:{name:'Speed Bounty',r:'C',tag:'Coins',d:'+1 coin per 100 km/h over 200, up to {v}.',v:[3,5,8],how:'Counts your top speed: every full 100 km/h above 200 pays a coin, however the flight ends.'},
+  bounty:{name:'Speed Bounty',r:'C',tag:'Coins',d:'+1 coin per 50 km/h over 150, up to {v}.',v:[3,5,8],how:'Counts your top speed: every full 50 km/h above 150 pays a coin, however the flight ends.'},
   tipjar:{name:'Tip Jar',r:'C',tag:'Coins',d:'+1 coin per trick, up to {v}.',v:[3,5,8],how:'The crowd tips for every loop, low pass, thermal and touch-and-go in a flight.'},
-  parachute:{name:'Golden Parachute',r:'R',tag:'Score',d:'Still flying when time runs out: keep {v%} of the landing bonus.',v:[.5,.6,.7],lock:6,how:'The altitude and distance bonus normally needs a landing. With this, a flight that ends in the air (out of time, or stuck hovering) keeps part of it. A crash still pays nothing.'},
+  parachute:{name:'Golden Parachute',r:'R',tag:'Score',d:'Still flying when time runs out: keep {v%} of the landing bonus.',v:[.1,.2,.3],lock:6,how:'The altitude and distance bonus normally needs a landing. With this, a flight that ends in the air (out of time, or stuck hovering) keeps part of it. A crash still pays nothing.'},
+  // added in 0.13: a physics mod for low flying, a payoff for engines, storms, tunings and holding speed
+  groundeffect:{name:'Ground Effect',r:'U',tag:'Body',d:'Below 10 m: drag ×{v}.',v:[.75,.6,.5],how:'Fly close to the ground (under 10 m) and the air cushion under your wings cuts drag. Low and long.'},
+  engineroom:{name:'Engine Room',r:'C',tag:'Score',d:'+{v} mult per propeller or rocket.',v:[.3,.45,.6],how:'Counts the propellers and rockets bolted to your craft.'},
+  stormchaser:{name:'Storm Chaser',r:'U',tag:'Score',d:'Storm contracts ×{v}.',v:[1.3,1.6,2],how:'Every flight of a storm contract is multiplied. The forecast shows which contracts are storms. Daily puzzles have no storms, so they never offer it.',noDaily:1},
+  mechanic:{name:'Mechanic',r:'U',tag:'Score',d:'+{v} mult per tuning level.',v:[.05,.08,.12],how:'Counts every tuning bought this run: each level of propeller tuning, bigger tanks, flight permits and the rest.'},
+  hotstreak:{name:'Hot Streak',r:'U',tag:'Score',d:'+{v} mult per second over 300 km/h, up to {w}.',v:[.1,.15,.2],w:[3,4,5],how:'Every full second you fly faster than 300 km/h adds mult. Rockets, dives and Slipstream keep you there.'},
 };
 // owned mods as {id: level}; older saves stored only the ids, which count as Lv 1. Plain id arrays work too (tests).
 const modLevels=r=>Array.isArray(r)?Object.fromEntries(r.map(id=>[id,1])):Object.fromEntries(r.mods.map(id=>[id,Math.min(MODMAX,(r.modLv&&r.modLv[id])||1)]));
@@ -236,18 +242,18 @@ function stats(tune,mods,wx){
   wx=wx||weatherFx(null,0);
   const propMul=pw('prop',1.3);
   return {
-    prop:15*propMul*(has('overclock')?mv('overclock'):1), propUse:has('overclock')?3.5:1.4,
+    prop:15*propMul*(has('overclock')?mv('overclock'):1), propUse:has('overclock')?2.5:1.4,
     rocket:34*pw('rocket',1.25), afterburner:mv('afterburner'),
     tankFuel:6*pw('fuel',1.35)*wx.fuelMul, reserve:3*pw('fuel',1.35)*wx.fuelMul,
     wing:.075*pw('wing',1.15), wingCD:.012,
-    launch:15*pw('launch',1.5)*(has('sling')?mv('sling'):1)*wx.launchMul, launchAng:(20+(has('sling')?10:0))*Math.PI/180,
+    launch:15*pw('launch',1.5)*(has('sling')?mv('sling'):1)*wx.launchMul, launchAng:(20+(has('sling')?10:0))*Math.PI/180, kick:has('sling')?15*mv('sling'):0,
     massMul:1/(1+.12*t('light')), cargo:wx.cargo,
     balloon:11*pw('balloon',1.25)*(1+mv('envelope')/100), burstAlt:has('envelope')?mv('envelope','w')*1000:2000,
     magnetR:has('magnet')?mv('magnet'):1,
     ramscoop:mv('ramscoop'), recycler:mv('recycler'), secondwind:mv('secondwind'),
     solar:mv('solar'), burnoff:mv('burnoff'), drag:has('slipstream')?mv('slipstream'):1,
     grav:has('antigrav')?mv('antigrav'):1, gyro:mv('gyro'), bounce:has('bounce')?1:0, thermal:has('thermal')?mv('thermal'):1,
-    dive:has('divebomb')?mv('divebomb'):1, sail:has('sailplane')?mv('sailplane'):1, booster:has('booster')?mv('booster'):1, supercharge:has('supercharge')?mv('supercharge'):1, burner:mv('burner'),
+    dive:has('divebomb')?mv('divebomb'):1, lowDrag:has('groundeffect')?mv('groundeffect'):1, sail:has('sailplane')?mv('sailplane'):1, booster:has('booster')?mv('booster'):1, supercharge:has('supercharge')?mv('supercharge'):1, burner:mv('burner'),
     frameMass:has('carpenter')?0:1,
     wind:wx.wind, ceiling:wx.ceiling, rhoMul:wx.rhoMul, gust:wx.gust,
     flightTime:(wx.clock||FLIGHT_TIME)+60*Math.min(t('time'),TUNES.time.max),
@@ -318,7 +324,7 @@ function newFlight(K,st){
   return {x:-4,y:21.2,vx:st.launch*Math.cos(st.launchAng),vy:st.launch*Math.sin(st.launchAng),th:st.launchAng,w:0,fuel:K.fuelMax,t:0,
     maxX:0,maxY:21,maxV:0,ground:0,done:false,crashed:false,landed:false,sw:false,bounces:0,coins:0,got:new Set(),flags:{},events:[],
     rocketOn:false,propOn:false,touch:false,calm:0,slow:0,progX:-4,recyc:0,gPrev:st.launchAng,
-    spin:0,loops:0,passes:0,skim:0,passReady:false,thermals:0,thSeen:new Set(),gustE:0,burst:false,popped:false,touchgos:0,tgArm:false,combos:0,lastTrick:-9,altMs:0,distMs:0};
+    spin:0,loops:0,passes:0,skim:0,passReady:false,thermals:0,thSeen:new Set(),gustE:0,burst:false,popped:false,touchgos:0,tgArm:false,combos:0,lastTrick:-9,altMs:0,distMs:0,hotT:0,kicked:false};
 }
 function segDist(px,py,ax,ay,bx,by){const dx=bx-ax,dy=by-ay,l=dx*dx+dy*dy;let t=l?((px-ax)*dx+(py-ay)*dy)/l:0;t=clamp(t,0,1);return Math.hypot(px-ax-dx*t,py-ay-dy*t)}
 function flag(S,k,msg){if(!S.flags[k]){S.flags[k]=1;S.events.push(msg)}}
@@ -344,7 +350,8 @@ function step(S,K,st,dt,ctl){
   // Dive Bomber: nose down steeper than 30 degrees while descending cuts all drag. Sailplane: so does gliding with no
   // engine pushing (decided from the last step's engines, which is what the craft is doing right now)
   const na=Math.atan2(Math.sin(S.th),Math.cos(S.th)), diving=st.dive<1&&S.vy<0&&na<-Math.PI/6&&na>-5*Math.PI/6;
-  const drag=st.drag*(diving?st.dive:1)*(st.sail<1&&!S.propOn&&!S.rocketOn&&S.t>.5?st.sail:1);
+  // Ground Effect: under 10 m the air cushion under the wings cuts drag
+  const drag=st.drag*(diving?st.dive:1)*(st.sail<1&&!S.propOn&&!S.rocketOn&&S.t>.5?st.sail:1)*(st.lowDrag<1&&S.y-groundY(S.x)<10?st.lowDrag:1);
   // Supercharger: props pull harder while the nose points up more than 15 degrees (so it helps a craft start climbing)
   const climbK=st.supercharge>1&&na>Math.PI/12&&na<Math.PI*.6?st.supercharge:1;
   const m=K.m*light, I=K.I*light+.3*st.massMul, W=m*G0*st.grav;
@@ -363,12 +370,16 @@ function step(S,K,st,dt,ctl){
   const Lact=Lcmd*Math.max(0,Math.cos(clamp(dev*2.5,-Math.PI/2,Math.PI/2)));
   const sa=Math.sin(Math.min(Math.PI/2,Math.abs(aEff)+Math.abs(dev)));
   let Fx=0,Fy=-W,Ta=0,Tt=0,use=0,thr=0;
+  // engines push only for the fuel there is: a trace of fuel used to buy a whole step of thrust, so a trickle of refills
+  // (Dive Recycler while gliding) kept an empty plane cruising level until the clock ran out
+  let need=0;for(const p of K.parts){if(p.blocked)continue;if(p.type==='prop'&&thrl>0)need+=st.propUse*thrl;else if(p.type==='rocket'&&rocketThr>0)need+=4*rocketThr*(p.rare?.6:1)}
+  const fk=hasFuel&&need>0?Math.min(1,S.fuel/(need*dt)):0;
   S.rocketOn=false;S.propOn=false;
   for(const p of K.parts){
     const rx=p.lx*c-p.ly*s, ry=p.lx*s+p.ly*c;
     let fx=0,fy=0,tx=0,ty=0;
-    if(p.type==='prop'){if(hasFuel&&!p.blocked&&thrl>0){const th=st.prop*rho*thrl*climbK*(p.rare?1.4:1);tx=c*th;ty=s*th;thr+=th;use+=st.propUse*thrl;S.propOn=true}}
-    else if(p.type==='rocket'){if(hasFuel&&rocketThr>0&&!p.blocked){const th=st.rocket*rocketThr*(1+st.afterburner*Math.min(v,1000)/100)*(S.t<3?st.booster||1:1);tx=c*th;ty=s*th;thr+=th;use+=4*rocketThr*(p.rare?.6:1);S.rocketOn=true}}
+    if(p.type==='prop'){if(hasFuel&&!p.blocked&&thrl>0){const th=st.prop*rho*thrl*climbK*(p.rare?1.4:1)*fk;tx=c*th;ty=s*th;thr+=th;use+=st.propUse*thrl*fk;S.propOn=true}}
+    else if(p.type==='rocket'){if(hasFuel&&rocketThr>0&&!p.blocked){const th=st.rocket*rocketThr*(1+st.afterburner*Math.min(v,1000)/100)*(S.t<3?st.booster||1:1)*fk;tx=c*th;ty=s*th;thr+=th;use+=4*rocketThr*(p.rare?.6:1)*fk;S.rocketOn=true}}
     else if(p.type==='wing'){
       const L=Lact/nw;Fx+=-uy*L;Fy+=ux*L;
       const D=st.wingCD*rho*q*(.06+sa*sa)*drag;fx-=ux*D;fy-=uy*D;
@@ -409,7 +420,7 @@ function step(S,K,st,dt,ctl){
   // the burner pays for the lift it gives back, so it cannot climb for free
   if(burnOn)use+=.06*K.counts.balloon*st.burner*(1-dens);
   if(use>0)S.fuel-=use*dt;
-  if(st.ramscoop&&v>150)S.fuel+=st.ramscoop*.006*(v-150)*rho*dt;
+  if(st.ramscoop&&v>RAM_V)S.fuel+=st.ramscoop*.006*(v-RAM_V)*rho*dt;
   if(st.recycler&&S.vy<0&&S.recyc<st.recycler*K.fuelMax){const g=Math.min(.1*(-S.vy)*dt,st.recycler*K.fuelMax-S.recyc);S.fuel+=g;S.recyc+=g}
   S.fuel=Math.min(S.fuel,K.fuelMax);
   if(S.fuel<=0){S.fuel=0;if(st.secondwind&&!S.sw){S.sw=true;S.fuel=K.fuelMax*st.secondwind;S.events.push('Second Wind')}}
@@ -423,12 +434,12 @@ function step(S,K,st,dt,ctl){
   if(minY<gy){
     S.touch=true;S.y+=gy-minY;
     const imp=-S.vy;
-    // a gentle touch at speed arms a touch-and-go; it counts once the craft climbs back above 3 m
-    if(S.x>5&&imp<5&&Math.hypot(S.vx,S.vy)>12)S.tgArm=true;
+    // a gentle touch at speed arms a touch-and-go; it counts once the craft climbs back above 2 m
+    if(S.x>5&&imp<7&&Math.hypot(S.vx,S.vy)>10)S.tgArm=true;
     if(imp>0){
       // a hard hit (over ~55 km/h straight down) or a nose-first impact steeper than 45 degrees is a crash
       {let a=S.th%(2*Math.PI);if(a>Math.PI)a-=2*Math.PI;if(a<-Math.PI)a+=2*Math.PI;
-       if(!st.bounce&&(imp>15||(imp>5&&a<-Math.PI/4))){S.crashed=true;S.done=true;S.impact=imp;return}}
+       if(!st.bounce&&(imp>15||(imp>5&&a<-Math.PI/4))){S.crashed=true;S.done=true;S.impact=imp;S.impactV=Math.hypot(S.vx,S.vy);return}}
       // Rubber Hull bounces big hits back up, but small ones die out so the craft can settle and land
       const e=st.bounce&&imp>3?.8:.18;
       S.vy=imp*e;if(imp>2){S.vx*=st.bounce?.97:.95;S.w*=.5}
@@ -437,7 +448,7 @@ function step(S,K,st,dt,ctl){
     S.vx*=Math.exp(-(st.bounce?.3:1.4)*dt);
     let a=S.th%(2*Math.PI);if(a>Math.PI)a-=2*Math.PI;if(a<-Math.PI)a+=2*Math.PI;S.th-=a*Math.min(1,4*dt);
   }
-  if(!S.touch&&S.tgArm&&h>3){S.tgArm=false;S.touchgos++;trick(S,'touchgo')}
+  if(!S.touch&&S.tgArm&&h>2){S.tgArm=false;S.touchgos++;trick(S,'touchgo')}
   // style: loops, and low passes that pull back up
   if(!S.touch){S.spin+=S.w*dt;if(Math.abs(S.spin)>=2*Math.PI){S.loops++;S.spin-=Math.sign(S.spin)*2*Math.PI;trick(S,'loop')}}else S.spin=0;
   const gs=Math.hypot(S.vx,S.vy);
@@ -453,6 +464,7 @@ function step(S,K,st,dt,ctl){
   const nv=gs;
   if(S.x>S.maxX)S.maxX=S.x;if(S.y>S.maxY)S.maxY=S.y;if(nv>S.maxV)S.maxV=nv;
   if(nv>REDLINE)flag(S,'mach','Redline');
+  if(nv>HOT_V)S.hotT+=dt;
   if(S.y>CLOUD9)flag(S,'karman','Cloud nine');
   if(altMilestones(S.y)>S.altMs){S.altMs=altMilestones(S.y);S.events.push('altitude')}
   if(distMilestones(S.maxX)>S.distMs){S.distMs=distMilestones(S.maxX);S.events.push('distance')}
@@ -472,6 +484,8 @@ function step(S,K,st,dt,ctl){
   if(S.ground>.5){S.done=true;S.landed=true}
   if(S.t>st.flightTime){S.done=true;S.timeout=true}
 }
+// Slingshot: once per flight, a catapult shove in the air along the nose
+function kick(S,st){if(!st.kick||S.kicked||S.done)return false;S.kicked=true;S.vx+=Math.cos(S.th)*st.kick;S.vy+=Math.sin(S.th)*st.kick;S.events.push('kick');return true}
 // balloons burst: rebuild the craft without them and keep it where it is in the sky
 function popBalloons(S,K,st){
   let m=0,x=0,y=0;for(const p of K.parts){if(p.type==='balloon')continue;m+=p.m;x+=p.m*p.lx;y+=p.m*p.ly}
@@ -481,7 +495,7 @@ function popBalloons(S,K,st){
 }
 function summaryOf(S,K){return {dist:Math.max(0,S.maxX),maxY:S.maxY,maxV:S.maxV,coins:S.coins,loops:S.loops,passes:S.passes,thermals:S.thermals,
   bounces:S.bounces,mach:!!S.flags.mach,space:!!S.flags.karman,crashed:S.crashed,landed:!!S.landed,banked:!!S.banked,fuelFrac:K.fuelMax?S.fuel/K.fuelMax:0,
-  touchgos:S.touchgos||0,combos:S.combos||0,landX:S.x,t:S.t,timeout:!!S.timeout,becalmed:!!S.becalmed}}
+  touchgos:S.touchgos||0,combos:S.combos||0,landX:S.x,t:S.t,timeout:!!S.timeout,becalmed:!!S.becalmed,impactV:S.impactV||0,hotT:S.hotT||0}}
 
 /* ---------- scoring: distance x multipliers ---------- */
 // repeated tricks pay less each time: the n-th loop or low pass is worth 1/(1+0.5(n-1)) of the first,
@@ -496,6 +510,8 @@ function trickVal(ctx,k){const lv=ctx.lv||modLevels(ctx.mods||[]),has=m=>!!lv[m]
 // how much of the altitude and distance landing bonus a flight keeps: all on a landing, none on a crash, and in the air
 // none, or Golden Parachute's share
 function landingShare(f,ctx){const lv=ctx.lv||modLevels(ctx.mods||[]);return f.landed?1:f.crashed?ALT_CRASH:lv.parachute?modVal(lv,'parachute'):ALT_AIR}
+// Speed Trap and Speed Bounty count full 50 km/h steps of top speed above 150 km/h
+const speedSteps=f=>Math.max(0,Math.floor((f.maxV*3.6-150)/50));
 function scoreFlight(f,ctx){
   const lv=ctx.lv||modLevels(ctx.mods||[]), has=k=>!!lv[k], mv=(k,key)=>modVal(lv,k,key), bn=k=>(ctx.boons&&ctx.boons[k])||0, lines=[];
   let base=Math.floor(f.dist);lines.push({t:'b',label:'Distance',v:base,dist:true});
@@ -507,8 +523,8 @@ function scoreFlight(f,ctx){
   const addM=(label,v)=>{v=Math.round(v*100)/100;if(v>0){mult+=v;lines.push({t:'m',label,v})}};
   const addX=(label,v)=>{if(v>1){xm*=v;lines.push({t:'x',label,v})}};
   const pl=(n,w)=>n+' '+w+(n===1?'':/s$/.test(w)?'es':'s');
-  if(f.landed){if(has('greaser'))addX('Greaser touchdown',mv('greaser'));else addM('Clean touchdown',.5);if(bn('land'))addM('Soft Landing',.25*bn('land'))}
-  if(f.crashed&&has('crashtest'))addM('Crash Test',mv('crashtest'));
+  if(f.landed){addM('Clean touchdown',.5);if(bn('land'))addM('Soft Landing',.25*bn('land'));if(has('greaser'))addX('Greaser touchdown',mv('greaser'))}
+  if(f.crashed&&has('crashtest'))addM('Crash Test',mv('crashtest')*Math.floor((f.impactV||0)*3.6/100));
   if(f.loops)addM(pl(f.loops,'loop'),repeats(f.loops)*trickVal(ctx,'loop'));
   if(f.passes)addM(pl(f.passes,'low pass'),repeats(f.passes)*trickVal(ctx,'pass'));
   if(f.thermals)addM(pl(f.thermals,'thermal')+' ridden',f.thermals*trickVal(ctx,'thermal'));
@@ -518,7 +534,7 @@ function scoreFlight(f,ctx){
   if(has('wingman'))addM('Wingman',mv('wingman')*ctx.wings);
   if(has('hauler'))addM('Fuel Hauler',mv('hauler')*ctx.tanks);
   if(has('altimeter'))addM('Altimeter',mv('altimeter')*Math.floor(f.maxY/1000));
-  if(has('speedtrap'))addM('Speed Trap',mv('speedtrap')*Math.max(0,Math.floor((f.maxV*3.6-200)/100)));
+  if(has('speedtrap'))addM('Speed Trap',mv('speedtrap')*speedSteps(f));
   if(f.coins)addM(pl(f.coins,'coin'),f.coins*trickVal(ctx,'coin'));
   if(has('opening')&&ctx.flightIdx===0)addX('Opening Act',mv('opening'));
   if(has('third')&&ctx.flightIdx===2)addX('Third Time Lucky',mv('third'));
@@ -539,6 +555,10 @@ function scoreFlight(f,ctx){
   if(has('carpenter'))addM('Carpenter',mv('carpenter')*(ctx.frames||0));
   if(has('longhaul')&&f.landed&&f.t>=60)addM('Long Haul',mv('longhaul')*Math.floor(f.t/60));
   if(has('magpie'))addM('Magpie',mv('magpie')*((ctx.coinsRun||0)+(f.coins||0)));
+  if(has('engineroom'))addM('Engine Room',mv('engineroom')*(ctx.engines||0));
+  if(has('mechanic'))addM('Mechanic',mv('mechanic')*(ctx.tunes||0));
+  if(has('hotstreak'))addM('Hot Streak',Math.min(mv('hotstreak','w'),mv('hotstreak')*Math.floor(f.hotT||0)));
+  if(has('stormchaser')&&ctx.storm)addX('Storm Chaser',mv('stormchaser'));
   const total=Math.floor(base*mult*xm);
   return {lines,base,mult:Math.round(mult*100)/100,xm,total};
 }
@@ -641,17 +661,19 @@ function craftCounts(cells){const l=connected(cells);const n=t=>l.filter(c=>c.ty
   return {parts:l.length,wings:n('wing'),tanks:n('tank'),balloons:n('balloon'),frames:n('frame'),engines:n('prop')+n('rocket')}}
 // everything scoreFlight needs to know about the run around a flight
 function flightCtx(run){return {lv:modLevels(run),boons:run.boons,flightIdx:run.flight,cleared:run.stage,coins:run.coins,streak:run.streak||0,loopsRun:run.loopsRun||0,coinsRun:run.coinsRun||0,
-  empty:Math.max(0,modSlots(run)-run.mods.length),...craftCounts(run.cells)}}
+  empty:Math.max(0,modSlots(run)-run.mods.length),storm:!!weatherOf(run,run.stage),tunes:Object.values(run.tune||{}).reduce((a,b)=>a+b,0),...craftCounts(run.cells)}}
 // coins the 0.12 economy mods pay for a flight: altitude and distance milestones (on a landing), top speed, tricks
 function flightCoins(lv,f){const v=k=>modVal(lv,k);
   return (f.landed?Math.min(v('skywriter'),altMilestones(f.maxY))+Math.min(v('mileage'),distMilestones(f.dist)):0)
-    +Math.min(v('bounty'),Math.max(0,Math.floor((f.maxV*3.6-200)/100)))+Math.min(v('tipjar'),(f.loops||0)+(f.passes||0)+(f.thermals||0)+(f.touchgos||0))}
+    +Math.min(v('bounty'),speedSteps(f))+Math.min(v('tipjar'),(f.loops||0)+(f.passes||0)+(f.thermals||0)+(f.touchgos||0))}
 function settleFlight(run,meta,f){
   const lv=modLevels(run), has=k=>!!lv[k];
   const sc=scoreFlight(f,flightCtx(run));
   run.streak=f.landed?(run.streak||0)+1:f.crashed?0:(run.streak||0);run.loopsRun=(run.loopsRun||0)+Math.min(3,f.loops||0);run.coinsRun=(run.coinsRun||0)+(f.coins||0);
   const invest=has('investor')?Math.min(modVal(lv,'investor'),Math.floor(sc.total/1000)):0;
-  const pay=3+f.coins+modVal(lv,'sponsor')+invest+flightCoins(lv,f);
+  let pay=3+f.coins+modVal(lv,'sponsor')+invest+flightCoins(lv,f);
+  // Piggy Bank: interest on the coins held once this flight has paid
+  if(has('piggy'))pay+=Math.min(modVal(lv,'piggy'),Math.floor((run.coins+pay)/5));
   run.coins+=pay;run.score+=sc.total;run.total+=sc.total;run.flight++;run.best=Math.max(run.best,sc.total);run.bestDist=Math.max(run.bestDist||0,f.dist);
   // s: the flight's snapshot for balancing: the build it flew with, where the score came from, how it went
   const lvs=modLevels(run),r1=x=>Math.round(x*100)/100;
@@ -675,12 +697,10 @@ function settleFlight(run,meta,f){
   return out}
 // a cleared contract: the reward (more for unused flights and storms), the next town's shop and packs, a storm reward
 function clearContract(run,meta,out={}){
-  const lv=modLevels(run), has=k=>!!lv[k];
   const unused=Math.max(0,FLIGHTS-run.flight), storm=isStorm(run.stage,run.level);
   const reward=6+2*unused+(storm?4:0);
-  const interest=has('piggy')?Math.min(modVal(lv,'piggy'),Math.floor((run.coins+reward)/5)):0;
-  run.coins+=reward+interest;
-  Object.assign(out,{cleared:true,reward,unused,storm,interest});
+  run.coins+=reward;
+  Object.assign(out,{cleared:true,reward,unused,storm});
   run.stage++;run.flight=0;run.score=0;
   const before=meta.bestStage||0;meta.bestStage=Math.max(before,run.stage);meta.deepest=Math.max(meta.deepest||0,run.stage);
   out.unlocks=isOnline(run)?[]:UNLOCKS.filter(u=>u.at>before&&u.at<=meta.bestStage).map(u=>u.text);
@@ -697,11 +717,11 @@ export {
   modUnlocked, QUOTA, quotaFor, isStorm, weatherOf, stats, DIRS,
   SOCK, STRUCT, linkage, connected, balanceOf, makeCraft, hs, groundY,
   COINSEG, COINR, thermalSeg, coinAt, coinSalt, newFlight, segDist, flag, step,
-  popBalloons, summaryOf, scoreFlight, trickVal, wpick, PART_W, rollMods, rollTunes, genShop,
+  popBalloons, kick, summaryOf, scoreFlight, trickVal, speedSteps, wpick, PART_W, rollMods, rollTunes, genShop,
   rerollShop, priceOf, offerPrice, rerollCost, sellValue, newRun, craftCounts, flightCtx, dropRemovedMods, settleFlight,
   PACKS, FIRST_PACKS, rollPacks, grantPacks, openPack, RARE, RARE_CHANCE, RARE_PACK_PRICE, isRare, baseOf, partName,
   MODMAX, modLevels, modVal, modDesc, modPrice, canBuy, applyPurchase, sellMod, flightStats, repeats, severity,
-  MAX_CEILING, CEILING_RULES, ceilingRules, REDLINE, CLOUD9, ALT_STEP, altBonus, altMilestones, altReached,
+  MAX_CEILING, CEILING_RULES, ceilingRules, REDLINE, CLOUD9, RAM_V, HOT_V, ALT_STEP, altBonus, altMilestones, altReached,
   distBonus, distMilestones, distReached, landingShare, flightCoins,
   BOONS, rollBoons, boonDesc, pickBoon, modSlots,
   DAILY_COINS, dailyNumber, dailySeed, SIM_DT, isOnline, ONLINE_TIME, clearContract,

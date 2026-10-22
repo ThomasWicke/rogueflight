@@ -107,6 +107,17 @@ function planeTop(g, D, x, y, s, a, col, col2) {
   g.restore();
 }
 
+// side view of a little plane, nose toward +x
+function planeSide(g, D, x, y, s, a, col, col2) {
+  g.save(); g.translate(x, y); g.rotate(a); g.scale(s, s); const d = sc(D, s);
+  solid(g, d, p => P(p, [-15, -2, -19, -12, -13, -12, -8, -2]), col, col2, 2 / s);
+  solid(g, d, p => RR(p, -18, -4, 34, 9, 4.5), col, col2, 2.4 / s);
+  fillP(g, p => E(p, 4, -4.5, 3.6, 2.6), INK);
+  solid(g, d, p => E(p, -1, 3, 11, 2.8), C.canvas, C.paper2, 1.4 / s);
+  fillP(g, p => E(p, 17.5, .5, 1.6, 9), 'rgba(255,255,255,.6)');
+  ln(g, d, p => { p.moveTo(17.5, -8); p.lineTo(17.5, 9); }, .7);
+  g.restore();
+}
 const planeTopShape = (p, x, y, s) => { RR(p, x - 3.4 * s, y - 16 * s, 6.8 * s, 30 * s, 3.4 * s); RR(p, x - 17 * s, y - 6 * s, 34 * s, 8 * s, 3.6 * s); };
 
 /* ---------- motifs: one per mod id, drawn in a box of about ±30 units ---------- */
@@ -712,6 +723,46 @@ const MOTIF = {
     solid(g, D, p => P(p, [22, -14, 30, -12, 23, -9]), C.brass, C.brass2, 1.4);
     solid(g, D, p => O(p, 17, -12, 1.4), C.canvas, null);
     coin(g, D, 22, 10, 9, 0);
+  },
+  // added in 0.13
+  groundeffect(g, D) {
+    // a plane skimming the grass on a cushion of air
+    blob(g, D, p => RR(p, -28, 18, 56, 11, 3), C.grass, C.grass2);
+    for (const x of [-15, 0, 15]) ln(g, D, p => { p.moveTo(x - 7, 14); p.quadraticCurveTo(x, 7, x + 7, 14); }, .9, C.teal2);
+    planeSide(g, D, 3, 0, 1.2, 0, C.red, C.red2);
+    ln(g, D, p => { p.moveTo(-31, -8); p.lineTo(-22, -8); p.moveTo(-30, 2); p.lineTo(-24, 2); }, .8, C.teal2);
+  },
+  engineroom(g, D) {
+    // two engines side by side, props spinning
+    for (const [x, y] of [[-13, 2], [13, -4]]) {
+      solid(g, D, p => RR(p, x - 7, y, 14, 26, 6), C.tin, C.tin2);
+      if (!D.small) ln(g, D, p => { p.moveTo(x - 7, y + 9); p.lineTo(x + 7, y + 9); }, .6, C.tin2);
+      fillP(g, p => E(p, x, y - 1, 15, 5.5), 'rgba(255,255,255,.45)');
+      solid(g, D, p => E(p, x, y - 1, 13, 3.2), C.wood, C.wood2, 1.6);
+      solid(g, D, p => O(p, x, y - 1, 4.2), C.red, C.red2, 1.6);
+    }
+  },
+  stormchaser(g, D) {
+    // a thundercloud with a bolt, a little plane flying right at it
+    blob(g, D, p => { O(p, -13, -10, 10); O(p, 1, -15, 13); O(p, 15, -9, 10); RR(p, -23, -10, 46, 12, 6); }, C.tin2, C.night, 2.6);
+    solid(g, D, p => P(p, [3, 1, -6, 15, 0, 15, -5, 29, 9, 11, 3, 11, 8, 1]), C.brass, C.brass2, 1.6);
+    planeSide(g, D, -15, 19, .75, rad(-24), C.red, C.red2);
+    if (!D.small) for (const [x, y] of [[18, 10], [24, 18]]) ln(g, D, p => { p.moveTo(x, y); p.lineTo(x - 2, y + 6); }, .7, C.teal2);
+  },
+  mechanic(g, D) {
+    // a brass cog with a spanner across it
+    const cog = (p, x, y, R, r, n) => { for (let i = 0; i < n * 4; i++) { const a = (i + .5) / (n * 4) * TAU, rr = i % 4 < 2 ? R : r; const px = x + rr * Math.cos(a), py = y + rr * Math.sin(a); if (i) p.lineTo(px, py); else p.moveTo(px, py); } p.closePath(); };
+    solid(g, D, p => cog(p, -5, 5, 20, 15, 8), C.brass, C.brass2);
+    solid(g, D, p => O(p, -5, 5, 6.5), C.canvas, null);
+    tube(g, D, p => { p.moveTo(-25, 27); p.lineTo(11, -9); }, 6, C.tin);
+    tube(g, D, p => p.arc(17, -15, 7.5, rad(-10), rad(280)), 6, C.tin);
+  },
+  hotstreak(g, D) {
+    // a plane at the head of a long flame streak
+    solid(g, D, p => { p.moveTo(-30, 16); p.quadraticCurveTo(-8, 8, 8, -8); p.lineTo(15, 1); p.quadraticCurveTo(-4, 18, -30, 16); p.closePath(); }, C.red, C.red2);
+    solid(g, D, p => { p.moveTo(-18, 14); p.quadraticCurveTo(-2, 8, 9, -3); p.lineTo(11, 3); p.quadraticCurveTo(-3, 14, -18, 14); p.closePath(); }, C.brass, null);
+    planeSide(g, D, 14, -9, .95, rad(-38), C.canvas, C.paper2);
+    if (!D.small) for (const [x, y, l] of [[-24, -2, 12], [-16, -12, 10], [-28, 26, 9]]) ln(g, D, p => { p.moveTo(x, y); p.lineTo(x + l * .8, y - l * .55); }, .8, C.teal2);
   },
 };
 // fallback for ids without a motif: a plain star

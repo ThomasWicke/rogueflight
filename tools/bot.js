@@ -169,12 +169,14 @@ const MOD_VALUE = {
   investor: 6, overachiever: 5, longhaul: 3, magpie: 5,
   // 0.12 coin mods: it lands its distance flights, climbs a little, rarely speeds or does tricks
   mileage: 6, skywriter: 3, bounty: 2, tipjar: 2, parachute: 1,
+  // 0.13: it counts engines and buys many tunings; it never flies low or holds 300 km/h
+  engineroom: 5, mechanic: 6, stormchaser: 4,
 };
 // smart shopper: try before you buy. A mod or tuning is valued by flying the current craft with and without it
 // (the gain in score, relative to the current score, scaled to the 0-10 range of MOD_VALUE). Coins, run-long and
 // flight-order mods do nothing in one test flight, so they keep their fixed value.
 const FIXED = new Set(['opening', 'third', 'logbook', 'sponsor', 'investor', 'overachiever', 'piggy', 'coupon', 'compound', 'magpie', 'flyer', 'fanclub', 'secondwind',
-  'mileage', 'skywriter', 'bounty', 'tipjar']);
+  'mileage', 'skywriter', 'bounty', 'tipjar', 'mechanic', 'stormchaser']);
 let SHOP_CRAFT = null;
 function testScore(run) {
   const st = flightStats(run), K = makeCraft(SHOP_CRAFT.cells, st);
