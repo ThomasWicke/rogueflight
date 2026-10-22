@@ -705,6 +705,9 @@ function mixHex(a,b,t){const p=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));co
 function toast(title,sub){F.toasts.push({title,sub});if(F.toasts.length>4)F.toasts.shift()}
 function frame(now){
   if(!F)return;
+  // turning the phone mid-flight: iOS can fire 'resize' before the layout has its new size, so the canvas kept the old
+  // shape and the picture was stretched; check the canvas against its box every frame instead
+  if(Math.abs(cv.clientWidth-vw)>1||Math.abs(cv.clientHeight-vh)>1)resize();
   const dt=clamp((now-last)/1000,0,.05);last=now; // a frame stamped before startFlight's clock reading would run time backwards
   const {S,st}=F, lv=F.ctx.lv, has=k=>!!lv[k], mv=(k,key)=>modVal(lv,k,key);
   // what the n-th repeat of a trick adds, after the diminishing returns in scoreFlight

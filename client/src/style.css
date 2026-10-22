@@ -742,6 +742,15 @@ body.offline::after{content:"Reconnecting…";position:fixed;left:50%;top:calc(v
   #hangar #bench>.card:first-child>.pal{grid-area:pal;grid-template-columns:repeat(2,minmax(0,1fr));margin-top:10px;padding-top:6px;align-content:start}
 }
 
+/* flight on landscape screens: the HUD is one band across the top (distance | score over fuel | height, speed, clock)
+   instead of three full-width rows, and clears the notch at the side */
+@media (min-width:640px) and (orientation:landscape){
+  .hud{grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"d s m" "d f m" "w w w";column-gap:10px;row-gap:5px;align-items:start;
+    padding-left:max(12px,env(safe-area-inset-left,0px));padding-right:max(12px,env(safe-area-inset-right,0px))}
+  .hrow{display:contents}
+  .hud .dist{grid-area:d}.hud .mini{grid-area:m}.hud .srow{grid-area:s}.hud .fuelrow{grid-area:f}.hud .wxhud{grid-area:w}
+  .toast{top:calc(var(--reserve) + 90px)}
+}
 /* phones held sideways: too short for a fixed poster above the bench, so poster and bench scroll together, and
    everything is drawn at --z of its phone size (zoom) */
 @media (min-width:640px) and (orientation:landscape) and (max-height:560px){
@@ -753,9 +762,18 @@ body.offline::after{content:"Reconnecting…";position:fixed;left:50%;top:calc(v
   /* flight: smaller buttons so the pad stays clear of the HUD, and away from the notch */
   .ctrl{padding-left:max(14px,env(safe-area-inset-left,0px));padding-right:max(14px,env(safe-area-inset-right,0px));padding-bottom:calc(10px + env(safe-area-inset-bottom,0px))}
   .ctrl .pad{gap:6px}
-  .ctrl button{height:52px;width:96px;font-size:10.5px}
-  .ctrl button svg{width:20px;height:20px}
-  .ctrl #bFF{height:38px}
+  .ctrl button{height:46px;width:88px;font-size:10px}
+  .ctrl button svg{width:18px;height:18px}
+  .ctrl #bFF{height:34px}
+  #thr{width:64px;height:128px}
+  .rpad{gap:6px}
+  .hud{padding-top:calc(var(--reserve) + 8px)}
+  .hud .dist{font-size:22px;padding:4px 9px 3px}
+  .hud .mini{font-size:11.5px;padding:3px 7px}
+  .hud .srow{padding:3px 10px}
+  .hud .fuel{height:9px}
+  .hud .fuelrow{font-size:10.5px}
+  .toast{top:calc(var(--reserve) + 70px);font-size:24px}
 }
 
 /* keyboard hints on the flight buttons, only where there is a mouse (desktop, itch) */
