@@ -70,7 +70,7 @@ const TUNES={
   fuel:{name:'Bigger tanks',d:'+35% fuel'},
   wing:{name:'Wing flaps',d:'+15% wing lift',needs:'wing'},
   light:{name:'Featherweight',d:'−10% mass'},
-  launch:{name:'Catapult spring',d:'+20% launch speed'},
+  launch:{name:'Catapult spring',d:'+50% launch speed'},
   balloon:{name:'Helium refill',d:'+25% balloon lift',needs:'balloon'},
   // capped: the flight clock is what bounds fuel-free thrust (Solar Wings, Ram Scoop), so it may only stretch so far
   time:{name:'Flight permit',d:'+1 min flight time',max:3},
@@ -240,7 +240,7 @@ function stats(tune,mods,wx){
     rocket:34*pw('rocket',1.25), afterburner:mv('afterburner'),
     tankFuel:6*pw('fuel',1.35)*wx.fuelMul, reserve:3*pw('fuel',1.35)*wx.fuelMul,
     wing:.075*pw('wing',1.15), wingCD:.012,
-    launch:15*pw('launch',1.2)*(has('sling')?mv('sling'):1)*wx.launchMul, launchAng:(20+(has('sling')?10:0))*Math.PI/180,
+    launch:15*pw('launch',1.5)*(has('sling')?mv('sling'):1)*wx.launchMul, launchAng:(20+(has('sling')?10:0))*Math.PI/180,
     massMul:1/(1+.12*t('light')), cargo:wx.cargo,
     balloon:11*pw('balloon',1.25)*(1+mv('envelope')/100), burstAlt:has('envelope')?mv('envelope','w')*1000:2000,
     magnetR:has('magnet')?mv('magnet'):1,
