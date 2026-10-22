@@ -754,11 +754,28 @@ body.offline::after{content:"Reconnecting…";position:fixed;left:50%;top:calc(v
 /* phones held sideways: too short for a fixed poster above the bench, so poster and bench scroll together, and
    everything is drawn at --z of its phone size (zoom) */
 @media (min-width:640px) and (orientation:landscape) and (max-height:560px){
-  :root{--z:.66;--side:clamp(240px,32vw,320px);--lw:380px;--gap:12px}
+  :root{--z:.66;--side:clamp(240px,32vw,320px);--lw:1fr;--gap:12px}
   #hangar>.htop,#hangar .poster,#hangar #bench,#hangar>.hbar,.drawer.docked .dr-panel{zoom:var(--z)}
   #hangar>.htop{padding-top:calc(var(--reserve) / var(--z) + 8px);padding-bottom:6px}
   #hangar>.hbar{padding-top:8px;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px) / var(--z))}
   #hangar .poster{margin-top:0}
+  #hangar>.htop{padding-top:calc(var(--reserve) / var(--z) + 6px);padding-bottom:4px}
+  /* the poster as one strip: town (and flight stubs) | score bar over the storm | the route */
+  #hangar .poster{grid-template-columns:auto minmax(140px,1fr) minmax(0,30%);grid-template-areas:"town bar route" "storm storm route";align-items:center;column-gap:14px;row-gap:5px;padding:6px 12px}
+  #hangar .poster .prow{grid-area:town;gap:10px}
+  #hangar .poster .cbar{grid-area:bar}
+  #hangar .poster .pstorm{grid-area:storm;padding:2px 8px;flex-wrap:nowrap;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #hangar .poster .route{grid-area:route;max-height:40px}
+  #hangar .poster .fcast{grid-area:route}
+  /* the build card: the parts tray beside the grid, the grid sized from the height left over (at --z) */
+  #hangar #bench>.card:first-child{--gw:max(300px,calc((100dvh - var(--reserve) - 200px) / var(--z) * 1.4));display:grid;
+    grid-template-columns:minmax(0,var(--gw)) minmax(180px,1fr);grid-template-rows:auto auto auto 1fr;
+    grid-template-areas:"head head" "grid pal" "legend pal" "blurb pal";column-gap:14px;align-items:start}
+  #hangar #bench>.card:first-child>.row{grid-area:head}
+  #hangar #bench>.card:first-child>.grid{grid-area:grid;margin:8px 0 0}
+  #hangar #bench>.card:first-child>.legend{grid-area:legend}
+  #hangar #bench>.card:first-child>.blurb{grid-area:blurb}
+  #hangar #bench>.card:first-child>.pal{grid-area:pal;grid-template-columns:repeat(2,minmax(0,1fr));margin-top:8px;padding-top:6px;align-content:start}
   /* flight: smaller buttons so the pad stays clear of the HUD, and away from the notch */
   .ctrl{padding-left:max(14px,env(safe-area-inset-left,0px));padding-right:max(14px,env(safe-area-inset-right,0px));padding-bottom:calc(10px + env(safe-area-inset-bottom,0px))}
   .ctrl .pad{gap:6px}

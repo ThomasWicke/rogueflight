@@ -5,7 +5,7 @@ import {
   newRun, stats, weatherFx, makeCraft, newFlight, step, popBalloons, summaryOf, scoreFlight, settleFlight,
   quotaFor, openPack, PACKS, FIRST_PACKS, rollTunes, thermalSeg, G0, repeats, rerollShop, applyPurchase, offerPrice, rollMods,
   isStorm, grantPacks, flightStats, MODMAX, pickBoon, rollBoons, modSlots, dailySeed, clearContract, ONLINE_TIME, SIM_DT,
-  craftCounts, flightCtx, onTarget, MODS,
+  craftCounts, flightCtx, onTarget, MODS, trickVal,
 } from '../client/src/sim.js';
 import { botFlight, planBot, BUILDS, cellsOf } from '../client/src/bots.js';
 
@@ -345,4 +345,16 @@ test('rare parts: about 15% of later packs, rare packs in some shops, and each r
   const a = makeCraft(layout('c22 f32 p42 w21 t23 b31'), st), b = makeCraft(cell('c22 f32 p42 w21 t23 b31', ['wing', 'tank', 'prop', 'balloon', 'frame']), st);
   assert.ok(b.m < a.m); assert.equal(b.wingLift, 1.3); assert.equal(b.balLift, 1.6); assert.equal(b.propPow, 1.4);
   assert.ok(Math.abs(b.fuelMax - (st.reserve + 1.8 * st.tankFuel)) < 1e-9); assert.equal(b.burstBonus, 1000);
+});
+
+test('trick values include storm rewards and match what scoreFlight pays (the in-flight pop-ups show them)', () => {
+  const ctx = { lv: {}, boons: { thermal: 1, loop: 2, pass: 1, coin: 1 } };
+  assert.ok(Math.abs(trickVal(ctx, 'thermal') - 0.2) < 1e-9);
+  assert.ok(Math.abs(trickVal(ctx, 'loop') - 0.7) < 1e-9);
+  assert.ok(Math.abs(trickVal(ctx, 'pass') - 0.35) < 1e-9);
+  assert.ok(Math.abs(trickVal(ctx, 'coin') - 0.08) < 1e-9);
+  assert.ok(Math.abs(trickVal({ lv: {} }, 'thermal') - 0.1) < 1e-9);
+  const base = { dist: 100, maxY: 0, landed: false, crashed: false, thermals: 2, loops: 0, passes: 0, coins: 0 };
+  const line = scoreFlight(base, ctx).lines.find(l => /thermal/.test(l.label));
+  assert.ok(Math.abs(line.v - 2 * trickVal(ctx, 'thermal')) < 1e-9);
 });

@@ -6,7 +6,7 @@ import {
   modUnlocked, QUOTA, quotaFor, isStorm, weatherOf, stats, DIRS,
   SOCK, STRUCT, linkage, connected, balanceOf, makeCraft, hs, groundY,
   COINSEG, COINR, thermalSeg, coinAt, newFlight, segDist, flag, step,
-  popBalloons, summaryOf, scoreFlight, wpick, PART_W, rollMods, rollTunes, genShop,
+  popBalloons, summaryOf, scoreFlight, trickVal, wpick, PART_W, rollMods, rollTunes, genShop,
   rerollShop, priceOf, offerPrice, rerollCost, sellValue, newRun, craftCounts, flightCtx, onTarget, TARGET_EVERY, settleFlight,
   PACKS, FIRST_PACKS, rollPacks, grantPacks, openPack, RARE, RARE_CHANCE, RARE_PACK_PRICE, isRare, baseOf, partName,
   MODMAX, modLevels, modVal, modDesc, modPrice, canBuy, applyPurchase, sellMod, flightStats, repeats, severity,
@@ -736,9 +736,9 @@ function frame(now){
     for(const e of S.events){
       if(e==='coin'){F.coinStreak=(F.coinT>0?(F.coinStreak||0)+1:0);F.coinT=1.2;sfx('coin',{pitch:Math.pow(2,Math.min(12,F.coinStreak)/12)});F.coinFlash=1;for(let j=0;j<8;j++){const a=j/8*6.283;F.parts.push({x:S.x,y:S.y,vx:Math.cos(a)*7+S.vx*.6,vy:Math.sin(a)*7+S.vy*.6,life:.7,r:.22,k:'gold'})}}
       else if(e==='bounce')dust(S.x,S.y-1,8);
-      else if(e==='loop')F.loopT=performance.now()/1000,F.cheer=1,sfx('loop'),sfx('cheer',{intensity:.5}),toast('Loop',nth(S.loops,has('stunt')?mv('stunt'):.5));
-      else if(e==='pass')F.cheer=1,sfx('pass'),toast('Low pass',nth(S.passes,has('duster')?mv('duster'):.25));
-      else if(e==='thermal')F.cheer=.6,sfx('thermal'),toast('Thermal',`+${num(has('thermal')?mv('thermal','w'):.1)} mult`);
+      else if(e==='loop')F.loopT=performance.now()/1000,F.cheer=1,sfx('loop'),sfx('cheer',{intensity:.5}),toast('Loop',nth(S.loops,trickVal(F.ctx,'loop')));
+      else if(e==='pass')F.cheer=1,sfx('pass'),toast('Low pass',nth(S.passes,trickVal(F.ctx,'pass')));
+      else if(e==='thermal')F.cheer=.6,sfx('thermal'),toast('Thermal',`+${num(trickVal(F.ctx,'thermal'))} mult`);
       else if(e==='burst')sfx('pop'),toast('Balloons burst','');
       else if(e==='Redline'){F.boom=0;F.cheer=1;sfx('redline');sfx('cheer',{intensity:.9});buzz(40);toast('Redline',has('sonic')?`×${num(mv('sonic'))} score`:'+1 mult')}
       else if(e==='Cloud nine')F.cheer=1,sfx('cheer',{intensity:.9}),toast('Cloud nine',has('escape')?`×${num(mv('escape'))} score`:'+2 mult');
@@ -757,7 +757,7 @@ function frame(now){
   }else if(!F.ended){
     F.ended=true;audio.stopEngine();F.endT=now;F.toasts.length=0;F.toastT=0;
     if(S.crashed){breakApart();sfx('crash');sfx('ooh');buzz([60,40,80]);toast('Crashed',has('crashtest')?`+${num(mv('crashtest'))} mult`:'');dust(S.x,S.y,30,true)}
-    else if(S.landed)sfx('touchdown'),sfx('cheer',{intensity:.6}),buzz(25),toast('Touchdown',has('greaser')?`×${num(mv('greaser'))} score`:'+0.5 mult');
+    else if(S.landed)sfx('touchdown'),sfx('cheer',{intensity:.6}),buzz(25),toast('Touchdown',(has('greaser')?`×${num(mv('greaser'))} score`:'+0.5 mult')+(F.ctx.boons&&F.ctx.boons.land?` · +${num(.25*F.ctx.boons.land)} mult`:''));
     if(S.landed&&has('bullseye')&&onTarget(S.x))F.cheer=1,sfx('cheer',{intensity:.9}),toast('Bullseye',`×${num(mv('bullseye'))} score`);
   }
   updParts(dt);draw(now);hud(dt);

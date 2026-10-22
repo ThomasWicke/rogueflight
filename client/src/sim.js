@@ -467,6 +467,11 @@ const onTarget=x=>x>TARGET_EVERY/2&&Math.abs(x-Math.round(x/TARGET_EVERY)*TARGET
 // so technique pays but farming one trick for the whole flight does not
 const repeats=n=>{let t=0;for(let k=0;k<n;k++)t+=1/(1+.5*k);return t};
 // ctx.lv: owned mods as {id: level} (ctx.mods, a plain id array, still works and counts as Lv 1)
+// what one loop, low pass, thermal or coin adds to the mult: the base value or its mod's, plus storm rewards
+// (scoreFlight and the in-flight pop-ups both use it, so they always agree)
+function trickVal(ctx,k){const lv=ctx.lv||modLevels(ctx.mods||[]),has=m=>!!lv[m],mv=(m,key)=>modVal(lv,m,key),bn=b=>(ctx.boons&&ctx.boons[b])||0;
+  return k==='loop'?(has('stunt')?mv('stunt'):.5)+.1*bn('loop'):k==='pass'?(has('duster')?mv('duster'):.25)+.1*bn('pass')
+    :k==='thermal'?(has('thermal')?mv('thermal','w'):.1)+.1*bn('thermal'):k==='coin'?(has('collector')?mv('collector'):.05)+.03*bn('coin'):0}
 function scoreFlight(f,ctx){
   const lv=ctx.lv||modLevels(ctx.mods||[]), has=k=>!!lv[k], mv=(k,key)=>modVal(lv,k,key), bn=k=>(ctx.boons&&ctx.boons[k])||0, lines=[];
   let base=Math.floor(f.dist);lines.push({t:'b',label:'Distance',v:base,dist:true});
@@ -479,9 +484,9 @@ function scoreFlight(f,ctx){
   const pl=(n,w)=>n+' '+w+(n===1?'':/s$/.test(w)?'es':'s');
   if(f.landed){if(has('greaser'))addX('Greaser touchdown',mv('greaser'));else addM('Clean touchdown',.5);if(bn('land'))addM('Soft Landing',.25*bn('land'))}
   if(f.crashed&&has('crashtest'))addM('Crash Test',mv('crashtest'));
-  if(f.loops)addM(pl(f.loops,'loop'),repeats(f.loops)*((has('stunt')?mv('stunt'):.5)+.1*bn('loop')));
-  if(f.passes)addM(pl(f.passes,'low pass'),repeats(f.passes)*((has('duster')?mv('duster'):.25)+.1*bn('pass')));
-  if(f.thermals)addM(pl(f.thermals,'thermal')+' ridden',f.thermals*((has('thermal')?mv('thermal','w'):.1)+.1*bn('thermal')));
+  if(f.loops)addM(pl(f.loops,'loop'),repeats(f.loops)*trickVal(ctx,'loop'));
+  if(f.passes)addM(pl(f.passes,'low pass'),repeats(f.passes)*trickVal(ctx,'pass'));
+  if(f.thermals)addM(pl(f.thermals,'thermal')+' ridden',f.thermals*trickVal(ctx,'thermal'));
   if(f.bounces&&has('bounce'))addM(pl(f.bounces,'bounce'),f.bounces*mv('bounce'));
   if(f.mach){if(has('sonic'))addX('Overdrive',mv('sonic'));else addM('Redline',1)}
   if(f.space){if(has('escape'))addX('Escape Plan',mv('escape'));else addM('Cloud nine',2)}
@@ -489,7 +494,7 @@ function scoreFlight(f,ctx){
   if(has('hauler'))addM('Fuel Hauler',mv('hauler')*ctx.tanks);
   if(has('altimeter'))addM('Altimeter',mv('altimeter')*Math.floor(f.maxY/1000));
   if(has('speedtrap'))addM('Speed Trap',mv('speedtrap')*Math.max(0,Math.floor((f.maxV*3.6-200)/100)));
-  if(f.coins)addM(pl(f.coins,'coin'),f.coins*((has('collector')?mv('collector'):.05)+.03*bn('coin')));
+  if(f.coins)addM(pl(f.coins,'coin'),f.coins*trickVal(ctx,'coin'));
   if(has('opening')&&ctx.flightIdx===0)addX('Opening Act',mv('opening'));
   if(has('third')&&ctx.flightIdx===2)addX('Third Time Lucky',mv('third'));
   if(has('frugal')&&f.landed&&f.fuelFrac>=.3)addX('Frugal',mv('frugal'));
@@ -653,7 +658,7 @@ export {
   modUnlocked, QUOTA, quotaFor, isStorm, weatherOf, stats, DIRS,
   SOCK, STRUCT, linkage, connected, balanceOf, makeCraft, hs, groundY,
   COINSEG, COINR, thermalSeg, coinAt, newFlight, segDist, flag, step,
-  popBalloons, summaryOf, scoreFlight, wpick, PART_W, rollMods, rollTunes, genShop,
+  popBalloons, summaryOf, scoreFlight, trickVal, wpick, PART_W, rollMods, rollTunes, genShop,
   rerollShop, priceOf, offerPrice, rerollCost, sellValue, newRun, craftCounts, flightCtx, onTarget, TARGET_EVERY, settleFlight,
   PACKS, FIRST_PACKS, rollPacks, grantPacks, openPack, RARE, RARE_CHANCE, RARE_PACK_PRICE, isRare, baseOf, partName,
   MODMAX, modLevels, modVal, modDesc, modPrice, canBuy, applyPurchase, sellMod, flightStats, repeats, severity,
