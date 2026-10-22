@@ -663,8 +663,6 @@ body.offline::after{content:"Reconnecting…";position:fixed;left:50%;top:calc(v
 /* hosts: a three-frame sprite (calm, delighted, worried); --f picks the frame, --ar is the frame's width / height */
 .host{display:inline-block;flex:none;height:var(--hh,48px);aspect-ratio:var(--ar);background:var(--hs) no-repeat;background-size:300% 100%;
   background-position:calc(var(--f) * 50%) 100%;vertical-align:bottom}
-.label.hosted{display:inline-flex;align-items:flex-end;gap:6px}
-.host.sm{--hh:56px;margin:-24px 0 -5px -4px}
 .host.lg{--hh:118px;justify-self:center;margin-bottom:-6px}
 /* the announcer peeks over the top left corner of the flight results */
 .tallysheet{margin-top:52px}

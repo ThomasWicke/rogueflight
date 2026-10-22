@@ -3,8 +3,6 @@
 
 // hosts: one sprite per character, three equal frames side by side (calm, delighted, worried), ar = frame width / height
 const HOSTS = {
-  dealer: { src: new URL('./assets/host-dealer.webp', import.meta.url).href, ar: 174 / 240 },         // raccoon, the shop
-  mechanic: { src: new URL('./assets/host-mechanic.webp', import.meta.url).href, ar: 168 / 240 },     // hen, the build bench
   ringmaster: { src: new URL('./assets/host-ringmaster.webp', import.meta.url).href, ar: 153 / 240 }, // basset, contracts won and lost
   announcer: { src: new URL('./assets/host-announcer.webp', import.meta.url).href, ar: 165 / 240 },   // owl, flight results
 };

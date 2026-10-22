@@ -377,7 +377,6 @@ function renderBuild(){
   const w=curWx();
   const warns=[];if(K.loose)warns.push(plural(K.loose,'loose part'));if(K.blocked)warns.push(K.blocked+' blocked engine'+(K.blocked>1?'s':''));
   if(offLine(K.propLine))warns.push('propeller off-center');if(offLine(K.rocketLine))warns.push('rocket off-center');
-  const ready=(lift>=1||bal>=1)&&(propT>.25||n.rocket||bal>=1), mechMood=warns.length||balCls==='warn'?'worried':ready?'happy':'calm';
   const rows=[['Mass',mul(K.m)+' t','']];
   if(off!=null)rows.push(['Balance',balTxt,balCls]);
   if(n.prop)rows.push(['Thrust',ratio(propT),propT>.25?'ok':'']);
@@ -387,7 +386,7 @@ function renderBuild(){
   if(n.balloon)rows.push(['Balloons',ratio(bal),'']);
   bench.innerHTML=`
   <div class="card">
-    <div class="row"><span class="label hosted">${hostHTML('mechanic',mechMood,'sm')}Build</span><button class="ghost${armClear?' armed':''}" id="clear" type="button" ${r.cells.length<=1?'disabled':''}>${armClear?'Tap again':'Clear'}</button></div>
+    <div class="row"><span class="label">Build</span><button class="ghost${armClear?' armed':''}" id="clear" type="button" ${r.cells.length<=1?'disabled':''}>${armClear?'Tap again':'Clear'}</button></div>
     <div class="grid" id="grid">${cells}<svg class="ov" viewBox="0 0 7 5" preserveAspectRatio="none" aria-hidden="true">${ov}</svg></div>
     <div class="legend"><span><i class="lg-com"></i>Mass</span><span><i class="lg-col"></i>Lift</span><span style="margin-left:auto">Nose \u2192</span></div>
     <div class="pal" id="pal">${palette().map(t=>`<button type="button" data-t="${t}" aria-pressed="${t===sel}"${isRare(t)?' class="rare"':''}><img alt="" src="${ICON[t]}"><span>${partName(t)}</span><small class="${left(t)?'':'none'}">${left(t)}/${owned(t)}</small></button>`).join('')}</div>
@@ -455,11 +454,9 @@ function renderShop(){
   const parts=S.parts.map((o,i)=>`<div class="offer${o.sold?' sold':''}"><img alt="" src="${ICON[o.t]}"><div><h3>${PARTS[o.t].name}</h3><p>${owned(o.t)} owned</p></div>${btn('part',i,o)}</div>`).join('')
     +(S.pack?`<div class="offer rarepack${S.pack.sold?' sold':''}"><div class="glyph R" aria-hidden="true">★</div><div><h3>Rare parts pack</h3><p>A random rare part</p></div>${btn('pack',0,S.pack)}</div>`:'');
   const rc=rerollCost(r);
-  const offers=[...S.parts.map(o=>['part',o]),...S.tunes.map(o=>['tune',o]),...S.mods.map(o=>['mod',o]),...(S.pack?[['pack',S.pack]]:[])].filter(([k,o])=>!o.sold&&canBuy(r,k,o));
-  const broke=offers.length>0&&offers.every(([k,o])=>offerPrice(r,k,o)>r.coins);
   $('dealerTitle').textContent='Shop';
   dbody.innerHTML=`
-  <div class="card"><span class="label hosted">${hostHTML('dealer',broke?'worried':'calm','sm')}Parts</span><div class="offers">${parts}</div></div>
+  <div class="card"><span class="label">Parts</span><div class="offers">${parts}</div></div>
   <div class="card"><span class="label">Tuning</span><div class="offers">${tunes}</div></div>
   <div class="card"><div class="row"><span class="label">Mods</span><span class="hint${full?' warn':''}">${r.mods.length}/${modSlots(r)}${full?' full':''}</span></div><div class="offers">${mods}</div></div>
   <div class="row" style="justify-content:flex-end"><button class="ghost" id="reroll" type="button" ${rc>r.coins?'disabled':''}>Reroll <i class="cn"></i>${rc}</button></div>`;
@@ -472,12 +469,8 @@ function renderShop(){
 }
 function buy(kind,i){
   const r=R(),S=r.shop;const o=kind==='pack'?S.pack:S[kind==='part'?'parts':kind==='tune'?'tunes':'mods'][i];if(!o)return;
-  if(applyPurchase(r,kind,o)){sfx('buy');buzz(12);persist();if(kind==='pack'){setTab('build');showPacks()}else{renderHangar();dealerGrin()}}else sfx('error')
+  if(applyPurchase(r,kind,o)){sfx('buy');buzz(12);persist();if(kind==='pack'){setTab('build');showPacks()}else renderHangar()}else sfx('error')
 }
-// the dealer beams for a moment after a sale (in place, the shop is not re-rendered)
-let grinT=0;
-function dealerGrin(){const el=dbody.querySelector('[data-host="dealer"]');if(!el)return;const was=el.style.getPropertyValue('--f');setHost(el,'dealer','happy');
-  clearTimeout(grinT);grinT=setTimeout(()=>{const e=dbody.querySelector('[data-host="dealer"]');if(e)e.style.setProperty('--f',was||0)},1400)}
 function renderMods(){
   const r=R();
   const lv=modLevels(r);
