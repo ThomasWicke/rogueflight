@@ -18,7 +18,8 @@ import { getDaily, postDaily, newRoomCode, connectRoom, cloudGet, cloudPut, link
 import { botFlight, planBot, cellsOf } from './bots.js';
 import { drawWorld, drawGrain, biomeOf, preloadLayers } from './world.js';
 import { audio } from './audio.js';
-import { drawPart, drawPilot, drawParachute } from './art.js';
+import { drawPart, drawPilot, drawParachute, KINS } from './art.js';
+import { hostHTML, setHost, CARD, MAP, MAP_TOWNS, preloadMap } from './troupe.js';
 import { decalURL } from './decals.js';
 import { townOf, showTitle, headline } from './fiction.js';
 import { initGuide, openGuide } from './guide.js';
@@ -93,6 +94,11 @@ const plural=(n,w)=>n+' '+w+(n===1?'':'s');
 const ICON={};
 // icons for every part, and for the rare variants ('wing+' etc.), which art.js draws with brass trim
 for(const t of [...Object.keys(PARTS),...Object.keys(RARE).map(k=>k+'+')]){const c=document.createElement('canvas');c.width=c.height=96;const g=c.getContext('2d');g.translate(48,48);g.scale(96,96);drawPart(g,t,.33,{frac:.7,lw:.055});ICON[t]=c.toDataURL()}
+// the cockpit with another animal pilot (live rooms), and that pilot's face for player lists
+const KICON={},KFACE={};
+const kinIcon=k=>KICON[k]||(KICON[k]=(()=>{const c=document.createElement('canvas');c.width=c.height=96;const g=c.getContext('2d');g.translate(48,48);g.scale(96,96);drawPart(g,'cockpit',.33,{lw:.055,kin:k});return c.toDataURL()})());
+const kinFace=k=>KFACE[k]||(KFACE[k]=(()=>{const c=document.createElement('canvas');c.width=c.height=64;const g=c.getContext('2d');g.translate(32,37);g.scale(46,46);drawPilot(g,'idle',0,{lw:.05,kin:k,scarf:.4});return c.toDataURL()})());
+const cellIcon=p=>p.type==='cockpit'&&slot==='online'&&ROOM?kinIcon(kinOf(clientId())):ICON[keyOf(p)];
 // a part on the bench as its inventory key: rare ones are 'wing+' etc.
 const keyOf=c=>c.rare?c.type+'+':c.type;
 // the compact cell code used for telemetry and ghosts: type initial + column + row, upper case for rare parts
@@ -141,12 +147,12 @@ function renderTitle(){
   let h='';
   if(r){
     const tw=townOf(r.seed,r.stage);
-    h+=`<div class="card stack"><span class="label">Current run</span>
+    h+=`<div class="card stack pic"><img class="cpic" alt="" src="${CARD.run}"><span class="label">Current run</span>
       <p class="hint">Contract ${r.stage+1}${r.endless?' (endless)':' of '+CONTRACTS}: <strong>${tw.town}</strong> · ${r.coins} coins · ${plural(r.mods.length,'mod')}${r.level?' · Difficulty '+r.level:''}</p>
       <button class="big" id="cont" type="button">Continue run</button>
       <button class="ghost${armAbandon?' armed':''}" id="aband" type="button">${armAbandon?'Tap again to abandon':'Abandon run'}</button></div>`;
   }else{
-    h+=`<div class="card"><span class="label">New run</span>
+    h+=`<div class="card pic"><img class="cpic" alt="" src="${CARD.run}"><span class="label">New run</span>
       ${m.level>0?`<div style="margin-top:12px"><div class="row" style="margin-bottom:6px"><span class="label">Difficulty</span></div><div class="seg" id="lvl">${Array.from({length:m.level+1},(_,i)=>`<button type="button" data-l="${i}" aria-pressed="${i===pickLevel}">${i}</button>`).join('')}</div>
         ${pickLevel?`<div class="crules"><span>+${pickLevel*25}% score targets</span>${ceilingRules(pickLevel).map(t=>`<span>${t}</span>`).join('')}</div>`:''}</div>`:''}
       <div style="margin-top:12px"><button class="big" id="start" type="button">Start run</button></div></div>`;
@@ -266,7 +272,41 @@ function routeStrip(r){
     if(w)h+=`<g class="rcloud" transform="translate(${x(i)} ${y(i)-15})"><title>${WEATHER[w].name}: ${WEATHER[w].d(severity(r,i))}</title><path d="M-8 3a4 4 0 0 1 2-7a5 5 0 0 1 9-1a4 4 0 0 1 5 5a3 3 0 0 1-1 3z"/><path d="M-1 4l-2 5 3-1-1 4" class="rbolt"/></g>`;}
   // tap the route to see what the storms are (phones have no hover)
   const names=[];for(let i=r.stage;i<n;i++){const w=weatherOf(r,i);if(w)names.push(`<b>${i+1}</b> ${wxIcon(w)}${WEATHER[w].name}: ${WEATHER[w].d(severity(r,i))}`)}
-  return `<svg class="route" viewBox="0 0 ${W} 40" role="button" tabindex="0" aria-label="Route: contract ${r.stage+1} of ${n}. Tap for storms">${h}</svg>${names.length?`<div class="pnext" hidden>${names.join('<br>')}</div>`:''}`;
+  return `<svg class="route" viewBox="0 0 ${W} 40" role="button" tabindex="0" aria-label="Route: contract ${r.stage+1} of ${n}. Tap for the map">${h}</svg>`;
+}
+// the season's tour map: a painted map with the eight towns (signposts with their names), storm clouds over the stormy
+// ones, ticks on the towns done, and the troupe's plane. After a contract is cleared (moving) the plane flies on from
+// the last town to the next along a dashed trail; from the route strip it just sits over the current town.
+let PLANE='';
+function planeURL(){if(PLANE)return PLANE;const c=document.createElement('canvas');c.width=192;c.height=144;const g=c.getContext('2d');
+  g.translate(96,88);g.scale(52,52);for(const [t,x,y] of [['wing',0,-1],['frame',-1,0],['cockpit',0,0],['prop',1,0]]){g.save();g.translate(x,y);drawPart(g,t,.4,{lw:.06,mood:'grin',on:true});g.restore()}
+  return PLANE=c.toDataURL()}
+function showTour(r,moving){
+  if(r.endless||r.stage>=CONTRACTS){veil.hidden=true;show('hangar');setTab('build');return}
+  const at=r.stage, from=moving?Math.max(0,at-1):at, P=i=>MAP_TOWNS[i];
+  let pins='';
+  for(let i=0;i<CONTRACTS;i++){const [x,y]=P(i),w=weatherOf(r,i),done=i<at,cur=i===at;
+    pins+=`<div class="tpin${done?' done':''}${cur?' cur':''}" style="left:${x}%;top:${y}%"><b>${done?'✓':i+1}</b><span>${townOf(r.seed,i).town}</span>${w?`<em title="${WEATHER[w].name}">${wxIcon(w)}</em>`:''}</div>`}
+  const [x0,y0]=P(from),[x1,y1]=P(at);
+  // the trail: from the start through every town done to the plane (SVG in the map's 100 x 150 space)
+  let trail='';for(let i=0;i<=from;i++){const [x,y]=P(i);trail+=(i?'L':'M')+x+' '+y*1.5}
+  const leg=`M${x0} ${y0*1.5}L${x1} ${y1*1.5}`;
+  const storms=[];for(let i=at;i<CONTRACTS;i++){const w=weatherOf(r,i);if(w)storms.push(`<span><b>${i+1}</b>${wxIcon(w)}${WEATHER[w].name}: ${WEATHER[w].d(severity(r,i))}</span>`)}
+  sheet.className='sheet toursheet';
+  sheet.innerHTML=`<div class="tmap" style="--map:url(${MAP})">
+      <svg viewBox="0 0 100 150" preserveAspectRatio="none" aria-hidden="true"><path d="${trail}" class="ttrail"/>${moving&&from!==at?`<path d="${leg}" class="tleg" pathLength="1"/>`:''}</svg>
+      ${pins}
+      <img class="tplane" alt="" src="${planeURL()}" style="left:${x0}%;top:${y0}%">
+    </div>
+    <div class="tfoot">${storms.length?`<div class="tstorms">${storms.join('')}</div>`:''}
+    <button class="big" type="button" id="tourGo">${moving?`To ${townOf(r.seed,at).town}`:'Close'}</button></div>`;
+  veil.hidden=false;veil.classList.add('tour');
+  const pl=sheet.querySelector('.tplane');
+  if(moving&&from!==at){sfx('thermal');const k=reduceMotion()?0:1;
+    pl.animate([{left:x0+'%',top:y0+'%'},{left:x1+'%',top:y1+'%'}],{duration:1800*k,delay:500*k,easing:'cubic-bezier(.45,0,.3,1)',fill:'forwards'})
+      .finished.then(()=>{if(sheet.contains(pl)){sfx('cheer',{intensity:.5});sheet.querySelector('.tpin.cur')?.classList.add('arrive')}})}
+  else{pl.style.left=x1+'%';pl.style.top=y1+'%'}
+  $('tourGo').onclick=()=>{veil.classList.remove('tour');sheet.className='sheet';veil.hidden=true;show('hangar');setTab('build')};
 }
 function forecast(r){const out=[];for(let i=r.stage+1;i<CONTRACTS;i++){const w=weatherOf(r,i);if(w)out.push(`<span title="${WEATHER[w].d(severity(r,i))}"><b>${i+1}</b>${wxIcon(w)}${WEATHER[w].name}</span>`)}
   return out.length?`<div class="fcast">${out.join('')}</div>`:''}
@@ -282,7 +322,7 @@ function renderStrip(){
   const p=r.phase==='shop'?0:Math.min(1,r.score/q);
   $('cstrip').innerHTML=`<div class="prow"><div class="ptown">${r.phase==='shop'?'<small>Next</small>':''}${t.town}</div>${r.phase==='shop'?'':stubs}</div>
     <div class="cbar"><i style="transform:scaleX(${p})"></i><span>Score ${r.phase==='shop'?'target '+fmt(q):fmt(r.score)+' / '+fmt(q)}</span></div>${storm}${routeStrip(r)}`;
-  {const rt=$('cstrip').querySelector('.route'),pn=$('cstrip').querySelector('.pnext');if(rt&&pn)rt.onclick=()=>{pn.hidden=!pn.hidden}}
+  {const rt=$('cstrip').querySelector('.route');if(rt){rt.onclick=()=>showTour(r,false);rt.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();showTour(r,false)}}}}
 }
 function renderHangar(){
   const r=R();if(!r)return;
@@ -309,7 +349,7 @@ function renderBuild(){
   let cells='';
   for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){const k=x+','+y,p=map.get(k);
     const cls='cell'+(p?' on':'')+(p&&!conn.has(k)?' loose':'')+(p&&p.type==='cockpit'?' cock':'')+(blockedSet.has(k)?' blocked':'');
-    cells+=`<button class="${cls}" data-c="${x}" data-r="${y}" type="button" aria-label="${p?partName(keyOf(p)):'Empty'} at column ${x+1}, row ${y+1}">${p?`<img alt="" src="${ICON[keyOf(p)]}">`:''}</button>`}
+    cells+=`<button class="${cls}" data-c="${x}" data-r="${y}" type="button" aria-label="${p?partName(keyOf(p)):'Empty'} at column ${x+1}, row ${y+1}">${p?`<img alt="" src="${cellIcon(p)}">`:''}</button>`}
   const W=K.m*G0*st.grav, n=K.counts;
   const propT=(K.propPow??n.prop)*st.prop*st.rhoMul/W, rockT=n.rocket*st.rocket/W;
   const burn=n.prop*st.propUse;
@@ -336,6 +376,7 @@ function renderBuild(){
   const w=curWx();
   const warns=[];if(K.loose)warns.push(plural(K.loose,'loose part'));if(K.blocked)warns.push(K.blocked+' blocked engine'+(K.blocked>1?'s':''));
   if(offLine(K.propLine))warns.push('propeller off-center');if(offLine(K.rocketLine))warns.push('rocket off-center');
+  const ready=(lift>=1||bal>=1)&&(propT>.25||n.rocket||bal>=1), mechMood=warns.length||balCls==='warn'?'worried':ready?'happy':'calm';
   const rows=[['Mass',mul(K.m)+' t','']];
   if(off!=null)rows.push(['Balance',balTxt,balCls]);
   if(n.prop)rows.push(['Thrust',ratio(propT),propT>.25?'ok':'']);
@@ -345,7 +386,7 @@ function renderBuild(){
   if(n.balloon)rows.push(['Balloons',ratio(bal),'']);
   bench.innerHTML=`
   <div class="card">
-    <div class="row"><span class="label">Build</span><button class="ghost${armClear?' armed':''}" id="clear" type="button" ${r.cells.length<=1?'disabled':''}>${armClear?'Tap again':'Clear'}</button></div>
+    <div class="row"><span class="label hosted">${hostHTML('mechanic',mechMood,'sm')}Build</span><button class="ghost${armClear?' armed':''}" id="clear" type="button" ${r.cells.length<=1?'disabled':''}>${armClear?'Tap again':'Clear'}</button></div>
     <div class="grid" id="grid">${cells}<svg class="ov" viewBox="0 0 7 5" preserveAspectRatio="none" aria-hidden="true">${ov}</svg></div>
     <div class="legend"><span><i class="lg-com"></i>Mass</span><span><i class="lg-col"></i>Lift</span><span style="margin-left:auto">Nose \u2192</span></div>
     <div class="pal" id="pal">${palette().map(t=>`<button type="button" data-t="${t}" aria-pressed="${t===sel}"${isRare(t)?' class="rare"':''}><img alt="" src="${ICON[t]}"><span>${partName(t)}</span><small class="${left(t)?'':'none'}">${left(t)}/${owned(t)}</small></button>`).join('')}</div>
@@ -370,7 +411,7 @@ function bindDrag(G){
     if(c===COCKPIT.c&&r===COCKPIT.r)return;const p=R().cells.find(x=>x.c===c&&x.r===r);if(!p)return;
     clearTimeout(drag&&drag.timer);
     drag={c,r,type:p.type,x0:e.clientX,y0:e.clientY,on:false,id:e.pointerId,timer:setTimeout(()=>{if(!drag)return;drag.on=true;
-      b.classList.add('lift');const g=document.createElement('img');g.className='ghost-part';g.src=ICON[keyOf(p)];g.style.left=drag.x+'px';g.style.top=drag.y+'px';document.body.appendChild(g);drag.ghost=g;
+      b.classList.add('lift');const g=document.createElement('img');g.className='ghost-part';g.src=cellIcon(p);g.style.left=drag.x+'px';g.style.top=drag.y+'px';document.body.appendChild(g);drag.ghost=g;
       try{navigator.vibrate&&navigator.vibrate(12)}catch(_){}},280),x:e.clientX,y:e.clientY}};
   G.onpointermove=e=>{if(!drag)return;drag.x=e.clientX;drag.y=e.clientY;
     if(!drag.on){if(Math.hypot(e.clientX-drag.x0,e.clientY-drag.y0)>10){clearTimeout(drag.timer);drag=null}return}
@@ -413,9 +454,11 @@ function renderShop(){
   const parts=S.parts.map((o,i)=>`<div class="offer${o.sold?' sold':''}"><img alt="" src="${ICON[o.t]}"><div><h3>${PARTS[o.t].name}</h3><p>${owned(o.t)} owned</p></div>${btn('part',i,o)}</div>`).join('')
     +(S.pack?`<div class="offer rarepack${S.pack.sold?' sold':''}"><div class="glyph R" aria-hidden="true">★</div><div><h3>Rare parts pack</h3><p>A random rare part</p></div>${btn('pack',0,S.pack)}</div>`:'');
   const rc=rerollCost(r);
+  const offers=[...S.parts.map(o=>['part',o]),...S.tunes.map(o=>['tune',o]),...S.mods.map(o=>['mod',o]),...(S.pack?[['pack',S.pack]]:[])].filter(([k,o])=>!o.sold&&canBuy(r,k,o));
+  const broke=offers.length>0&&offers.every(([k,o])=>offerPrice(r,k,o)>r.coins);
   $('dealerTitle').textContent='Shop';
   dbody.innerHTML=`
-  <div class="card"><span class="label">Parts</span><div class="offers">${parts}</div></div>
+  <div class="card"><span class="label hosted">${hostHTML('dealer',broke?'worried':'calm','sm')}Parts</span><div class="offers">${parts}</div></div>
   <div class="card"><span class="label">Tuning</span><div class="offers">${tunes}</div></div>
   <div class="card"><div class="row"><span class="label">Mods</span><span class="hint${full?' warn':''}">${r.mods.length}/${modSlots(r)}${full?' full':''}</span></div><div class="offers">${mods}</div></div>
   <div class="row" style="justify-content:flex-end"><button class="ghost" id="reroll" type="button" ${rc>r.coins?'disabled':''}>Reroll <i class="cn"></i>${rc}</button></div>`;
@@ -428,8 +471,12 @@ function renderShop(){
 }
 function buy(kind,i){
   const r=R(),S=r.shop;const o=kind==='pack'?S.pack:S[kind==='part'?'parts':kind==='tune'?'tunes':'mods'][i];if(!o)return;
-  if(applyPurchase(r,kind,o)){sfx('buy');buzz(12);persist();if(kind==='pack'){setTab('build');showPacks()}else renderHangar()}else sfx('error')
+  if(applyPurchase(r,kind,o)){sfx('buy');buzz(12);persist();if(kind==='pack'){setTab('build');showPacks()}else{renderHangar();dealerGrin()}}else sfx('error')
 }
+// the dealer beams for a moment after a sale (in place, the shop is not re-rendered)
+let grinT=0;
+function dealerGrin(){const el=dbody.querySelector('[data-host="dealer"]');if(!el)return;const was=el.style.getPropertyValue('--f');setHost(el,'dealer','happy');
+  clearTimeout(grinT);grinT=setTimeout(()=>{const e=dbody.querySelector('[data-host="dealer"]');if(e)e.style.setProperty('--f',was||0)},1400)}
 function renderMods(){
   const r=R();
   const lv=modLevels(r);
@@ -664,7 +711,7 @@ function mixHex(a,b,t){const p=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));co
 function toast(title,sub){F.toasts.push({title,sub});if(F.toasts.length>4)F.toasts.shift()}
 function frame(now){
   if(!F)return;
-  const dt=Math.min(.05,(now-last)/1000);last=now;
+  const dt=clamp((now-last)/1000,0,.05);last=now; // a frame stamped before startFlight's clock reading would run time backwards
   const {S,st}=F, lv=F.ctx.lv, has=k=>!!lv[k], mv=(k,key)=>modVal(lv,k,key);
   // what the n-th repeat of a trick adds, after the diminishing returns in scoreFlight
   const nth=(n,per)=>`+${num((repeats(n)-repeats(n-1))*per)} mult`;
@@ -782,7 +829,7 @@ function draw(now){
   const left=cam.x-vw/2/sc, right=cam.x+vw/2/sc;
   // the crowd cheers for tricks and records and gets livelier as the flight's hype builds
   F.cheer=Math.max(0,(F.cheer||0)-1/60*1.5);
-  drawWorld(ctx,{targets:F.ctx.lv.bullseye?TARGET_EVERY:0,vw,vh,sc,X,Y,camX:cam.x,camY:cam.y,left,right,now,RES,stage:R()?R().stage:0,town:R()?townOf(R().seed,R().stage).town:'',wx:F.wx,st,best:F.bestDist,hype:F.hype||0,cheer:F.cheer});
+  drawWorld(ctx,{targets:F.ctx.lv.bullseye?TARGET_EVERY:0,vw,vh,sc,X,Y,camX:cam.x,camY:cam.y,left,right,now,RES,stage:R()?R().stage:0,town:R()?townOf(R().seed,R().stage).town:'',wx:F.wx,st,best:F.bestDist,hype:F.hype||0,cheer:F.cheer,pull:pre?Math.pow(clamp((1-F.pre/1.1)*1.3,0,1),2):0,launchT:pre?-1:S.t});
   const mag=st.magnetR>1;
   if(mag&&!S.done){const R0=COINR*st.magnetR*sc;ctx.save();ctx.strokeStyle='rgba(255,196,60,.45)';ctx.lineWidth=1.5;ctx.setLineDash([5,6]);ctx.lineDashOffset=-now/40;
     ctx.beginPath();ctx.arc(X(S.x),Y(S.y),R0,0,7);ctx.stroke();ctx.restore()}
@@ -821,7 +868,7 @@ function draw(now){
     ctx.save();ctx.translate(px,py);ctx.scale(ds,ds);ctx.rotate(-S.th);
     if(F.stretch>0)ctx.scale(1+.18*F.stretch,1-.12*F.stretch);
     const frac=K.fuelMax?S.fuel/K.fuelMax:0, mood=pilotMood();
-    for(const p of K.parts){ctx.save();ctx.translate(p.lx,-p.ly);drawPart(ctx,p.type,now/1000,{rare:p.rare,on:p.type==='rocket'?S.rocketOn:S.propOn,frac,lw:clamp(ds*.06,.9,2.5)/ds,mood});ctx.restore()}
+    for(const p of K.parts){ctx.save();ctx.translate(p.lx,-p.ly);drawPart(ctx,p.type,now/1000,{rare:p.rare,on:p.type==='rocket'?S.rocketOn:S.propOn,frac,lw:clamp(ds*.06,.9,2.5)/ds,mood,kin:F.online?kinOf(clientId()):0});ctx.restore()}
     ctx.restore()
   }
   drawGrain(ctx,vw,vh);
@@ -835,7 +882,7 @@ function drawFlyers(list,X,Y,sc,now,fo){
     const px=X(f.x),py=Y(f.y);let ext=.7;for(const p of f.K.parts)ext=Math.max(ext,Math.hypot(p.lx,p.ly)+.7);
     const ds=Math.max(sc,12/ext),inView=px>-30&&px<vw+30&&py>RES+40&&py<vh+30;
     if(inView){ctx.save();ctx.globalAlpha=f.done?.35:.62;ctx.translate(px,py);ctx.scale(ds,ds);ctx.rotate(-f.th);
-      for(const p of f.K.parts){ctx.save();ctx.translate(p.lx,-p.ly);drawPart(ctx,p.type,now/1000,{rare:p.rare,on:f.on,frac:.6,lw:clamp(ds*.06,.9,2.5)/ds,mood:f.mood});ctx.restore()}
+      for(const p of f.K.parts){ctx.save();ctx.translate(p.lx,-p.ly);drawPart(ctx,p.type,now/1000,{rare:p.rare,on:f.on,frac:.6,lw:clamp(ds*.06,.9,2.5)/ds,mood:f.mood,kin:kinOf(f.id)});ctx.restore()}
       ctx.restore();tag(px,py-ext*ds-14,f.name+(f.s?' · '+fmt(f.s):''),fo&&fo.id===f.id)}
     else if(!f.done){const ex=clamp(px,44,vw-44),ey=clamp(py,RES+110,vh-150);tag(ex,ey,(px<0?'◂ ':'')+f.name+(px>vw?' ▸':'')+(py<RES+40&&px>=0&&px<=vw?' ▴':''),false)}}
   ctx.restore();
@@ -901,14 +948,14 @@ function showResults(out,S,f){
   const barT=v=>isFinite(q)?`Score ${fmt(v)} / ${fmt(q)}`:`Total ${fmt(v)}`;
   let btn='',next='',result='';
   // one result line: sold out (with the bonus), or what is still needed; the gate cash rides along
-  if(out.cleared){btn=out.won?'Continue':'Next contract';next=out.won?'won':'shop';
+  if(out.cleared){btn=out.won?'Continue':'Next contract';next=out.won?'won':'shop';preloadMap();
     result=`<div id="tySold" class="soldout" hidden>Contract cleared! <small>+${out.reward+out.interest+out.pay+(out.over||0)} coins</small></div>`+(out.unlocks&&out.unlocks.length?`<p class="hint">Unlocked: <strong>${out.unlocks.join(', ')}</strong></p>`:'');}
   else if(out.failed){btn='Run summary';next='over';result=`<p class="tres warn">No flights left · +${out.pay} coins</p>`}
   else if(out.dailyDone){btn='See results';next='daily';result=`<p class="tres">Puzzle complete · +${out.pay} coins</p>`}
   else{const left=FLIGHTS-out.flightNo;btn='Continue';next='hangar';result=`<p class="tres">${isFinite(q)?fmt(q-out.contractScore)+' to target · ':''}${plural(left,'flight')} left · +${out.pay} coins</p>`}
   const news=headline({...f,cleared:!!out.cleared},{town:town.town,pilot:'Goat'},r.seed+out.stage*7+out.flightNo);
   sheet.className='sheet tallysheet';
-  sheet.innerHTML=`<div class="stamp ${kind}">${title}</div>
+  sheet.innerHTML=`${hostHTML('announcer',S.crashed?'worried':out.cleared||S.landed&&(!Number.isFinite(q)||sc.total>=q/FLIGHTS)?'happy':'calm','peek')}<div class="stamp ${kind}">${title}</div>
     <span class="label">${town.town} · flight ${out.flightNo} of ${FLIGHTS}</span>
     <div class="eqn"><span class="drum" id="tyBase">0</span><i>×</i><span id="tyM">1</span><i>=</i><b id="tyT">0</b></div>
     ${extra.length?`<div class="hype bpts">${extra.map(l=>`<span class="hc b in">${l.label}<b>+${fmt(l.v)}</b></span>`).join('')}</div>`:''}
@@ -925,7 +972,7 @@ function showResults(out,S,f){
   const wait=ms=>new Promise(res=>setTimeout(res,rm||skip?0:ms));
   let skip=false, done=false;
   const finishNow=()=>{skip=true;sheet.querySelectorAll('.hc').forEach(c=>c.classList.add('in'));el('tyM').textContent=num(sc.mult*sc.xm);el('tyT').textContent=fmt(sc.total);el('tyBase').textContent=fmt(sc.base)+(base.length===1?' m':'');
-    el('rbar').style.transform=`scaleX(${p1})`;el('rbarT').textContent=barT(out.contractScore);el('tyNews').hidden=false;if(out.cleared)el('tySold').hidden=false};
+    el('rbar').style.transform=`scaleX(${p1})`;el('rbarT').textContent=barT(out.contractScore);el('tyNews').hidden=false;if(out.cleared){el('tySold').hidden=false;setHost(sheet.querySelector('.host'),'ringmaster','happy')}};
   sheet.onclick=e=>{if(!e.target.closest('button')&&!done)finishNow()};
   (async()=>{
     sfx('stamp');buzz(15);
@@ -940,7 +987,7 @@ function showResults(out,S,f){
     await roll(el('tyT'),sc.total,450);
     await wait(200);
     el('rbar').style.transform=`scaleX(${p1})`;el('rbarT').textContent=barT(out.contractScore);
-    if(out.cleared){await wait(700);el('tySold').hidden=false;sfx('fireworks');sfx('fanfare');buzz([20,60,20,60,40]);confetti()}
+    if(out.cleared){await wait(700);el('tySold').hidden=false;setHost(sheet.querySelector('.host'),'ringmaster','happy');sfx('fireworks');sfx('fanfare');buzz([20,60,20,60,40]);confetti()}
     await wait(400);el('tyNews').hidden=false;done=true;
   })();
   $('next').onclick=()=>{
@@ -948,6 +995,7 @@ function showResults(out,S,f){
     if(next==='won'){showVictory();return}
     if(next==='daily'){showDailyEnd();return}
     if(next==='over'){showRunOver();return}
+    if(next==='shop'&&slot==='run'){showTour(R(),true);return}
     veil.hidden=true;show('hangar');setTab('build');
   };
 }
@@ -966,7 +1014,7 @@ function runStats(r){return `<dl class="stats"><dt>Total score</dt><dd>${fmt(r.t
 function showVictory(){
   const r=R(),m=save.meta;
   sheet.className='sheet endsheet win';
-  sheet.innerHTML=`<span class="label">${r.level?'Difficulty '+r.level:'Run'}</span>
+  sheet.innerHTML=`${hostHTML('ringmaster','happy','lg')}<span class="label">${r.level?'Difficulty '+r.level:'Run'}</span>
     <h2>Run complete!</h2>
     <p class="note">All ${CONTRACTS} contracts cleared.</p>
     ${runStats(r)}
@@ -982,7 +1030,7 @@ function showRunOver(){
   const r=R();
   const n=r.stage;
   sheet.className='sheet endsheet lose';
-  sheet.innerHTML=`<span class="label">${r.level?'Difficulty '+r.level:'Run'}</span>
+  sheet.innerHTML=`${hostHTML('ringmaster','worried','lg')}<span class="label">${r.level?'Difficulty '+r.level:'Run'}</span>
     <h2>${r.endless?'Endless run over':'Run over'}</h2>
     <p class="note">Contracts cleared: <b>${n}${r.endless?'':' / '+CONTRACTS}</b></p>
     ${runStats(r)}
@@ -1001,11 +1049,11 @@ function dailyCard(){
   if(d)b=`<p class="hint">${d.ranked?'Daily #'+d.day:'Random puzzle'} · flight ${d.flight+1} of ${FLIGHTS} · score ${fmt(d.total)}</p><button class="big alt" id="dCont" type="button">Continue puzzle</button>`;
   else if(rec)b=`<p class="hint">Your score <b>${fmt(rec.score)}</b>${rec.rank?` · #${rec.rank} of ${rec.total}`:''}</p><div class="row2"><button class="ghost" id="dBoard" type="button">Leaderboard</button><button class="ghost" id="dRandom" type="button">Random puzzle</button></div>`;
   else b=`<p class="hint">${DAILY_COINS} coins · ${FLIGHTS} flights · no storms. Highest score wins.</p><button class="big alt" id="dPlay" type="button">Play daily #${n}</button>${m.dailyEver?'<button class="ghost" id="dRandom" type="button">Random puzzle</button>':''}`;
-  return `<div class="card stack"><span class="label">Daily puzzle #${n}</span>${b}</div>`;
+  return `<div class="card stack pic"><img class="cpic" alt="" src="${CARD.daily}"><span class="label">Daily puzzle #${n}</span>${b}</div>`;
 }
 function roomCard(){
-  if(save.room)return `<div class="card stack"><span class="label">Play with friends</span><p class="hint">Room <b>${esc(save.room)}</b></p><button class="big alt" id="rRejoin" type="button">Rejoin room</button><button class="ghost" id="rQuit" type="button">Leave room</button></div>`;
-  return `<div class="card stack"><span class="label">Play with friends</span><button class="big alt" id="rNew" type="button">Create room</button>
+  if(save.room)return `<div class="card stack pic"><img class="cpic" alt="" src="${CARD.rooms}"><span class="label">Play with friends</span><p class="hint">Room <b>${esc(save.room)}</b></p><button class="big alt" id="rRejoin" type="button">Rejoin room</button><button class="ghost" id="rQuit" type="button">Leave room</button></div>`;
+  return `<div class="card stack pic"><img class="cpic" alt="" src="${CARD.rooms}"><span class="label">Play with friends</span><p class="hint">Up to 8 pilots, live</p><button class="big alt" id="rNew" type="button">Create room</button>
     <div class="joinrow"><input id="rCode" maxlength="4" placeholder="CODE" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Room code"><button class="ghost" id="rJoin" type="button">Join</button></div></div>`;
 }
 function bindModeCards(){
@@ -1086,6 +1134,8 @@ let NET=null, ROOM=null;
 const ghosts=new Map();
 const me=()=>ROOM&&ROOM.players.find(p=>p.id===clientId());
 const isBotP=p=>p&&p.bot>=0;
+// in a room every pilot is a different animal with its own scarf colour, by seat (join order), the same on every phone
+const kinOf=id=>{const i=ROOM?ROOM.players.findIndex(p=>p.id===id):-1;return i<0?0:i%KINS.length};
 function joinRoom(code){
   if(NET&&NET.code!==code){NET.close();NET=null}
   if(save.room!==code){save.room=code;if(save.online&&save.online.room!==code)save.online=null;persist()}
@@ -1153,7 +1203,7 @@ function showLobby(){
     <button class="ghost" id="rShare" type="button">Invite friends</button>
     <div class="seg" id="rMode">${[['team','Team'],['elim','Elimination']].map(([k,n])=>`<button type="button" data-m="${k}" aria-pressed="${R0.mode===k}" ${host?'':'disabled'}>${n}</button>`).join('')}</div>
     <p class="hint">${elim?'One flight per round. The lowest scores drop out until one pilot is left.':'A full run together: all your scores add up toward each target.'}</p>
-    <ul class="plist">${R0.players.map(p=>`<li class="${p.connected?'':'off'}"><span>${esc(roomName(p))}</span>${p.id===R0.host?'<b>host</b>':''}${p.id===clientId()?'<i>you</i>':''}</li>`).join('')}</ul>
+    <ul class="plist">${R0.players.map((p,i)=>`<li class="${p.connected?'':'off'}"><img class="kin" alt="" src="${kinFace(i%KINS.length)}"><span>${esc(roomName(p))}</span>${p.id===R0.host?'<b>host</b>':''}${p.id===clientId()?'<i>you</i>':''}</li>`).join('')}</ul>
     ${host&&elim?`<div class="row2"><button class="ghost" id="rBot" type="button" ${R0.players.length>=8?'disabled':''}>+ Bot</button><button class="ghost" id="rKick" type="button" ${R0.players.some(isBotP)?'':'disabled'}>− Bot</button></div>`:''}
     <div class="namerow"><input id="rName" maxlength="16" placeholder="Your name" autocomplete="nickname" value="${esc(mine?mine.name:save.meta.name||'')}"></div>
     ${host?`<button class="big" id="rGo" type="button">Start</button>`:'<p class="hint">Waiting for the host to start…</p>'}
@@ -1171,7 +1221,7 @@ function showLobby(){
 // the poster in a room: team target or elimination round, plus who is ready
 function roomStrip(r){
   const R0=ROOM;if(!R0)return '';
-  const chips=R0.players.filter(p=>R0.mode==='team'||p.alive).map(p=>`<span class="rchip${p.ready?' ready':''}${p.connected?'':' off'}${p.id===clientId()?' me':''}">${p.ready?'✓ ':''}${esc(roomName(p))}</span>`).join('');
+  const chips=R0.players.filter(p=>R0.mode==='team'||p.alive).map(p=>`<span class="rchip${p.ready?' ready':''}${p.connected?'':' off'}${p.id===clientId()?' me':''}"><img class="kin" alt="" src="${kinFace(kinOf(p.id))}">${p.ready?'✓ ':''}${esc(roomName(p))}</span>`).join('');
   const t=townOf(r.seed,r.stage);
   if(R0.mode==='team'){const q=R0.target||1,p=Math.min(1,R0.teamScore/q);
     const stubs=`<span class="fpips" aria-label="${FLIGHTS-R0.flight} flights left">${Array.from({length:FLIGHTS},(_,i)=>`<i class="${i<R0.flight?'used':''}"></i>`).join('')}</span>`;
@@ -1320,7 +1370,7 @@ $('hSound').onclick=()=>{audio.setMuted(!audio.muted);syncSound()};
 syncSound();
 
 // dev only: inspect the running flight from the console (stripped from production builds)
-if(import.meta.env.DEV)window.__rf={F:()=>F,R,frame:n=>frame(n),ctl}; // ctl: tools/ and dev pages drive flights (e.g. the trailer capture)
+if(import.meta.env.DEV)window.__rf={F:()=>F,R,frame:n=>frame(n),ctl,tour:m=>showTour(R(),m),results:(o,S,f)=>showResults(o,S,f)}; // ctl: tools/ and dev pages drive flights (e.g. the trailer capture)
 
 /* ---------- history: finished runs and puzzles ----------
    save.meta.history, newest first, at most HIST_MAX (it rides along in the cloud save). Each entry keeps the build, mods

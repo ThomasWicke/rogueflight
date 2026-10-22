@@ -222,9 +222,29 @@ function launchSite(ctx,v,b){
   W(l=>{const g=ctx;g.lineWidth=l;g.strokeStyle=INK;g.fillStyle=WOOD;
     g.beginPath();g.moveTo(-5,0);g.lineTo(2,0);g.lineTo(2,-1);g.lineTo(-5,-.2);g.closePath();g.fill();g.stroke();
     g.fillStyle=WOOD2;g.fillRect(-4.6,-.1,.4,.1);g.beginPath();g.moveTo(-6,-.1);g.lineTo(1.6,-2.9);g.lineTo(2.2,-2.4);g.lineTo(-5.6,.3);g.closePath();g.fill();g.stroke();
-    g.strokeStyle='#8a8f99';g.lineWidth=l*1.2;g.beginPath();for(let i=0;i<7;i++){const x=-4.2+i*.5;g.moveTo(x,-.3-i*.18);g.lineTo(x+.25,-1-i*.18)}g.stroke();
     g.strokeStyle=INK;g.lineWidth=l;g.fillStyle=RED;g.fillRect(.9,-4.4,.25,2);g.beginPath();g.moveTo(1.15,-4.4);g.lineTo(2.6,-4);g.lineTo(1.15,-3.6);g.closePath();g.fill();g.stroke();
   },-2,20,1);
+  spring(ctx,v,lw);
+}
+// the catapult spring along the rail, behind the craft (which starts at -4, 21.2, nose up 20°): squeezed while the
+// plane is pulled back (v.pull 0..1), then it fires and wobbles out to its rest length (v.launchT = seconds since launch)
+function spring(ctx,v,lw){
+  const {X,Y,sc}=v, c=Math.cos(.349), s=Math.sin(.349), cx=-4, cy=21.2;
+  let L=2.8;
+  if(v.pull>0)L-=v.pull*1.4;
+  else if(v.launchT>=0&&v.launchT<1.5)L*=1+.22*Math.exp(-v.launchT*5)*Math.sin(v.launchT*34);
+  const ax=cx-c*3.4, ay=cy-s*3.4, ex=ax+c*L, ey=ay+s*L, n=8, r=.34;
+  // the coil: a zigzag across the rail line, ink under tin
+  const pts=[[ax,ay]];
+  for(let i=0;i<n;i++){const k=(i+.5)/n,sg=i%2?-1:1;pts.push([ax+c*L*k-s*r*sg,ay+s*L*k+c*r*sg])}
+  pts.push([ex,ey]);
+  const path=()=>{ctx.beginPath();pts.forEach(([x,y],i)=>i?ctx.lineTo(X(x),Y(y)):ctx.moveTo(X(x),Y(y)))};
+  const w=Math.max(1.5,.14*sc);ctx.lineJoin='round';ctx.lineCap='round';
+  path();ctx.strokeStyle=INK;ctx.lineWidth=w+lw*1.6;ctx.stroke();
+  path();ctx.strokeStyle='#b9c3c9';ctx.lineWidth=w;ctx.stroke();
+  // the back stop and the pusher plate
+  const plate=(x,y,h,col)=>{ctx.beginPath();ctx.moveTo(X(x+s*h),Y(y-c*h));ctx.lineTo(X(x-s*h),Y(y+c*h));ctx.strokeStyle=INK;ctx.lineWidth=Math.max(3,.32*sc)+lw*1.6;ctx.stroke();ctx.strokeStyle=col;ctx.lineWidth=Math.max(3,.32*sc);ctx.stroke()};
+  plate(ax,ay,.55,WOOD2);plate(ex,ey,.5,RED);
 }
 
 /* ---------- wooden distance signposts and the BEST pennant ---------- */
@@ -290,8 +310,20 @@ function thermals(ctx,v,st){
   for(let k=Math.floor(left/120)-1;k<=Math.ceil(right/120)+1;k++){const t=thermalSeg(k,st);if(!t)continue;const px=X(t.cx),w=22*sc;if(px<-w||px>v.vw+w)continue;
     const ty=Y(t.top);const gr=ctx.createLinearGradient(0,gy,0,ty);gr.addColorStop(0,'rgba(255,236,190,.36)');gr.addColorStop(1,'rgba(255,236,190,0)');
     ctx.fillStyle=gr;ctx.fillRect(px-w/2,ty,w,gy-ty);
-    ctx.strokeStyle='rgba(251,245,232,.55)';ctx.lineWidth=2;const ph=(now/700)%1;
-    for(let i=0;i<5;i++){const yy=lerp(gy,ty,((i/5+ph)%1));ctx.beginPath();for(let j=0;j<=8;j++){const x=px-w*.25+j*w*.0625,y=yy+Math.sin(j*1.3+now/300+i)*3;j?ctx.lineTo(x,y):ctx.moveTo(x,y)}ctx.stroke()}
+    // warm air curling upward: swirls that rise, swell and fade, each ending in an arrowhead, and chevrons up the middle
+    const ph=(now/1600)%1, r=clamp(w*.2,5,34), n=w>160?6:4;ctx.lineCap='round';ctx.lineJoin='round';
+    for(let i=0;i<n;i++){const k=(i/n+ph)%1,yy=lerp(gy,ty,k),sx=px+(i%2?1:-1)*w*(n>4?.12+.1*(i%3):.18),a=Math.sin(k*Math.PI),rr=r*(.7+.5*k),a0=now/500*(i%2?-1:1)+i;
+      if(yy<ty||yy>gy)continue;
+      ctx.beginPath();
+      for(let j=0;j<=14;j++){const t=a0+j/14*4.4,q=rr*(.35+.65*j/14);const x=sx+Math.cos(t)*q,y=yy-j*rr*.06+Math.sin(t)*q*.55;j?ctx.lineTo(x,y):ctx.moveTo(x,y)}
+      const t1=a0+4.4,ex=sx+Math.cos(t1)*rr,ey=yy-14*rr*.06+Math.sin(t1)*rr*.55,hs2=Math.max(3,rr*.35);
+      ctx.moveTo(ex-hs2,ey+hs2*.2);ctx.lineTo(ex,ey-hs2*.6);ctx.lineTo(ex+hs2,ey+hs2*.2);
+      ctx.strokeStyle=`rgba(190,112,50,${a*.35})`;ctx.lineWidth=4.5;ctx.stroke();
+      ctx.strokeStyle=`rgba(255,248,232,${a*.9})`;ctx.lineWidth=2.2;ctx.stroke()}
+    const cw=Math.max(4,Math.min(w*.12,16));
+    for(let i=0;i<3;i++){const k=(i/3+ph*1.4)%1,yy=lerp(gy,ty,k);ctx.globalAlpha=Math.sin(k*Math.PI);ctx.beginPath();ctx.moveTo(px-cw,yy+cw*.6);ctx.lineTo(px,yy-cw*.2);ctx.lineTo(px+cw,yy+cw*.6);
+      ctx.strokeStyle='rgba(190,112,50,.3)';ctx.lineWidth=5;ctx.stroke();ctx.strokeStyle='rgba(255,248,232,.75)';ctx.lineWidth=2.5;ctx.stroke()}
+    ctx.globalAlpha=1;
     // a hawk circling near the top
     const a=now/1400+k,hx=px+Math.cos(a)*w*.6,hy=lerp(gy,ty,.75)+Math.sin(a)*w*.2,hsz=Math.max(4,.9*sc);
     ctx.strokeStyle=INK;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(hx-hsz,hy-hsz*.3);ctx.quadraticCurveTo(hx-hsz*.4,hy-hsz*.7,hx,hy);ctx.quadraticCurveTo(hx+hsz*.4,hy-hsz*.7,hx+hsz,hy-hsz*.3);ctx.stroke();
@@ -313,6 +345,39 @@ function stormFx(ctx,v,st,wx){
       const x=((hs(i*7.1)*(vw+120)-now/1000*spd)%(vw+120)+vw+120)%(vw+120)-60,y=((hs(i*3.7)*vh+now/1000*vy)%vh+vh)%vh;
       ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+(wx==='headwind'?30:6),y+(wx==='gusts'?-Math.sign(vy)*16:4));ctx.stroke()}
   }
+  // each storm has its own sky: wrap(i,spd) places particle i in screen space, drifting with the camera (par) and time
+  const wrap=(i,par,sx,sy)=>[((hs(i*7.1)*(vw+120)-parOff(v,par)-now/1000*sx)%(vw+120)+vw+120)%(vw+120)-60,((hs(i*3.7)*vh+now/1000*sy)%vh+vh)%vh];
+  ctx.save();ctx.lineCap='round';ctx.lineJoin='round';
+  if(wx==='headwind'){ // leaves tumbling past
+    for(let i=0;i<12;i++){const [x,y]=wrap(i+40,.6,260+hs(i)*120,20),a=now/200+i,r=7+hs(i*2)*4;
+      ctx.save();ctx.translate(x,y);ctx.rotate(a);ctx.scale(1,.45+.55*Math.abs(Math.sin(a*.7)));ctx.fillStyle=['#c96a2b','#e9a93b','#8f9a3c'][i%3];ctx.strokeStyle=INK;ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.moveTo(-r,0);ctx.quadraticCurveTo(0,-r*.8,r,0);ctx.quadraticCurveTo(0,r*.8,-r,0);ctx.fill();ctx.stroke();ctx.restore()}}
+  else if(wx==='gusts'){ // gust curls: little whirls that bob up and down
+    ctx.strokeStyle='rgba(251,245,232,.6)';ctx.lineWidth=2.2;
+    for(let i=0;i<6;i++){const [x,y0]=wrap(i+60,.3,30,0),y=y0+Math.sin(now/700+i)*40,r=10+hs(i*5)*8,a0=now/300+i;ctx.beginPath();
+      for(let j=0;j<=16;j++){const t=a0+j/16*5,q=r*(1-j/20);const px=x+j*2.2+Math.cos(t)*q*.4,py=y+Math.sin(t)*q*.4;j?ctx.lineTo(px,py):ctx.moveTo(px,py)}ctx.stroke()}}
+  else if(wx==='ceiling'&&st.ceiling){ // rain falling from the cloud deck
+    const cy=Y(st.ceiling);if(cy<vh){ctx.strokeStyle='rgba(200,214,232,.5)';ctx.lineWidth=1.5;ctx.beginPath();
+      for(let i=0;i<60;i++){const [x,y0]=wrap(i+80,.15,40,520),y=Math.max(cy,0)+y0*(1-Math.max(cy,0)/vh);ctx.moveTo(x,y);ctx.lineTo(x-4,y+14)}ctx.stroke()}}
+  else if(wx==='thin'){ // thin air: ice glints twinkling high up, a pale violet wash at the top
+    const g=ctx.createLinearGradient(0,0,0,vh*.6);g.addColorStop(0,'rgba(196,184,232,.28)');g.addColorStop(1,'rgba(196,184,232,0)');ctx.fillStyle=g;ctx.fillRect(0,0,vw,vh*.6);
+    ctx.fillStyle='#fbf5e8';for(let i=0;i<24;i++){const [x,y]=wrap(i+120,.02,6,-8),k=Math.max(0,Math.sin(now/400+i*1.7));if(k<.2)continue;const r=1.5+k*3.5;
+      ctx.globalAlpha=k*.85;ctx.beginPath();ctx.moveTo(x,y-r*2);ctx.lineTo(x+r*.5,y);ctx.lineTo(x,y+r*2);ctx.lineTo(x-r*.5,y);ctx.closePath();ctx.moveTo(x-r*2,y);ctx.lineTo(x,y-r*.5);ctx.lineTo(x+r*2,y);ctx.lineTo(x,y+r*.5);ctx.closePath();ctx.fill()}
+    ctx.globalAlpha=1}
+  else if(wx==='cargo'){ // mail run: loose letters fluttering across the sky
+    for(let i=0;i<7;i++){const [x,y]=wrap(i+150,.4,40,12),a=Math.sin(now/500+i)*.6,fl=Math.abs(Math.cos(now/260+i*2)),w2=9,h2=6*(.4+.6*fl);
+      ctx.save();ctx.translate(x,y+Math.sin(now/800+i)*14);ctx.rotate(a);ctx.fillStyle=CANVAS;ctx.strokeStyle=INK;ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.rect(-w2,-h2,w2*2,h2*2);ctx.fill();ctx.stroke();ctx.beginPath();ctx.moveTo(-w2,-h2);ctx.lineTo(0,h2*.2);ctx.lineTo(w2,-h2);ctx.stroke();
+      ctx.fillStyle=RED;ctx.fillRect(w2*.35,-h2*.8,w2*.45,Math.max(1.5,h2*.6));ctx.restore()}}
+  else if(wx==='ration'){ // fuel rationing: a dry, hot day, heat haze rippling over the ground
+    const g=ctx.createLinearGradient(0,vh*.4,0,vh);g.addColorStop(0,'rgba(240,170,90,0)');g.addColorStop(1,'rgba(240,170,90,.22)');ctx.fillStyle=g;ctx.fillRect(0,vh*.4,vw,vh*.6);
+    ctx.strokeStyle='rgba(255,236,190,.5)';ctx.lineWidth=2.5;const gy=Math.min(vh,Y(0));
+    for(let i=0;i<7;i++){const y=gy-20-i*((gy-vh*.45)/7);if(y<0)continue;ctx.beginPath();for(let x=0;x<=vw;x+=14){const yy=y+Math.sin(x*.03+now/300+i*2)*3;x?ctx.lineTo(x,yy):ctx.moveTo(x,yy)}ctx.stroke()}}
+  else if(wx==='short'){ // short catapult: crows on the wing, a sign of a bad start
+    ctx.strokeStyle=INK;ctx.lineWidth=2.5;
+    for(let i=0;i<8;i++){const [x,y0]=wrap(i+190,.25,-30,0),y=y0*.5+Math.sin(now/900+i)*10,f=Math.sin(now/120+i*1.3)*.6,r=9+hs(i)*5;
+      ctx.beginPath();ctx.moveTo(x-r,y-r*f);ctx.quadraticCurveTo(x-r*.4,y-r*.4,x,y);ctx.quadraticCurveTo(x+r*.4,y-r*.4,x+r,y-r*f);ctx.stroke()}}
+  ctx.restore();
 }
 
 /* ---------- the whole backdrop ---------- */

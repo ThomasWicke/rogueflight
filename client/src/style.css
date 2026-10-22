@@ -575,6 +575,8 @@ html,body{height:100%;min-height:100dvh}
 .plist li b{font-size:11px;color:var(--paper);background:var(--ink);border-radius:999px;padding:1px 7px}
 .plist li i{font-style:normal;font-size:11px;color:var(--muted)}
 .plist li.off{opacity:.5}
+.plist .kin{width:28px;height:28px;margin:-4px 0}
+.rchip .kin{width:18px;height:18px;vertical-align:-4px;margin:-2px 3px -2px -5px}
 .rchips{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
 .rchip{font-size:12px;font-weight:900;padding:2px 9px;border-radius:999px;border:2px solid var(--ink);background:var(--canvas);color:var(--muted)}
 .rchip.ready{background:var(--good);color:var(--paper)}
@@ -655,8 +657,51 @@ body.offline::after{content:"Reconnecting…";position:fixed;left:50%;top:calc(v
    The hangar becomes a grid: toolbar across the top, the phone hangar (poster + bench) left, the shop / mods panel right
    (ui.js moves the dealer drawer into #hangar), the launch bar across the bottom. The panel is only as tall as its
    content and never taller than its row, so it can't run into the launch bar. */
+/* ---------- the troupe's painted art (troupe.js) ---------- */
+/* the hangar is the barn workshop: a painted interior behind the cards, dimmed a little so the chips and cards stand out */
+#hangar{background-image:linear-gradient(rgba(36,22,12,.28),rgba(36,22,12,.42)),url('./assets/workshop-tall.webp');background-size:cover;background-position:50% 30%}
+/* hosts: a three-frame sprite (calm, delighted, worried); --f picks the frame, --ar is the frame's width / height */
+.host{display:inline-block;flex:none;height:var(--hh,48px);aspect-ratio:var(--ar);background:var(--hs) no-repeat;background-size:300% 100%;
+  background-position:calc(var(--f) * 50%) 100%;vertical-align:bottom}
+.label.hosted{display:inline-flex;align-items:flex-end;gap:6px}
+.host.sm{--hh:56px;margin:-24px 0 -5px -4px}
+.host.lg{--hh:118px;justify-self:center;margin-bottom:-6px}
+/* the announcer peeks over the top left corner of the flight results */
+.tallysheet{margin-top:52px}
+.host.peek{--hh:84px;position:absolute;left:12px;top:-74px;z-index:-1}
+/* home card pictures: a pinned photo in the top right corner */
+.card.pic{position:relative}
+.card.pic>.label,.card.pic>.hint:first-of-type{padding-right:78px}
+.cpic{position:absolute;top:-10px;right:-8px;width:76px;height:76px;border:3px solid var(--ink);border-radius:6px;box-shadow:3px 3px 0 var(--ink);transform:rotate(4deg);background:var(--canvas)}
+/* the tour map */
+.veil.tour{align-items:center}
+.toursheet{padding:10px;gap:10px;max-width:min(460px,calc((100dvh - var(--reserve) - 150px) * .667 + 20px))}
+.tmap{position:relative;width:100%;aspect-ratio:2/3;border:3px solid var(--ink);border-radius:5px;overflow:hidden;background:var(--map) center/cover,var(--paper2)}
+.tmap svg{position:absolute;inset:0;width:100%;height:100%}
+/* the svg is 100 x 150 over a 2:3 map, so one unit is about 4 px */
+.ttrail,.tleg{fill:none;stroke:var(--red);stroke-width:.9;stroke-dasharray:2.2 1.8;stroke-linecap:round}
+.tleg{stroke:var(--brass);stroke-dasharray:0 1;animation:tleg 1.8s .5s cubic-bezier(.45,0,.3,1) forwards}
+@keyframes tleg{from{stroke-dasharray:0 1}to{stroke-dasharray:1 0}}
+.tpin{position:absolute;transform:translate(-50%,-50%);display:grid;justify-items:center;pointer-events:none}
+.tpin b{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-family:var(--display);font-weight:400;font-size:13px;color:var(--ink);background:var(--canvas);border:2.5px solid var(--ink);box-shadow:2px 2px 0 var(--ink)}
+.tpin.done b{background:var(--good);color:var(--paper)}
+.tpin.cur b{background:var(--brass);width:30px;height:30px;font-size:16px}
+.tpin.arrive b{animation:arrive .5s cubic-bezier(.2,1.6,.4,1)}
+@keyframes arrive{0%{transform:scale(.6)}100%{transform:scale(1)}}
+.tpin span{margin-top:3px;font-size:10.5px;font-weight:900;line-height:1;color:var(--ink);background:var(--paper);border:2px solid var(--ink);border-radius:3px;padding:2px 5px;white-space:nowrap}
+.tpin em{position:absolute;left:calc(50% + 12px);top:-14px;width:24px;height:24px;border-radius:50%;background:#5a6878;border:2px solid var(--ink);display:grid;place-items:center;color:var(--paper)}
+.tpin em .wxi{width:15px;height:15px;margin:0}
+.tplane{position:absolute;width:84px;transform:translate(-50%,-100%) rotate(-6deg);margin-top:-18px;pointer-events:none;
+  filter:drop-shadow(2.5px 0 0 var(--paper)) drop-shadow(-2.5px 0 0 var(--paper)) drop-shadow(0 2.5px 0 var(--paper)) drop-shadow(0 -2.5px 0 var(--paper)) drop-shadow(3px 4px 0 rgba(34,40,58,.45))}
+.tfoot{display:grid;gap:8px}
+.tstorms{display:grid;gap:3px;font-size:12px;font-weight:800;color:var(--muted)}
+.tstorms b{color:var(--red);margin-right:5px}
+.tstorms .wxi{width:14px;height:14px;vertical-align:-2px;margin-right:4px}
+@media (prefers-reduced-motion: reduce){.tleg{animation:none;stroke-dasharray:none}}
+
 @media (min-width:640px) and (orientation:landscape){
   :root{--side:clamp(290px,31vw,400px);--lw:552px;--gap:16px}
+  #hangar{background-image:linear-gradient(rgba(36,22,12,.28),rgba(36,22,12,.42)),url('./assets/workshop-wide.webp');background-position:50% 40%}
   #hangar{display:grid;grid-template-columns:minmax(0,var(--lw)) var(--side);grid-template-rows:auto minmax(0,1fr) auto;
     grid-template-areas:"top top" "mid side" "bar bar";column-gap:var(--gap);justify-content:center;
     padding:0 max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px))}

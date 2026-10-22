@@ -22,6 +22,18 @@ const FUR = '#f9f2e4', FUR2 = '#e5d4b4', HORN = '#dcc59a', HORN2 = '#b59c6e',
 // balsa and copper for the duration of one drawPart call (see drawPart), so every part shares one rare look.
 const ENAMEL = '#7a4fa0', BALSA = '#e3c48f', COPPER = '#d08a4e';
 let ACC = RED, CRATE = WOOD, TANKC = TIN;
+// pilots in live rooms: each player gets an animal (fur, ears, nose, horns or not) and a scarf colour, so planes are
+// easy to tell apart. drawPart and drawPilot take o.kin (an index into KINS, 0 = the goat); the goat is the default.
+//   ears: 'leaf' floppy goat ears, 'point' upright, 'long' hanging, 'side' sticking out. nose: 'goat', 'pig', 'dark'.
+export const KINS = [
+  { id: 'goat', fur: FUR, fur2: FUR2, ears: 'leaf', nose: 'goat', horns: 1, beard: 1, sc: [RED, RED2] },
+  { id: 'pig', fur: '#f4bcae', fur2: '#dc968a', ears: 'point', nose: 'pig', sc: ['#4fa35b', '#36793f'] },
+  { id: 'fox', fur: '#e58a46', fur2: '#bd6630', ears: 'point', nose: 'dark', muzzle: '#fbf1e2', sc: [TEAL, '#2a7580'] },
+  { id: 'dog', fur: '#c99a68', fur2: '#a2774c', ears: 'long', nose: 'dark', sc: ['#3f6fb5', '#2c5190'] },
+  { id: 'sheep', fur: '#fbf7ee', fur2: '#ddd3c0', ears: 'side', nose: 'goat', wool: 1, sc: [BRASS, BRASS2] },
+  { id: 'cat', fur: '#9aa1ab', fur2: '#757d88', ears: 'point', nose: 'pig', whiskers: 1, sc: ['#7a4fa0', '#5b3880'] },
+];
+let KIN = KINS[0];
 const SHADE = 'rgba(34,40,58,.17)', SHADE2 = 'rgba(34,40,58,.32)', HI = 'rgba(255,255,255,.5)';
 
 // constant dash patterns (no per-frame allocation)
@@ -86,7 +98,7 @@ export function drawPart(g, type, t, o) {
   g.save(); g.lineJoin = 'round'; g.lineCap = 'round'; ink(g, lw);
   if (rare) { ACC = ENAMEL; CRATE = BALSA; TANKC = COPPER; }
   switch (type) {
-    case 'cockpit': cockpit(g, t, lw, fine, o.mood || 'idle'); break;
+    case 'cockpit': cockpit(g, t, lw, fine, o.mood || 'idle', o.kin); break;
     case 'frame': frame(g, lw, fine); break;
     case 'tank': tank(g, lw, fine, o.frac == null ? 1 : Math.max(0, Math.min(1, o.frac))); break;
     case 'wing': wing(g, lw, fine); break;
@@ -402,14 +414,14 @@ function boxFrame(g, lw, fine) {
   if (fine) { detail(g, WOOD2, lw * .45); grain(g, -.3, -.465, .25, .01); }
   nail(g, -.465, -.465, .02); nail(g, .465, -.465, .02); nail(g, 0, -.465, .024);
 }
-function cockpit(g, t, lw, fine, mood) {
+function cockpit(g, t, lw, fine, mood, kin) {
   boxFrame(g, lw, fine);
   // the goat, big: its face is the main feedback channel; shoulders hide behind the tub wall
   const s = .76;
   g.save(); g.translate(-.06, -.13); g.scale(s, s);
   // after a clean landing the goat bows to the crowd: a slow nod forward and back, then a pause
   if (mood === 'bow') { const k = Math.max(0, Math.sin(t * 2.4)); g.translate(0, .42); g.rotate(k * .5); g.translate(0, -.42); mood = 'grin'; }
-  drawPilot(g, mood, t, { lw: lw / s * .85, scarf: .8, compact: true });
+  drawPilot(g, mood, t, { lw: lw / s * .85, scarf: .8, compact: true, kin });
   g.restore();
   ink(g, lw);
   // windscreen: glass in a brass frame
@@ -450,6 +462,7 @@ function star5(g, x, y, r) {
 //   o.lw      outline width in these units (default 0.04)
 //   o.scarf   scarf tail length factor (default 1; the tail trails to about x=-0.7)
 //   o.compact keep mood effects (dizzy stars, crash smoke) inside the box, as the cockpit does
+//   o.kin     index into KINS (another animal in live rooms; default the goat)
 // Ear angles per mood: [back ear (left), front ear (right)], radians, 0 = +x, positive = down.
 const EARS = {
   idle: [Math.PI - .3, -.35], focus: [Math.PI + .12, -.75], grin: [Math.PI + .6, -1.1], scared: [Math.PI + .8, -1.45],
@@ -467,22 +480,52 @@ export function drawPilot(g, mood, t, o) {
   g.save(); g.lineJoin = 'round'; g.lineCap = 'round'; ink(g, lw);
   jacket(g, lw, fine);
   if (mood === 'scared') g.translate(Math.sin(t * 57) * .007, 0); // trembling
+  KIN = KINS[o.kin] || KINS[0];
   scarf(g, t * (mood === 'grin' ? 15 : 9), lw, o.scarf == null ? 1 : o.scarf); // flutters faster at speed
-  const ea = EARS[mood];
+  const ea = earsOf(mood);
   ear(g, -.19, -.1, ea[0], lw, fine);
   ear(g, .14, -.17, ea[1], lw, fine);
   head(g, lw);
+  if (KIN.muzzle) muzzle(g);
   const askew = mood === 'crash';
   if (askew) { g.save(); g.translate(-.02, -.28); g.rotate(-.24); g.translate(.02, .28); }
   cap(g, lw, fine);
   if (mood !== 'focus' && fine) goggles(g, false, lw, askew); // pushed-up goggles only when there is room
   if (askew) g.restore();
-  horns(g, lw, fine);
+  if (KIN.horns) horns(g, lw, fine);
+  if (KIN.wool) wool(g, lw);
   face(g, mood, t, fw);
-  beard(g, lw);
+  if (KIN.beard) beard(g, lw);
+  if (KIN.whiskers) whiskers(g, fw);
   if (mood === 'focus') goggles(g, true, fw, false);
   extras(g, mood, t, fw, !!o.compact);
+  g.restore(); KIN = KINS[0];
+}
+// ear angles for this animal: goat ears flop with the mood, upright ears only flatten when sad or hurt
+function earsOf(mood) {
+  const e = EARS[mood], k = KIN.ears;
+  if (k === 'point') { const d = mood === 'sad' || mood === 'crash' ? .8 : mood === 'scared' ? .4 : 0; return [-2.1 - d * .6, -1.15 + d]; }
+  if (k === 'long') return [Math.PI / 2 + .55 + (e[0] - Math.PI) * .25, Math.PI / 2 - .25 + e[1] * .15];
+  if (k === 'side') return [Math.PI + .25, .15 + e[1] * .1];
+  return e;
+}
+// the fox's pale muzzle over the front of the head
+function muzzle(g) {
+  g.save(); headPath(g, 0, 0); g.clip();
+  ell(g, .2, .13, .17, .12, .32); g.fillStyle = KIN.muzzle; g.fill();
   g.restore();
+}
+// a fringe of wool curls under the cap brim and over the cheek
+function wool(g, lw) {
+  for (const [x, y, r] of [[-.24, -.03, .07], [-.15, -.06, .065], [-.06, -.075, .06], [.04, -.08, .055], [.12, -.08, .05], [-.25, .06, .06]]) {
+    circ(g, x, y, r); fillStroke(g, KIN.fur);
+  }
+  g.fillStyle = KIN.fur2; circ(g, -.25, .08, .03); g.fill();
+}
+function whiskers(g, lw) {
+  detail(g, INK, lw * .6);
+  for (const d of [-.025, .015]) { seg(g, .3, .1 + d, .42, .08 + d * 1.8); seg(g, .22, .11 + d, .1, .1 + d * 2); }
+  ink(g, lw);
 }
 
 // scarf: a band round the neck, knotted at the back, the tail trailing toward -x and waving with t
@@ -491,18 +534,18 @@ function scarfY(t, i, k) { return .28 - .045 * i / SC_N + Math.sin(t - i * 1.15)
 function scarf(g, t, lw, len) {
   // t here is already the wave phase (time x flutter speed)
   g.beginPath(); g.moveTo(-.23, .25); g.quadraticCurveTo(0, .33, .25, .24); g.lineTo(.25, .33);
-  g.quadraticCurveTo(0, .42, -.22, .35); g.closePath(); fillStroke(g, RED);
-  g.save(); g.clip(); g.fillStyle = RED2; g.fillRect(-.3, .35, .6, .1); g.restore(); g.stroke();
+  g.quadraticCurveTo(0, .42, -.22, .35); g.closePath(); fillStroke(g, KIN.sc[0]);
+  g.save(); g.clip(); g.fillStyle = KIN.sc[1]; g.fillRect(-.3, .35, .6, .1); g.restore(); g.stroke();
   const x0 = -.2, x1 = x0 - .48 * len;
   g.beginPath();
   for (let i = 0; i <= SC_N; i++) { const x = x0 + (x1 - x0) * i / SC_N, w = .055 - .015 * i / SC_N; i ? g.lineTo(x, scarfY(t, i, -w)) : g.moveTo(x, scarfY(t, i, -w)); }
   g.lineTo(x1 + .06, scarfY(t, SC_N, 0)); // swallowtail notch
   for (let i = SC_N; i >= 0; i--) { const x = x0 + (x1 - x0) * i / SC_N, w = .055 - .015 * i / SC_N; g.lineTo(x, scarfY(t, i, w)); }
-  g.closePath(); fillStroke(g, RED);
-  detail(g, RED2, lw * .9); g.beginPath();
+  g.closePath(); fillStroke(g, KIN.sc[0]);
+  detail(g, KIN.sc[1], lw * .9); g.beginPath();
   for (let i = 1; i < SC_N; i++) { const x = x0 + (x1 - x0) * i / SC_N, w = .055 - .015 * i / SC_N; i > 1 ? g.lineTo(x, scarfY(t, i, w * .4)) : g.moveTo(x, scarfY(t, i, w * .4)); }
   g.stroke(); ink(g, lw);
-  ell(g, -.19, .3, .055, .05, .3); fillStroke(g, RED2); // knot
+  ell(g, -.19, .3, .055, .05, .3); fillStroke(g, KIN.sc[1]); // knot
 }
 function jacket(g, lw, fine) {
   g.beginPath(); g.moveTo(-.4, .52); g.quadraticCurveTo(-.38, .3, -.18, .27); g.lineTo(.22, .27);
@@ -516,12 +559,12 @@ function jacket(g, lw, fine) {
 }
 function ear(g, bx, by, a, lw, fine) {
   // floppy leaf-shaped ear from base (bx,by), pointing along angle a
-  const L = .24, W = .085, c = Math.cos(a), s = Math.sin(a), tx = bx + c * L, ty = by + s * L, px = -s * W, py = c * W;
+  const k = KIN.ears, L = k === 'long' ? .34 : k === 'point' ? .2 : .24, W = k === 'point' ? .1 : k === 'long' ? .1 : .085, c = Math.cos(a), s = Math.sin(a), tx = bx + c * L, ty = by + s * L, px = -s * W, py = c * W;
   g.beginPath(); g.moveTo(bx + px * .5, by + py * .5);
   g.quadraticCurveTo(bx + c * L * .55 + px * 1.3, by + s * L * .55 + py * 1.3, tx, ty);
   g.quadraticCurveTo(bx + c * L * .55 - px * 1.1, by + s * L * .55 - py * 1.1, bx - px * .5, by - py * .5);
-  g.closePath(); fillStroke(g, FUR);
-  if (fine) {
+  g.closePath(); fillStroke(g, k === 'long' ? KIN.fur2 : KIN.fur);
+  if (fine && k !== 'long') {
     g.beginPath(); g.moveTo(bx + c * .05, by + s * .05);
     g.quadraticCurveTo(bx + c * L * .55 + px * .45, by + s * L * .55 + py * .45, bx + c * L * .85, by + s * L * .85);
     g.quadraticCurveTo(bx + c * L * .55 - px * .25, by + s * L * .55 - py * .25, bx + c * .05, by + s * .05);
@@ -536,8 +579,8 @@ function headPath(g, dx, dy) {
 function head(g, lw) {
   // union outline: stroke both shapes at double width, then fill over the inner half
   ink(g, lw * 2); headPath(g, 0, 0); g.stroke();
-  g.fillStyle = FUR2; g.fill();
-  g.save(); g.clip(); headPath(g, -.035, -.045); g.fillStyle = FUR; g.fill(); g.restore();
+  g.fillStyle = KIN.fur2; g.fill();
+  g.save(); g.clip(); headPath(g, -.035, -.045); g.fillStyle = KIN.fur; g.fill(); g.restore();
   ink(g, lw);
 }
 function cap(g, lw, fine) {
@@ -608,11 +651,11 @@ function eye(g, x, y, rx, ry, side, p, lw) {
   if (p.lid > 0) {
     const ly = y - ry + 2 * ry * p.lid, yl = ly - p.tilt * side, yr = ly + p.tilt * side;
     g.beginPath(); g.moveTo(x - rx - .02, y - ry - .03); g.lineTo(x + rx + .02, y - ry - .03); g.lineTo(x + rx + .02, yr); g.lineTo(x - rx - .02, yl); g.closePath();
-    g.fillStyle = FUR; g.fill(); ink(g, lw * .8); seg(g, x - rx - .02, yl, x + rx + .02, yr);
+    g.fillStyle = KIN.fur; g.fill(); ink(g, lw * .8); seg(g, x - rx - .02, yl, x + rx + .02, yr);
   }
   if (p.sq > 0) {
     const R = ry * 1.25, cy = y + ry * (1.95 - .9 * p.sq);
-    circ(g, x, cy, R); g.fillStyle = FUR; g.fill(); ink(g, lw * .8); g.stroke();
+    circ(g, x, cy, R); g.fillStyle = KIN.fur; g.fill(); ink(g, lw * .8); g.stroke();
   }
   g.restore();
   ink(g, lw * .85); ell(g, x, y, rx, ry); g.stroke(); ink(g, lw);
@@ -633,11 +676,18 @@ function spiralEye(g, x, y, r, a0, lw) {
 const P = {}; // scratch eye params (reused, no allocation)
 function eyeP(lid, tilt, lx, ly, iris, sq, pup) { P.lid = lid; P.tilt = tilt; P.lx = lx; P.ly = ly; P.iris = iris; P.sq = sq; P.pup = pup; return P; }
 function eyes(g, lid, tilt, lx, ly, iris, sq, pup, big, lw) {
+  if (pup === SLIT && KIN.nose !== 'goat') pup = ROUND;
   eye(g, E1X, E1Y, .062 * big, .07 * big, -1, eyeP(lid, tilt, lx, ly, iris, sq, pup), lw);
   eye(g, E2X, E2Y, .052 * big, .064 * big, 1, eyeP(lid, tilt, lx, ly, iris, sq, pup), lw);
 }
 function nose(g, lw) {
   // nose pad and nostrils at the front of the muzzle, plus the split upper lip
+  if (KIN.nose === 'pig') { // a round snout disc with two nostrils
+    ell(g, .3, .085, .06, .048, .3); fillStroke(g, KIN.id === 'cat' ? PINK : KIN.fur2);
+    if (KIN.id === 'cat') { seg(g, .3, .13, .295, .15); return; }
+    dot(g, .285, .08, .012, INK); dot(g, .318, .09, .012, INK); return;
+  }
+  if (KIN.nose === 'dark') { ell(g, .3, .075, .05, .036, .3); fillStroke(g, INK); dot(g, .29, .065, .012, '#fff'); ink(g, lw * .8); seg(g, .3, .11, .295, .145); ink(g, lw); return; }
   ell(g, .285, .085, .045, .03, .3); g.fillStyle = PINK; g.fill();
   ink(g, lw * .8); seg(g, .265, .075, .28, .09); seg(g, .305, .07, .315, .085);
   seg(g, .3, .105, .295, .14); ink(g, lw);

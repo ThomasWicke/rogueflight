@@ -29,7 +29,7 @@
 </header>
 <div class="bands" id="root"></div>
 <script type="module">
-import { drawPart, drawPilot, drawParachute, PILOT_MOODS } from '../src/art.js';
+import { drawPart, drawPilot, drawParachute, PILOT_MOODS, KINS } from '../src/art.js';
 
 const qs = new URLSearchParams(location.search);
 const frozen = qs.has('t') ? parseFloat(qs.get('t')) : null;
@@ -63,12 +63,12 @@ function partFig(type, px, o, label) {
   });
   return fig(cv, label);
 }
-function pilotFig(mood, px) {
+function pilotFig(mood, px, kin) {
   const cv = canvas(px * 1.35, px * 1.15, (g, t) => {
     g.translate(px * .78, px * .6); g.scale(px, px);
-    drawPilot(g, mood, t, { lw: lwFor(px) });
+    drawPilot(g, mood, t, { lw: lwFor(px), kin });
   });
-  return fig(cv, mood + ' ' + px);
+  return fig(cv, (kin ? KINS[kin].id + ' ' : '') + mood + ' ' + px);
 }
 const only = qs.get('only'); // show only sections whose title contains this text
 const bgs = qs.get('bg') === 'paper' ? [false] : qs.get('bg') === 'sky' ? [true] : [false, true];
@@ -105,6 +105,12 @@ section('Pilot moods at 64 px', band => {
 });
 section('Pilot moods at 160 px', band => {
   const r = row(band); for (const m of PILOT_MOODS) r.appendChild(pilotFig(m, 160));
+});
+section('Room pilots at 120 px', band => {
+  for (let k = 1; k < KINS.length; k++) { const r = row(band); for (const m of PILOT_MOODS) r.appendChild(pilotFig(m, 120, k)); }
+});
+section('Room cockpits at 48 px', band => {
+  const r = row(band); for (let k = 0; k < KINS.length; k++) r.appendChild(partFig('cockpit', 48, { mood: 'grin', kin: k }, KINS[k].id));
 });
 section('Cockpit moods at 120 px', band => {
   const r = row(band); for (const m of PILOT_MOODS) r.appendChild(partFig('cockpit', 120, { mood: m }, m));
