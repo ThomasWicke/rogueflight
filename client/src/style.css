@@ -176,10 +176,14 @@ button:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
 /* flight */
 #flight{background:#7cc4dd}
 #cv{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
-.hud{position:absolute;left:0;right:0;top:0;padding:calc(var(--reserve) + 10px) 12px 0;display:grid;gap:7px;pointer-events:none}
-.hrow{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+/* one band across the top: score over fuel on the left, the stats tag (distance, height, speed, clock) on the right */
+.hud{position:absolute;left:0;right:0;top:0;padding:calc(var(--reserve) + 10px) 12px 0;display:grid;grid-template-columns:minmax(0,1fr) auto;
+  grid-template-areas:"s m" "f m" "w w";column-gap:8px;row-gap:6px;align-items:start;pointer-events:none}
+.hrow{display:contents}
+.hud .mini{grid-area:m}.hud .srow{grid-area:s}.hud .fuelrow{grid-area:f}.hud .wxhud{grid-area:w}
 /* HUD pieces are little paper tags so they read on any sky */
-.dist{font-family:var(--display);font-size:28px;line-height:1;font-variant-numeric:tabular-nums;color:var(--ink);background:var(--paper);border:var(--ol) solid var(--ink);border-radius:6px;padding:5px 10px 4px;box-shadow:3px 3px 0 var(--ink)}
+/* the distance is the top line of the stats tag, set big */
+.fdist{font-family:var(--display);font-weight:400;font-size:19px;line-height:1.05}
 .mini{font-size:12.5px;font-weight:900;display:grid;gap:1px;text-align:right;font-variant-numeric:tabular-nums;color:var(--ink);background:var(--paper);border:2px solid var(--ink);border-radius:6px;padding:4px 8px;box-shadow:2px 2px 0 var(--ink)}
 .srow{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;white-space:nowrap;font-weight:900;font-variant-numeric:tabular-nums;color:var(--ink);background:var(--paper);border:2px solid var(--ink);border-radius:6px;padding:4px 10px;box-shadow:2px 2px 0 var(--ink)}
 .srow b{font-family:var(--display);font-weight:400;font-size:15px;color:var(--ink)}
@@ -742,13 +746,9 @@ body.offline::after{content:"Reconnecting…";position:fixed;left:50%;top:calc(v
   #hangar #bench>.card:first-child>.pal{grid-area:pal;grid-template-columns:repeat(2,minmax(0,1fr));margin-top:10px;padding-top:6px;align-content:start}
 }
 
-/* flight on landscape screens: the HUD is one band across the top (distance | score over fuel | height, speed, clock)
-   instead of three full-width rows, and clears the notch at the side */
+/* flight on landscape screens: the HUD band clears the notch at the side */
 @media (min-width:640px) and (orientation:landscape){
-  .hud{grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"d s m" "d f m" "w w w";column-gap:10px;row-gap:5px;align-items:start;
-    padding-left:max(12px,env(safe-area-inset-left,0px));padding-right:max(12px,env(safe-area-inset-right,0px))}
-  .hrow{display:contents}
-  .hud .dist{grid-area:d}.hud .mini{grid-area:m}.hud .srow{grid-area:s}.hud .fuelrow{grid-area:f}.hud .wxhud{grid-area:w}
+  .hud{column-gap:10px;padding-left:max(12px,env(safe-area-inset-left,0px));padding-right:max(12px,env(safe-area-inset-right,0px))}
   .toast{top:calc(var(--reserve) + 90px)}
 }
 /* phones held sideways: too short for a fixed poster above the bench, so poster and bench scroll together, and
@@ -785,7 +785,7 @@ body.offline::after{content:"Reconnecting…";position:fixed;left:50%;top:calc(v
   #thr{width:64px;height:128px}
   .rpad{gap:6px}
   .hud{padding-top:calc(var(--reserve) + 8px)}
-  .hud .dist{font-size:22px;padding:4px 9px 3px}
+  .hud .fdist{font-size:16px}
   .hud .mini{font-size:11.5px;padding:3px 7px}
   .hud .srow{padding:3px 10px}
   .hud .fuel{height:9px}
