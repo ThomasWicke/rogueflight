@@ -140,6 +140,8 @@ function reportRun(r,finished){
 function endRun(){if(slot!=='run'){leaveMode();return}reportRun(save.run,true);addHistory(save.run);save.meta.runs=(save.meta.runs||0)+1;save.run=null;persist();veil.hidden=true;armAbandon=false;show('title');renderTitle()}
 
 /* ================= title ================= */
+// a home card's header: title (and a hint line) beside the card's small picture
+const cardHead=(label,hint,pic)=>`<div class="chead"><div><span class="label">${label}</span>${hint?`<p class="hint">${hint}</p>`:''}</div><img class="cpic" alt="" src="${pic}"></div>`;
 let pickLevel=save.meta.level||0;
 function renderTitle(){
   const m=save.meta, r=save.run;
@@ -147,12 +149,11 @@ function renderTitle(){
   let h='';
   if(r){
     const tw=townOf(r.seed,r.stage);
-    h+=`<div class="card stack pic"><img class="cpic" alt="" src="${CARD.run}"><span class="label">Current run</span>
-      <p class="hint">Contract ${r.stage+1}${r.endless?' (endless)':' of '+CONTRACTS}: <strong>${tw.town}</strong> · ${r.coins} coins · ${plural(r.mods.length,'mod')}${r.level?' · Difficulty '+r.level:''}</p>
+    h+=`<div class="card stack">${cardHead('Current run',`Contract ${r.stage+1}${r.endless?' (endless)':' of '+CONTRACTS}: <strong>${tw.town}</strong> · ${r.coins} coins · ${plural(r.mods.length,'mod')}${r.level?' · Difficulty '+r.level:''}`,CARD.run)}
       <button class="big" id="cont" type="button">Continue run</button>
       <button class="ghost${armAbandon?' armed':''}" id="aband" type="button">${armAbandon?'Tap again to abandon':'Abandon run'}</button></div>`;
   }else{
-    h+=`<div class="card pic"><img class="cpic" alt="" src="${CARD.run}"><span class="label">New run</span>
+    h+=`<div class="card">${cardHead('New run','',CARD.run)}
       ${m.level>0?`<div style="margin-top:12px"><div class="row" style="margin-bottom:6px"><span class="label">Difficulty</span></div><div class="seg" id="lvl">${Array.from({length:m.level+1},(_,i)=>`<button type="button" data-l="${i}" aria-pressed="${i===pickLevel}">${i}</button>`).join('')}</div>
         ${pickLevel?`<div class="crules"><span>+${pickLevel*25}% score targets</span>${ceilingRules(pickLevel).map(t=>`<span>${t}</span>`).join('')}</div>`:''}</div>`:''}
       <div style="margin-top:12px"><button class="big" id="start" type="button">Start run</button></div></div>`;
@@ -1045,15 +1046,15 @@ function showRunOver(){
 // Random puzzles (any seed, unranked) open up after the first finished daily.
 function dailyCard(){
   const n=dailyNumber(),m=save.meta,d=save.daily,rec=(m.daily||{})[n];
-  let b;
-  if(d)b=`<p class="hint">${d.ranked?'Daily #'+d.day:'Random puzzle'} · flight ${d.flight+1} of ${FLIGHTS} · score ${fmt(d.total)}</p><button class="big alt" id="dCont" type="button">Continue puzzle</button>`;
-  else if(rec)b=`<p class="hint">Your score <b>${fmt(rec.score)}</b>${rec.rank?` · #${rec.rank} of ${rec.total}`:''}</p><div class="row2"><button class="ghost" id="dBoard" type="button">Leaderboard</button><button class="ghost" id="dRandom" type="button">Random puzzle</button></div>`;
-  else b=`<p class="hint">${DAILY_COINS} coins · ${FLIGHTS} flights · no storms. Highest score wins.</p><button class="big alt" id="dPlay" type="button">Play daily #${n}</button>${m.dailyEver?'<button class="ghost" id="dRandom" type="button">Random puzzle</button>':''}`;
-  return `<div class="card stack pic"><img class="cpic" alt="" src="${CARD.daily}"><span class="label">Daily puzzle #${n}</span>${b}</div>`;
+  let t,b;
+  if(d)t=`${d.ranked?'Daily #'+d.day:'Random puzzle'} · flight ${d.flight+1} of ${FLIGHTS} · score ${fmt(d.total)}`,b=`<button class="big alt" id="dCont" type="button">Continue puzzle</button>`;
+  else if(rec)t=`Your score <b>${fmt(rec.score)}</b>${rec.rank?` · #${rec.rank} of ${rec.total}`:''}`,b=`<div class="row2"><button class="ghost" id="dBoard" type="button">Leaderboard</button><button class="ghost" id="dRandom" type="button">Random puzzle</button></div>`;
+  else t=`${DAILY_COINS} coins · ${FLIGHTS} flights · no storms. Highest score wins.`,b=`<button class="big alt" id="dPlay" type="button">Play daily #${n}</button>${m.dailyEver?'<button class="ghost" id="dRandom" type="button">Random puzzle</button>':''}`;
+  return `<div class="card stack">${cardHead(`Daily puzzle #${n}`,t,CARD.daily)}${b}</div>`;
 }
 function roomCard(){
-  if(save.room)return `<div class="card stack pic"><img class="cpic" alt="" src="${CARD.rooms}"><span class="label">Play with friends</span><p class="hint">Room <b>${esc(save.room)}</b></p><button class="big alt" id="rRejoin" type="button">Rejoin room</button><button class="ghost" id="rQuit" type="button">Leave room</button></div>`;
-  return `<div class="card stack pic"><img class="cpic" alt="" src="${CARD.rooms}"><span class="label">Play with friends</span><p class="hint">Up to 8 pilots, live</p><button class="big alt" id="rNew" type="button">Create room</button>
+  if(save.room)return `<div class="card stack">${cardHead('Play with friends',`Room <b>${esc(save.room)}</b>`,CARD.rooms)}<button class="big alt" id="rRejoin" type="button">Rejoin room</button><button class="ghost" id="rQuit" type="button">Leave room</button></div>`;
+  return `<div class="card stack">${cardHead('Play with friends','',CARD.rooms)}<button class="big alt" id="rNew" type="button">Create room</button>
     <div class="joinrow"><input id="rCode" maxlength="4" placeholder="CODE" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Room code"><button class="ghost" id="rJoin" type="button">Join</button></div></div>`;
 }
 function bindModeCards(){

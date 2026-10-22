@@ -669,10 +669,10 @@ body.offline::after{content:"Reconnecting…";position:fixed;left:50%;top:calc(v
 /* the announcer peeks over the top left corner of the flight results */
 .tallysheet{margin-top:52px}
 .host.peek{--hh:84px;position:absolute;left:12px;top:-74px;z-index:-1}
-/* home card pictures: a pinned photo in the top right corner */
-.card.pic{position:relative}
-.card.pic>.label,.card.pic>.hint:first-of-type{padding-right:78px}
-.cpic{position:absolute;top:-10px;right:-8px;width:76px;height:76px;border:3px solid var(--ink);border-radius:6px;box-shadow:3px 3px 0 var(--ink);transform:rotate(4deg);background:var(--canvas)}
+/* home card pictures: a small pinned photo at the end of the card's header row, inside the card */
+.chead{display:flex;align-items:center;gap:12px}
+.chead>div{flex:1;min-width:0;display:grid;gap:4px}
+.cpic{flex:none;width:52px;height:52px;border:2.5px solid var(--ink);border-radius:5px;box-shadow:2px 2px 0 var(--ink);transform:rotate(3deg);background:var(--canvas)}
 /* the tour map */
 .veil.tour{align-items:center}
 .toursheet{padding:10px;gap:10px;max-width:min(460px,calc((100dvh - var(--reserve) - 150px) * .667 + 20px))}
