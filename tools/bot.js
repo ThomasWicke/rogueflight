@@ -167,11 +167,14 @@ const MOD_VALUE = {
   // 0.4 mods this pilot can use (it never builds balloon or engine-less craft, dives, or chains tricks)
   supercharge: 7, sailplane: 5, flyer: 5, carpenter: 4, understudy: 3, booster: 2,
   investor: 6, overachiever: 5, longhaul: 3, magpie: 5,
+  // 0.12 coin mods: it lands its distance flights, climbs a little, rarely speeds or does tricks
+  mileage: 6, skywriter: 3, bounty: 2, tipjar: 2, parachute: 1,
 };
 // smart shopper: try before you buy. A mod or tuning is valued by flying the current craft with and without it
 // (the gain in score, relative to the current score, scaled to the 0-10 range of MOD_VALUE). Coins, run-long and
 // flight-order mods do nothing in one test flight, so they keep their fixed value.
-const FIXED = new Set(['opening', 'third', 'logbook', 'sponsor', 'investor', 'overachiever', 'piggy', 'coupon', 'compound', 'magpie', 'flyer', 'fanclub', 'secondwind']);
+const FIXED = new Set(['opening', 'third', 'logbook', 'sponsor', 'investor', 'overachiever', 'piggy', 'coupon', 'compound', 'magpie', 'flyer', 'fanclub', 'secondwind',
+  'mileage', 'skywriter', 'bounty', 'tipjar']);
 let SHOP_CRAFT = null;
 function testScore(run) {
   const st = flightStats(run), K = makeCraft(SHOP_CRAFT.cells, st);

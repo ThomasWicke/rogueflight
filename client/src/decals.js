@@ -9,7 +9,7 @@ const C = {
   ink: '#22283a', paper: '#f3e7ce', paper2: '#e6d4ae', canvas: '#fbf5e8', red: '#d2402f', red2: '#a92f22',
   brass: '#e9a93b', brass2: '#b97d1c', teal: '#3b9aa6', teal2: '#2a7580', wood: '#b7793f', wood2: '#8a5428',
   wood3: '#d9a066', tin: '#b9c3c9', tin2: '#7f8d96', grass: '#7faf55', grass2: '#5e8f43', night: '#0c1a2c', rare: '#7a4fa0',
-  rare2: '#5b417c', // enamel shade: rare mixed 35% with ink (the palette has no second purple)
+  good: '#4fa35b', rare2: '#5b417c', // enamel shade: rare mixed 35% with ink (the palette has no second purple)
 };
 const INK = C.ink, TAU = Math.PI * 2, PI = Math.PI, rad = d => d * PI / 180;
 const SHADOW = 'rgba(34,40,58,.24)';
@@ -517,6 +517,55 @@ const MOTIF = {
     for (const y of [-19, 8]) solid(g, D, p => RR(p, 7, y, 7.5, 11, 1), C.tin, C.tin2, 2);
     hiLn(g, D, p => p.arc(0, 0, 15, rad(200), rad(250)));
     g.restore();
+  },
+  // added in 0.12
+  skywriter(g, D) {
+    // an arrow climbing out of the clouds to a coin up high
+    tube(g, D, p => { p.moveTo(-8, 22); p.lineTo(-8, -10); }, 7, C.red, 'butt');
+    solid(g, D, p => P(p, [-8, -27, 4, -11, -20, -11]), C.red, C.red2, 2.2);
+    blob(g, D, p => { O(p, -18, 22, 8); O(p, -6, 19, 10); O(p, 7, 23, 7.5); RR(p, -26, 22, 40, 8, 4); }, C.canvas, C.paper2, 2.4);
+    coin(g, D, 15, -15, 10, 0);
+    if (!D.small) solid(g, D, p => sparkle(p, 25, 4, 5), C.canvas, null);
+  },
+  mileage(g, D) {
+    // a wooden signpost pointing on, a coin at its foot
+    tube(g, D, p => { p.moveTo(-12, 30); p.lineTo(-12, -16); }, 4, C.wood);
+    solid(g, D, p => P(p, [-27, -24, 15, -24, 27, -14, 15, -4, -27, -4]), C.canvas, C.paper2);
+    if (!D.small) ln(g, D, p => { p.moveTo(-20, -14); p.lineTo(-11, -14); p.moveTo(-5, -14); p.lineTo(4, -14); p.moveTo(10, -14); p.lineTo(15, -14); }, 1.1, C.red);
+    solid(g, D, p => O(p, -12, -14, 2.2), C.tin, null);
+    coin(g, D, 13, 16, 11, rad(-8));
+  },
+  bounty(g, D) {
+    // a speedometer with the needle swung into the red, a coin below
+    solid(g, D, p => { p.moveTo(-27, 8); p.arc(0, 8, 27, PI, TAU); p.closePath(); }, C.canvas, C.paper2);
+    g.save(); g.lineCap = 'butt'; g.beginPath(); g.arc(0, 8, 21, rad(-50), rad(-4)); g.lineWidth = 6; g.strokeStyle = C.red; g.stroke(); g.restore();
+    if (!D.small) for (let i = 0; i <= 6; i++) { const a = PI + i * PI / 6; ln(g, D, p => { p.moveTo(14 * Math.cos(a), 8 + 14 * Math.sin(a)); p.lineTo(17.5 * Math.cos(a), 8 + 17.5 * Math.sin(a)); }, .6); }
+    const a = rad(-28); solid(g, D, p => P(p, [-2.4 * Math.sin(a), 8 + 2.4 * Math.cos(a), 23 * Math.cos(a), 8 + 23 * Math.sin(a), 2.4 * Math.sin(a), 8 - 2.4 * Math.cos(a)]), C.night, null);
+    solid(g, D, p => O(p, 0, 8, 4), C.brass, null);
+    coin(g, D, -13, 21, 8.5, 0);
+  },
+  tipjar(g, D) {
+    // a glass jar with coins in it, one more dropping in
+    coin(g, D, 5, -23, 7.5, rad(30));
+    solid(g, D, p => RR(p, -17, -8, 34, 37, 8), 'rgba(207,232,230,.95)', 'rgba(150,196,200,.95)');
+    g.save(); g.beginPath(); RR(g, -17, -8, 34, 37, 8); g.clip();
+    coin(g, D, -7, 21, 7.5, 0); coin(g, D, 7, 23, 7.5, 0); coin(g, D, 0, 12, 7, rad(-20));
+    g.restore();
+    g.beginPath(); RR(g, -17, -8, 34, 37, 8); g.lineWidth = D.L; g.strokeStyle = INK; g.stroke();
+    solid(g, D, p => RR(p, -19, -14, 38, 8, 3), C.tin, C.tin2, 2);
+    hiLn(g, D, p => { p.moveTo(-12, -2); p.lineTo(-12, 14); });
+  },
+  parachute(g, D) {
+    // a golden canopy floating a coin down
+    const dome = p => { p.moveTo(-27, 0); p.bezierCurveTo(-27, -34, 27, -34, 27, 0); for (let i = 3; i >= 0; i--) { const x0 = -27 + (i + 1) * 13.5, x1 = x0 - 13.5; p.quadraticCurveTo((x0 + x1) / 2, -6, x1, 0); } p.closePath(); };
+    ln(g, D, p => { p.moveTo(-26, 0); p.lineTo(-3, 18); p.moveTo(-9, -2); p.lineTo(-1, 17); p.moveTo(9, -2); p.lineTo(1, 17); p.moveTo(26, 0); p.lineTo(3, 18); }, .6);
+    solid(g, D, dome, C.brass, C.brass2);
+    g.save(); g.beginPath(); dome(g); g.clip();
+    fillP(g, p => { p.moveTo(-5, -30); p.lineTo(5, -30); p.lineTo(8, 2); p.lineTo(-8, 2); p.closePath(); }, C.canvas);
+    g.restore();
+    g.beginPath(); dome(g); g.lineWidth = D.L; g.strokeStyle = INK; g.stroke();
+    hiLn(g, D, p => { p.moveTo(-19, -12); p.quadraticCurveTo(-17, -21, -9, -24); });
+    coin(g, D, 0, 23, 8, 0);
   },
   sponsor(g, D) {
     tube(g, D, p => { p.moveTo(-20, 31); p.lineTo(-20, -23); }, 3.2, C.wood);

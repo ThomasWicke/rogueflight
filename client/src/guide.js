@@ -50,7 +50,7 @@ const artAlt = () => `<div class="gr-alt">
   <div class="gr-clock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/></svg><b>2:00</b><span>per flight</span></div>`;
 // the in-flight score line: distance plus the pending landing bonus, times the multiplier
 const artScore = () => `<div class="gr-score"><span class="label">Score</span><b>(1,365 <em>+ 2,750</em>) ×1.6</b></div>
-  <div class="gr-row"><span class="gr-key">distance</span><span class="gr-key alt">height bonus · land to keep it</span><span class="gr-key">mult</span></div>
+  <div class="gr-row"><span class="gr-key">distance</span><span class="gr-key alt">height &amp; distance bonus · land to keep it</span><span class="gr-key">mult</span></div>
   <div class="gr-chips"><span>Landing +0.5</span><span>Loop +0.5</span><span>Low pass +0.25</span><span>Thermal +0.1</span><span>Coin +0.05</span></div>`;
 // five mod slots, two still empty, and a storm reward
 const artMods = () => `<div class="gr-mods">${['stunt', 'greaser', 'collector'].map((id, i) => `<img alt="" src="${decalURL(id, 52, i === 0 ? 3 : 1)}">`).join('')}<i></i><i></i></div>
@@ -73,7 +73,7 @@ const SLIDES = [
     'Wings need airspeed. Climb at about 30–35°; steeper bleeds speed until you stall.',
     'Out of fuel? Let go and the craft glides on its own. Throttle down to make fuel last.'] },
   { t: 'Scoring', art: artScore, p: [
-    'Distance, plus a bonus for the height you reached, times your multiplier. The height bonus only counts if you land: crash and it is gone.',
+    'Distance, plus a bonus for the height you reached and the distance marks you passed (500 m, 1.25 km, 2.5 km …), times your multiplier. The bonus only counts if you land: crash and it is gone.',
     'Clean landings, loops, low passes, thermals and coins raise the multiplier. Repeated loops and low passes pay a little less each time.'] },
   { t: 'Altitude & time', art: artAlt, p: [
     'Thin air up high: less drag, but weaker wings and props. Balloons rise until they burst at 2 km.',

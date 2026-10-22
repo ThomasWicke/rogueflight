@@ -5,7 +5,7 @@ import {
   newRun, stats, weatherFx, makeCraft, newFlight, step, popBalloons, summaryOf, scoreFlight, settleFlight,
   quotaFor, openPack, PACKS, FIRST_PACKS, rollTunes, thermalSeg, G0, repeats, rerollShop, applyPurchase, offerPrice, rollMods,
   isStorm, grantPacks, flightStats, MODMAX, pickBoon, rollBoons, modSlots, dailySeed, clearContract, ONLINE_TIME, SIM_DT,
-  craftCounts, flightCtx, onTarget, MODS, trickVal,
+  craftCounts, flightCtx, onTarget, MODS, trickVal, distBonus, distMilestones, altBonus, flightCoins, landingShare,
 } from '../client/src/sim.js';
 import { botFlight, planBot, BUILDS, cellsOf } from '../client/src/bots.js';
 
@@ -357,4 +357,32 @@ test('trick values include storm rewards and match what scoreFlight pays (the in
   const base = { dist: 100, maxY: 0, landed: false, crashed: false, thermals: 2, loops: 0, passes: 0, coins: 0 };
   const line = scoreFlight(base, ctx).lines.find(l => /thermal/.test(l.label));
   assert.ok(Math.abs(line.v - 2 * trickVal(ctx, 'thermal')) < 1e-9);
+});
+
+test('distance milestones: the altitude ladder at 5x the spacing, a landing bonus; Golden Parachute keeps a share in the air', () => {
+  assert.equal(distMilestones(499), 0); assert.equal(distMilestones(500), 1); assert.equal(distMilestones(5000), 5); assert.equal(distMilestones(6250), 6);
+  assert.equal(distBonus(5000), altBonus(1000)); assert.equal(distBonus(10000), altBonus(2000)); assert.equal(distBonus(5000), 2750);
+  const f = { dist: 5000, maxY: 1000, landed: true, crashed: false, loops: 0, passes: 0, thermals: 0, coins: 0 };
+  const base = s => s.lines.filter(l => l.t === 'b').reduce((t, l) => t + l.v, 0);
+  assert.equal(base(scoreFlight(f, { lv: {} })), 5000 + 2750 + 2750);
+  assert.equal(base(scoreFlight({ ...f, landed: false, crashed: true }, { lv: {} })), 5000);
+  assert.equal(base(scoreFlight({ ...f, landed: false }, { lv: {} })), 5000);
+  assert.equal(base(scoreFlight({ ...f, landed: false }, { lv: { parachute: 1 } })), 5000 + 2750);
+  assert.equal(base(scoreFlight({ ...f, landed: false, crashed: true }, { lv: { parachute: 3 } })), 5000);
+  assert.equal(landingShare({ landed: false }, { lv: { parachute: 2 } }), 0.6);
+});
+
+test('0.12 coin mods: altitude and distance milestones on a landing, top speed, tricks, each capped', () => {
+  const f = { dist: 3000, maxY: 300, maxV: 650 / 3.6, landed: true, loops: 2, passes: 1, thermals: 3, touchgos: 0 };
+  assert.equal(flightCoins({}, f), 0);
+  assert.equal(flightCoins({ skywriter: 1 }, f), 2);                    // 100 and 250 m
+  assert.equal(flightCoins({ mileage: 1 }, f), 3);                      // 500, 1250, 2500 m
+  assert.equal(flightCoins({ mileage: 1 }, { ...f, landed: false }), 0);
+  assert.equal(flightCoins({ bounty: 1 }, f), 3);                       // 650 km/h: 4 full hundreds over 200, capped at 3
+  assert.equal(flightCoins({ bounty: 2 }, f), 4);
+  assert.equal(flightCoins({ tipjar: 1 }, f), 3);                       // 6 tricks, capped at 3
+  assert.equal(flightCoins({ tipjar: 3 }, f), 6);
+  const run = newRun(0, {}); run.mods = ['tipjar']; run.modLv = { tipjar: 3 };
+  const before = run.coins, out = settleFlight(run, {}, { ...f, coins: 0, crashed: false, fuelFrac: 0, t: 30 });
+  assert.equal(out.pay, 3 + 6); assert.ok(run.coins >= before + 9);
 });

@@ -11,14 +11,25 @@ const REDLINE=500/3.6, CLOUD9=5000;
 // altitude milestones: peak height pays flat bonuses added to the base (so multipliers apply). ALT_AT are the heights,
 // ALT_PAY what each adds; past the table a milestone every ALT_STEP m adds ALT_MORE more than the one before.
 // It is a landing bonus: only a landing collects it (ALT_CRASH / ALT_AIR are what a crash or a flight that ends in the
-// air would keep; both 0). Partial credit was tried: at x0.5 / x0.75, 4 balloons just floating up to 1.7 km scored
-// about as much as a well-flown propeller plane. Rubber Hull lets a wingless craft bounce to a stop and land.
+// air keep; both 0, but Golden Parachute keeps part of it in the air). Partial credit for everyone was tried: at x0.5 /
+// x0.75, 4 balloons just floating up to 1.7 km scored about as much as a well-flown propeller plane. Rubber Hull lets a
+// wingless craft bounce to a stop and land.
+// Distance milestones (0.12) are the same ladder at 5x the spacing (500, 1250, 2500, 3750, 5000 m, then every 1250 m) with
+// the same pay, also a landing bonus, so flying far grows faster than linear too (logged flights: median 850 m, 90% under
+// 3.3 km, 99% under 9.5 km; landed heights: median 65 m, 90% under 440 m, 99% under 4.1 km).
 const ALT_CRASH=0, ALT_AIR=0;
 const ALT_AT=[100,250,500,750,1000], ALT_PAY=[200,300,500,750,1000], ALT_STEP=250, ALT_MORE=250;
-const altHeight=k=>k<ALT_AT.length?ALT_AT[k]:ALT_AT[ALT_AT.length-1]+(k-ALT_AT.length+1)*ALT_STEP;
-function altMilestones(y){let k=0;while(y>=altHeight(k))k++;return k}
-const altReached=y=>{const k=altMilestones(y);return k?altHeight(k-1):0};
-function altBonus(y){let t=0,last=0;for(let k=0;k<altMilestones(y);k++){last=k<ALT_PAY.length?ALT_PAY[k]:last+ALT_MORE;t+=last}return t}
+const DIST_AT=ALT_AT.map(x=>x*5), DIST_STEP=ALT_STEP*5;
+// a milestone ladder: at(k) where milestone k sits, count(x) how many are passed, reached(x) the last one, bonus(x) the pay
+function ladder(AT,PAY,STEP,MORE){
+  const at=k=>k<AT.length?AT[k]:AT[AT.length-1]+(k-AT.length+1)*STEP;
+  const count=x=>{let k=0;while(x>=at(k))k++;return k};
+  return {count,reached:x=>{const k=count(x);return k?at(k-1):0},
+    bonus:x=>{let t=0,last=0;for(let k=0,n=count(x);k<n;k++){last=k<PAY.length?PAY[k]:last+MORE;t+=last}return t}};
+}
+const ALT=ladder(ALT_AT,ALT_PAY,ALT_STEP,ALT_MORE), DIST=ladder(DIST_AT,ALT_PAY,DIST_STEP,ALT_MORE);
+const altMilestones=ALT.count, altReached=ALT.reached, altBonus=ALT.bonus;
+const distMilestones=DIST.count, distReached=DIST.reached, distBonus=DIST.bonus;
 const clamp=(v,a,b)=>v<a?a:v>b?b:v;
 // Gameplay randomness: each run carries its own seeded generator state (run.rs, mulberry32), so one seed fixes the shop,
 // packs, weather and storm rewards for everyone (daily puzzles, shared rooms, replays). Entry points that roll dice for a run
@@ -129,6 +140,12 @@ const MODS={
   overachiever:{name:'Overachiever',r:'U',tag:'Coins',d:'Clearing a contract: +{v} coins per 10% over the target, up to {w}.',v:[1,2,3],w:[6,10,14],how:'When a contract clears, every full 10% your contract score is above the target pays coins. Not in daily puzzles or rooms.',noDaily:1},
   magpie:{name:'Magpie',r:'R',tag:'Score',d:'+{v} mult per coin collected this run.',v:[.01,.015,.02],how:'Every coin you fly through this run adds to it for good. Coins get rarer the farther out you fly.'},
   sponsor:{name:'Sponsor Decal',r:'C',tag:'Coins',d:'+{v} coins per flight.',v:[2,3,4],how:'Extra coins after every flight, whatever happens.'},
+  // added in 0.12: coins for the other builds (height, distance, speed, tricks), and a way to keep part of the landing bonus
+  skywriter:{name:'Skywriter',r:'U',tag:'Coins',d:'+1 coin per altitude milestone, up to {v}, if you land.',v:[4,7,10],how:'Climb past 100, 250, 500, 750, 1000 m and on: every height you pass pays a coin after a landing.'},
+  mileage:{name:'Mileage Club',r:'U',tag:'Coins',d:'+1 coin per distance milestone, up to {v}, if you land.',v:[4,7,10],how:'Fly past 500, 1250, 2500, 3750, 5000 m and on: every mark you pass pays a coin after a landing.'},
+  bounty:{name:'Speed Bounty',r:'C',tag:'Coins',d:'+1 coin per 100 km/h over 200, up to {v}.',v:[3,5,8],how:'Counts your top speed: every full 100 km/h above 200 pays a coin, however the flight ends.'},
+  tipjar:{name:'Tip Jar',r:'C',tag:'Coins',d:'+1 coin per trick, up to {v}.',v:[3,5,8],how:'The crowd tips for every loop, low pass, thermal and touch-and-go in a flight.'},
+  parachute:{name:'Golden Parachute',r:'R',tag:'Score',d:'Still flying when time runs out: keep {v%} of the landing bonus.',v:[.5,.6,.7],lock:6,how:'The altitude and distance bonus normally needs a landing. With this, a flight that ends in the air (out of time, or stuck hovering) keeps part of it. A crash still pays nothing.'},
 };
 // owned mods as {id: level}; older saves stored only the ids, which count as Lv 1. Plain id arrays work too (tests).
 const modLevels=r=>Array.isArray(r)?Object.fromEntries(r.map(id=>[id,1])):Object.fromEntries(r.mods.map(id=>[id,Math.min(MODMAX,(r.modLv&&r.modLv[id])||1)]));
@@ -192,7 +209,7 @@ const modSlots=run=>MAXMODS+boonN(run,'slot');
 const START={coins:12,inv:{}};
 const UNLOCKS=[
   {at:4,text:'Afterburner, Ram Scoop'},
-  {at:6,text:'Solar Wings, Antigravity Coil'},
+  {at:6,text:'Solar Wings, Antigravity Coil, Golden Parachute'},
   {at:8,text:'4 rare mods, Difficulty 1'},
 ];
 const modUnlocked=(id,meta)=>!MODS[id].lock||(meta.bestStage||0)>=MODS[id].lock;
@@ -298,7 +315,7 @@ function newFlight(K,st){
   return {x:-4,y:21.2,vx:st.launch*Math.cos(st.launchAng),vy:st.launch*Math.sin(st.launchAng),th:st.launchAng,w:0,fuel:K.fuelMax,t:0,
     maxX:0,maxY:21,maxV:0,ground:0,done:false,crashed:false,landed:false,sw:false,bounces:0,coins:0,got:new Set(),flags:{},events:[],
     rocketOn:false,propOn:false,touch:false,calm:0,slow:0,progX:-4,recyc:0,gPrev:st.launchAng,
-    spin:0,loops:0,passes:0,skim:0,passReady:false,thermals:0,thSeen:new Set(),gustE:0,burst:false,popped:false,touchgos:0,tgArm:false,combos:0,lastTrick:-9,altMs:0};
+    spin:0,loops:0,passes:0,skim:0,passReady:false,thermals:0,thSeen:new Set(),gustE:0,burst:false,popped:false,touchgos:0,tgArm:false,combos:0,lastTrick:-9,altMs:0,distMs:0};
 }
 function segDist(px,py,ax,ay,bx,by){const dx=bx-ax,dy=by-ay,l=dx*dx+dy*dy;let t=l?((px-ax)*dx+(py-ay)*dy)/l:0;t=clamp(t,0,1);return Math.hypot(px-ax-dx*t,py-ay-dy*t)}
 function flag(S,k,msg){if(!S.flags[k]){S.flags[k]=1;S.events.push(msg)}}
@@ -432,6 +449,7 @@ function step(S,K,st,dt,ctl){
   if(nv>REDLINE)flag(S,'mach','Redline');
   if(S.y>CLOUD9)flag(S,'karman','Cloud nine');
   if(altMilestones(S.y)>S.altMs){S.altMs=altMilestones(S.y);S.events.push('altitude')}
+  if(distMilestones(S.maxX)>S.distMs){S.distMs=distMilestones(S.maxX);S.events.push('distance')}
   if(S.y>11000)flag(S,'cruise','Above the airliners');
   if(nv>11186)flag(S,'escape','Escape velocity');
   if(S.x>40075000)flag(S,'earth','Once around the Earth');
@@ -472,12 +490,16 @@ const repeats=n=>{let t=0;for(let k=0;k<n;k++)t+=1/(1+.5*k);return t};
 function trickVal(ctx,k){const lv=ctx.lv||modLevels(ctx.mods||[]),has=m=>!!lv[m],mv=(m,key)=>modVal(lv,m,key),bn=b=>(ctx.boons&&ctx.boons[b])||0;
   return k==='loop'?(has('stunt')?mv('stunt'):.5)+.1*bn('loop'):k==='pass'?(has('duster')?mv('duster'):.25)+.1*bn('pass')
     :k==='thermal'?(has('thermal')?mv('thermal','w'):.1)+.1*bn('thermal'):k==='coin'?(has('collector')?mv('collector'):.05)+.03*bn('coin'):0}
+// how much of the altitude and distance landing bonus a flight keeps: all on a landing, none on a crash, and in the air
+// none, or Golden Parachute's share
+function landingShare(f,ctx){const lv=ctx.lv||modLevels(ctx.mods||[]);return f.landed?1:f.crashed?ALT_CRASH:lv.parachute?modVal(lv,'parachute'):ALT_AIR}
 function scoreFlight(f,ctx){
   const lv=ctx.lv||modLevels(ctx.mods||[]), has=k=>!!lv[k], mv=(k,key)=>modVal(lv,k,key), bn=k=>(ctx.boons&&ctx.boons[k])||0, lines=[];
   let base=Math.floor(f.dist);lines.push({t:'b',label:'Distance',v:base,dist:true});
   if(has('odometer')){base+=mv('odometer');lines.push({t:'b',label:'Odometer',v:mv('odometer')})}
-  {const k=f.landed?1:f.crashed?ALT_CRASH:ALT_AIR,ab=Math.round(altBonus(f.maxY)*k);
-   if(ab){base+=ab;lines.push({t:'b',label:`Altitude ${altReached(f.maxY)} m${k<1?' ×'+k:''}`,v:ab})}}
+  {const k=landingShare(f,ctx),ab=Math.round(altBonus(f.maxY)*k),db=Math.round(distBonus(f.dist)*k),x=k<1?' ×'+k:'';
+   if(ab){base+=ab;lines.push({t:'b',label:`Altitude ${altReached(f.maxY)} m${x}`,v:ab})}
+   if(db){base+=db;lines.push({t:'b',label:`Distance ${distReached(f.dist)} m${x}`,v:db})}}
   let mult=1,xm=1;
   const addM=(label,v)=>{v=Math.round(v*100)/100;if(v>0){mult+=v;lines.push({t:'m',label,v})}};
   const addX=(label,v)=>{if(v>1){xm*=v;lines.push({t:'x',label,v})}};
@@ -607,12 +629,16 @@ function craftCounts(cells){const l=connected(cells);const n=t=>l.filter(c=>c.ty
 // everything scoreFlight needs to know about the run around a flight
 function flightCtx(run){return {lv:modLevels(run),boons:run.boons,flightIdx:run.flight,cleared:run.stage,coins:run.coins,streak:run.streak||0,loopsRun:run.loopsRun||0,coinsRun:run.coinsRun||0,
   empty:Math.max(0,modSlots(run)-run.mods.length),...craftCounts(run.cells)}}
+// coins the 0.12 economy mods pay for a flight: altitude and distance milestones (on a landing), top speed, tricks
+function flightCoins(lv,f){const v=k=>modVal(lv,k);
+  return (f.landed?Math.min(v('skywriter'),altMilestones(f.maxY))+Math.min(v('mileage'),distMilestones(f.dist)):0)
+    +Math.min(v('bounty'),Math.max(0,Math.floor((f.maxV*3.6-200)/100)))+Math.min(v('tipjar'),(f.loops||0)+(f.passes||0)+(f.thermals||0)+(f.touchgos||0))}
 function settleFlight(run,meta,f){
   const lv=modLevels(run), has=k=>!!lv[k];
   const sc=scoreFlight(f,flightCtx(run));
   run.streak=f.landed?(run.streak||0)+1:f.crashed?0:(run.streak||0);run.loopsRun=(run.loopsRun||0)+Math.min(3,f.loops||0);run.coinsRun=(run.coinsRun||0)+(f.coins||0);
   const invest=has('investor')?Math.min(modVal(lv,'investor'),Math.floor(sc.total/1000)):0;
-  const pay=3+f.coins+modVal(lv,'sponsor')+invest;
+  const pay=3+f.coins+modVal(lv,'sponsor')+invest+flightCoins(lv,f);
   run.coins+=pay;run.score+=sc.total;run.total+=sc.total;run.flight++;run.best=Math.max(run.best,sc.total);run.bestDist=Math.max(run.bestDist||0,f.dist);
   // s: the flight's snapshot for balancing: the build it flew with, where the score came from, how it went
   const lvs=modLevels(run),r1=x=>Math.round(x*100)/100;
@@ -663,6 +689,7 @@ export {
   PACKS, FIRST_PACKS, rollPacks, grantPacks, openPack, RARE, RARE_CHANCE, RARE_PACK_PRICE, isRare, baseOf, partName,
   MODMAX, modLevels, modVal, modDesc, modPrice, canBuy, applyPurchase, sellMod, flightStats, repeats, severity,
   MAX_CEILING, CEILING_RULES, ceilingRules, REDLINE, CLOUD9, ALT_STEP, altBonus, altMilestones, altReached,
+  distBonus, distMilestones, distReached, landingShare, flightCoins,
   BOONS, rollBoons, boonDesc, pickBoon, modSlots,
   DAILY_COINS, dailyNumber, dailySeed, SIM_DT, isOnline, ONLINE_TIME, clearContract,
 };
