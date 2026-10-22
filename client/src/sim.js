@@ -123,7 +123,7 @@ const MODS={
   bouquet:{name:'Balloon Bouquet',r:'C',tag:'Score',d:'+{v} mult per balloon.',v:[.2,.3,.4],how:'Counts the balloons bolted to your craft at launch, even after they pop.'},
   hedgehop:{name:'Hedgehopper',r:'U',tag:'Score',d:'×{v} if you never climb above 30 m.',v:[1.5,2,2.5],how:'Stay low the whole flight: never higher than 30 m. Pairs well with low passes.'},
   touchgo:{name:'Touch and Go',r:'C',tag:'Score',d:'Touch-and-gos +{v} mult.',v:[.4,.6,.8],how:'Touch the ground gently while flying fast, then lift off again and climb above 3 m. Each one pays a bit less.'},
-  showboat:{name:'Showboat',r:'C',tag:'Score',d:'+{v} mult per trick chained within 3 s.',v:[.2,.3,.4],how:'Do a loop, low pass, thermal or touch-and-go within 3 seconds of the last one to chain it. Each link pays a bit less.'},
+  showboat:{name:'Showboat',r:'C',tag:'Score',d:'+{v} mult per trick chained within 10 s.',v:[.2,.3,.4],how:'Do a loop, low pass, thermal or touch-and-go within 10 seconds of the last one to chain it. Each link pays a bit less.'},
   flyer:{name:'Frequent Flyer',r:'U',tag:'Score',d:'+{v} mult per landing in a row. A crash resets it.',v:[.1,.15,.2],how:'Counts your landings without a crash in between, across the whole run (flights that end in the air keep the count).'},
   fanclub:{name:'Fan Club',r:'U',tag:'Score',d:'+{v} mult per loop flown this run.',v:[.03,.05,.07],how:'Every loop this run adds to it for good (up to 3 loops per flight count).'},
   understudy:{name:'Understudy',r:'U',tag:'Score',d:'×{v} per empty mod slot.',v:[1.2,1.3,1.4],how:'Rewards running with fewer mods: every empty slot multiplies the score again. Alone in five slots that is ×2.07 at Lv 1, ×3.84 at Lv 3.'},
@@ -319,7 +319,10 @@ function newFlight(K,st){
 function segDist(px,py,ax,ay,bx,by){const dx=bx-ax,dy=by-ay,l=dx*dx+dy*dy;let t=l?((px-ax)*dx+(py-ay)*dy)/l:0;t=clamp(t,0,1);return Math.hypot(px-ax-dx*t,py-ay-dy*t)}
 function flag(S,k,msg){if(!S.flags[k]){S.flags[k]=1;S.events.push(msg)}}
 // a trick (loop, low pass, thermal, touch-and-go); one within 3 s of the last one also chains a combo (Showboat)
-function trick(S,e){S.events.push(e);if(S.t-S.lastTrick<=3){S.combos++;S.events.push('combo')}S.lastTrick=S.t}
+// Showboat chains a trick done within COMBO_S of the previous one. It was 3 s until 0.12.2, but a full loop takes about
+// 9 s holding NOSE UP (measured in the sim with a tuned propeller plane), so loops could never chain
+const COMBO_S=10;
+function trick(S,e){S.events.push(e);if(S.t-S.lastTrick<=COMBO_S){S.combos++;S.events.push('combo')}S.lastTrick=S.t}
 function step(S,K,st,dt,ctl){
   const px0=S.x,py0=S.y;
   const dens=Math.exp(-Math.max(0,S.y)/8500), rho=dens*st.rhoMul;
