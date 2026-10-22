@@ -660,13 +660,6 @@ body.offline::after{content:"Reconnecting…";position:fixed;left:50%;top:calc(v
 /* ---------- the troupe's painted art (troupe.js) ---------- */
 /* the hangar is the barn workshop: a painted interior behind the cards, dimmed a little so the chips and cards stand out */
 #hangar{background-image:linear-gradient(rgba(36,22,12,.28),rgba(36,22,12,.42)),url('./assets/workshop-tall.webp');background-size:cover;background-position:50% 30%}
-/* hosts: a three-frame sprite (calm, delighted, worried); --f picks the frame, --ar is the frame's width / height */
-.host{display:inline-block;flex:none;height:var(--hh,48px);aspect-ratio:var(--ar);background:var(--hs) no-repeat;background-size:300% 100%;
-  background-position:calc(var(--f) * 50%) 100%;vertical-align:bottom}
-.host.lg{--hh:118px;justify-self:center;margin-bottom:-6px}
-/* the announcer peeks over the top left corner of the flight results */
-.tallysheet{margin-top:52px}
-.host.peek{--hh:84px;position:absolute;left:12px;top:-74px;z-index:-1}
 /* home card pictures: a small pinned photo at the end of the card's header row, inside the card */
 .chead{display:flex;align-items:center;gap:12px}
 .chead>div{flex:1;min-width:0;display:grid;gap:4px}

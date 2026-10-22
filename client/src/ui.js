@@ -19,7 +19,7 @@ import { botFlight, planBot, cellsOf } from './bots.js';
 import { drawWorld, drawGrain, biomeOf, preloadLayers } from './world.js';
 import { audio } from './audio.js';
 import { drawPart, drawPilot, drawParachute, KINS } from './art.js';
-import { hostHTML, setHost, CARD, MAP, MAP_TOWNS, preloadMap } from './troupe.js';
+import { CARD, MAP, MAP_TOWNS, preloadMap } from './troupe.js';
 import { decalURL } from './decals.js';
 import { townOf, showTitle, headline } from './fiction.js';
 import { initGuide, openGuide } from './guide.js';
@@ -949,7 +949,7 @@ function showResults(out,S,f){
   else{const left=FLIGHTS-out.flightNo;btn='Continue';next='hangar';result=`<p class="tres">${isFinite(q)?fmt(q-out.contractScore)+' to target · ':''}${plural(left,'flight')} left · +${out.pay} coins</p>`}
   const news=headline({...f,cleared:!!out.cleared},{town:town.town,pilot:'Goat'},r.seed+out.stage*7+out.flightNo);
   sheet.className='sheet tallysheet';
-  sheet.innerHTML=`${hostHTML('announcer',S.crashed?'worried':out.cleared||S.landed&&(!Number.isFinite(q)||sc.total>=q/FLIGHTS)?'happy':'calm','peek')}<div class="stamp ${kind}">${title}</div>
+  sheet.innerHTML=`<div class="stamp ${kind}">${title}</div>
     <span class="label">${town.town} · flight ${out.flightNo} of ${FLIGHTS}</span>
     <div class="eqn"><span class="drum" id="tyBase">0</span><i>×</i><span id="tyM">1</span><i>=</i><b id="tyT">0</b></div>
     ${extra.length?`<div class="hype bpts">${extra.map(l=>`<span class="hc b in">${l.label}<b>+${fmt(l.v)}</b></span>`).join('')}</div>`:''}
@@ -966,7 +966,7 @@ function showResults(out,S,f){
   const wait=ms=>new Promise(res=>setTimeout(res,rm||skip?0:ms));
   let skip=false, done=false;
   const finishNow=()=>{skip=true;sheet.querySelectorAll('.hc').forEach(c=>c.classList.add('in'));el('tyM').textContent=num(sc.mult*sc.xm);el('tyT').textContent=fmt(sc.total);el('tyBase').textContent=fmt(sc.base)+(base.length===1?' m':'');
-    el('rbar').style.transform=`scaleX(${p1})`;el('rbarT').textContent=barT(out.contractScore);el('tyNews').hidden=false;if(out.cleared){el('tySold').hidden=false;setHost(sheet.querySelector('.host'),'ringmaster','happy')}};
+    el('rbar').style.transform=`scaleX(${p1})`;el('rbarT').textContent=barT(out.contractScore);el('tyNews').hidden=false;if(out.cleared)el('tySold').hidden=false};
   sheet.onclick=e=>{if(!e.target.closest('button')&&!done)finishNow()};
   (async()=>{
     sfx('stamp');buzz(15);
@@ -981,7 +981,7 @@ function showResults(out,S,f){
     await roll(el('tyT'),sc.total,450);
     await wait(200);
     el('rbar').style.transform=`scaleX(${p1})`;el('rbarT').textContent=barT(out.contractScore);
-    if(out.cleared){await wait(700);el('tySold').hidden=false;setHost(sheet.querySelector('.host'),'ringmaster','happy');sfx('fireworks');sfx('fanfare');buzz([20,60,20,60,40]);confetti()}
+    if(out.cleared){await wait(700);el('tySold').hidden=false;sfx('fireworks');sfx('fanfare');buzz([20,60,20,60,40]);confetti()}
     await wait(400);el('tyNews').hidden=false;done=true;
   })();
   $('next').onclick=()=>{
@@ -1008,7 +1008,7 @@ function runStats(r){return `<dl class="stats"><dt>Total score</dt><dd>${fmt(r.t
 function showVictory(){
   const r=R(),m=save.meta;
   sheet.className='sheet endsheet win';
-  sheet.innerHTML=`${hostHTML('ringmaster','happy','lg')}<span class="label">${r.level?'Difficulty '+r.level:'Run'}</span>
+  sheet.innerHTML=`<span class="label">${r.level?'Difficulty '+r.level:'Run'}</span>
     <h2>Run complete!</h2>
     <p class="note">All ${CONTRACTS} contracts cleared.</p>
     ${runStats(r)}
@@ -1024,7 +1024,7 @@ function showRunOver(){
   const r=R();
   const n=r.stage;
   sheet.className='sheet endsheet lose';
-  sheet.innerHTML=`${hostHTML('ringmaster','worried','lg')}<span class="label">${r.level?'Difficulty '+r.level:'Run'}</span>
+  sheet.innerHTML=`<span class="label">${r.level?'Difficulty '+r.level:'Run'}</span>
     <h2>${r.endless?'Endless run over':'Run over'}</h2>
     <p class="note">Contracts cleared: <b>${n}${r.endless?'':' / '+CONTRACTS}</b></p>
     ${runStats(r)}

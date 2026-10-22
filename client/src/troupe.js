@@ -1,17 +1,5 @@
-// The troupe's painted art (generated, see docs/concept/v011): host portraits with three expressions, the home card
-// pictures and the season's tour map with each town's spot on it. Only URLs and small HTML strings; ui.js places them.
-
-// hosts: one sprite per character, three equal frames side by side (calm, delighted, worried), ar = frame width / height
-const HOSTS = {
-  ringmaster: { src: new URL('./assets/host-ringmaster.webp', import.meta.url).href, ar: 153 / 240 }, // basset, contracts won and lost
-  announcer: { src: new URL('./assets/host-announcer.webp', import.meta.url).href, ar: 165 / 240 },   // owl, flight results
-};
-const MOOD = { calm: 0, happy: 1, worried: 2 };
-const hostStyle = (who, mood) => `--hs:url(${HOSTS[who].src});--ar:${HOSTS[who].ar};--f:${MOOD[mood] || 0}`;
-// a portrait as an inline element; cls sets its size and placement (style.css .host)
-const hostHTML = (who, mood, cls = '') => `<i class="host ${cls}" data-host="${who}" style="${hostStyle(who, mood)}" aria-hidden="true"></i>`;
-// change who is shown or their expression in place (no re-render)
-function setHost(el, who, mood) { if (el) el.setAttribute('style', hostStyle(who, mood)), el.dataset.host = who; }
+// The troupe's painted art (generated, see docs/concept/v011): the home card pictures and the season's tour map with
+// each town's spot on it. Only URLs; ui.js places them.
 
 const CARD = {
   run: new URL('./assets/card-run.webp', import.meta.url).href,
@@ -29,4 +17,4 @@ function preloadMap() { if (!mapImg) { mapImg = new Image(); mapImg.src = MAP; }
 
 // the barn workshop behind the hangar is a CSS background (style.css, url() bundled by Vite)
 
-export { HOSTS, hostHTML, setHost, CARD, MAP, MAP_TOWNS, preloadMap };
+export { CARD, MAP, MAP_TOWNS, preloadMap };
