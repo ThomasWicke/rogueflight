@@ -5,7 +5,7 @@ import {
   newRun, stats, weatherFx, makeCraft, newFlight, step, popBalloons, summaryOf, scoreFlight, settleFlight,
   quotaFor, openPack, PACKS, FIRST_PACKS, rollTunes, thermalSeg, G0, repeats, rerollShop, applyPurchase, offerPrice, rollMods,
   isStorm, grantPacks, flightStats, MODMAX, pickBoon, rollBoons, modSlots, dailySeed, clearContract, ONLINE_TIME, SIM_DT,
-  craftCounts, flightCtx, onTarget, MODS, trickVal, distBonus, distMilestones, altBonus, flightCoins, landingShare,
+  craftCounts, flightCtx, dropRemovedMods, MODS, trickVal, distBonus, distMilestones, altBonus, flightCoins, landingShare,
 } from '../client/src/sim.js';
 import { botFlight, planBot, BUILDS, cellsOf } from '../client/src/bots.js';
 
@@ -277,7 +277,7 @@ test('Silent Flight, Balloon Bouquet, Carpenter and Understudy count the right t
   const f = { dist: 1000, maxY: 50, maxV: 30, coins: 0, loops: 0, passes: 0, thermals: 0, landed: false, fuelFrac: 0 };
   const sc = scoreFlight(f, { lv: { silent: 1, bouquet: 1, carpenter: 1, understudy: 1 }, ...cc, empty: 1 });
   const lab = Object.fromEntries(sc.lines.map((l) => [l.label, l.v]));
-  assert.equal(lab['Silent Flight'], 1.5); assert.equal(lab['Balloon Bouquet'], 0.6); assert.equal(lab.Carpenter, 0.3); assert.equal(lab.Understudy, 0.3);
+  assert.equal(lab['Silent Flight'], 1.5); assert.equal(lab['Balloon Bouquet'], 0.6); assert.equal(lab.Carpenter, 0.3); assert.equal(lab.Understudy, 1.2);
   const withProp = scoreFlight(f, { lv: { silent: 1 }, ...craftCounts(layout('c22 p32 w21')) });
   assert.ok(!withProp.lines.some((l) => l.label === 'Silent Flight'));
   // carpenter frames weigh nothing
@@ -285,12 +285,10 @@ test('Silent Flight, Balloon Bouquet, Carpenter and Understudy count the right t
   assert.ok(makeCraft(layout('c22 f32 f42'), st1).m < makeCraft(layout('c22 f32 f42'), st0).m);
 });
 
-test('Hedgehopper, Bullseye and Frequent Flyer follow the flight and the run', () => {
+test('Hedgehopper and Frequent Flyer follow the flight and the run', () => {
   const f = (o) => ({ dist: 800, maxY: 25, maxV: 30, coins: 0, loops: 0, passes: 0, thermals: 0, landed: true, fuelFrac: 0, landX: 403, ...o });
   const lab = (fl, lv, ctx = {}) => Object.fromEntries(scoreFlight(fl, { lv, ...ctx }).lines.map((l) => [l.label, l.v]));
   assert.equal(lab(f({}), { hedgehop: 2 }).Hedgehopper, 2); assert.equal(lab(f({ maxY: 31 }), { hedgehop: 2 }).Hedgehopper, undefined);
-  assert.ok(onTarget(403) && onTarget(1996) && !onTarget(410) && !onTarget(3));
-  assert.equal(lab(f({}), { bullseye: 1 }).Bullseye, 1.5); assert.equal(lab(f({ landX: 450 }), { bullseye: 1 }).Bullseye, undefined);
   // the streak lives on the run: two landings, then a crash resets it
   const meta = { bestStage: 8 }, run = newRun(0, meta, { seed: 9 }); run.mods = ['flyer']; run.modLv = { flyer: 1 };
   settleFlight(run, meta, f({})); const out2 = settleFlight(run, meta, f({}));
@@ -385,4 +383,17 @@ test('0.12 coin mods: altitude and distance milestones on a landing, top speed, 
   const run = newRun(0, {}); run.mods = ['tipjar']; run.modLv = { tipjar: 3 };
   const before = run.coins, out = settleFlight(run, {}, { ...f, coins: 0, crashed: false, fuelFrac: 0, t: 30 });
   assert.equal(out.pay, 3 + 6); assert.ok(run.coins >= before + 9);
+});
+
+test('Understudy multiplies per empty slot; a removed mod (Bullseye) is taken out of a saved run and refunded', () => {
+  const lab = ctx => Object.fromEntries(scoreFlight({ dist: 100, maxY: 0, landed: true, loops: 0, passes: 0, thermals: 0, coins: 0 }, ctx).lines.map(l => [l.label, l.v]));
+  assert.equal(lab({ lv: { understudy: 1 }, empty: 4 }).Understudy, 2.07);
+  assert.equal(lab({ lv: { understudy: 3 }, empty: 4 }).Understudy, 3.84);
+  assert.equal(lab({ lv: { understudy: 1 }, empty: 0 }).Understudy, undefined);
+  const run = newRun(0, {}); run.mods = ['bullseye', 'stunt']; run.modLv = { bullseye: 2, stunt: 1 }; run.coins = 10;
+  run.shop = { parts: [], tunes: [], mods: [{ id: 'bullseye' }, { id: 'stunt' }] }; run.boonOffer = [{ id: 'upgrade', mod: 'bullseye' }, { id: 'coins' }];
+  const refund = dropRemovedMods(run);
+  assert.deepEqual(run.mods, ['stunt']); assert.equal(run.modLv.bullseye, undefined); assert.ok(refund > 2); assert.equal(run.coins, 10 + refund);
+  assert.deepEqual(run.shop.mods.map(o => o.id), ['stunt']); assert.deepEqual(run.boonOffer.map(o => o.id), ['coins']);
+  assert.equal(dropRemovedMods(run), 0);
 });

@@ -123,11 +123,10 @@ const MODS={
   bouquet:{name:'Balloon Bouquet',r:'C',tag:'Score',d:'+{v} mult per balloon.',v:[.2,.3,.4],how:'Counts the balloons bolted to your craft at launch, even after they pop.'},
   hedgehop:{name:'Hedgehopper',r:'U',tag:'Score',d:'×{v} if you never climb above 30 m.',v:[1.5,2,2.5],how:'Stay low the whole flight: never higher than 30 m. Pairs well with low passes.'},
   touchgo:{name:'Touch and Go',r:'C',tag:'Score',d:'Touch-and-gos +{v} mult.',v:[.4,.6,.8],how:'Touch the ground gently while flying fast, then lift off again and climb above 3 m. Each one pays a bit less.'},
-  bullseye:{name:'Bullseye',r:'U',tag:'Score',d:'×{v} if you land on a target.',v:[1.5,2,2.5],how:'Targets sit on the ground every 100 m. Come to a stop within 6 m of one.'},
   showboat:{name:'Showboat',r:'C',tag:'Score',d:'+{v} mult per trick chained within 3 s.',v:[.2,.3,.4],how:'Do a loop, low pass, thermal or touch-and-go within 3 seconds of the last one to chain it. Each link pays a bit less.'},
   flyer:{name:'Frequent Flyer',r:'U',tag:'Score',d:'+{v} mult per landing in a row. A crash resets it.',v:[.1,.15,.2],how:'Counts your landings without a crash in between, across the whole run (flights that end in the air keep the count).'},
   fanclub:{name:'Fan Club',r:'U',tag:'Score',d:'+{v} mult per loop flown this run.',v:[.03,.05,.07],how:'Every loop this run adds to it for good (up to 3 loops per flight count).'},
-  understudy:{name:'Understudy',r:'U',tag:'Score',d:'+{v} mult per empty mod slot.',v:[.3,.4,.5],how:'Rewards running with fewer mods: each empty slot adds mult.'},
+  understudy:{name:'Understudy',r:'U',tag:'Score',d:'×{v} per empty mod slot.',v:[1.2,1.3,1.4],how:'Rewards running with fewer mods: every empty slot multiplies the score again. Alone in five slots that is ×2.07 at Lv 1, ×3.84 at Lv 3.'},
   carpenter:{name:'Carpenter',r:'C',tag:'Body',d:'Frames weigh nothing. +{v} mult per frame.',v:[.15,.2,.25],how:'Every frame on your craft is weightless and adds mult. Build long.'},
   divebomb:{name:'Dive Bomber',r:'U',tag:'Body',d:'Diving nose-down: drag ×{v}.',v:[.4,.3,.2],how:'Point the nose down steeper than 30° and you cut through the air. Climb high, then dive for speed.'},
   sailplane:{name:'Sailplane',r:'C',tag:'Body',d:'Engines off: drag ×{v}.',v:[.8,.7,.6],how:'Whenever no propeller or rocket is pushing (out of fuel, throttle at 0, or none bolted on), you glide farther.'},
@@ -476,9 +475,6 @@ function popBalloons(S,K,st){
 function summaryOf(S,K){return {dist:Math.max(0,S.maxX),maxY:S.maxY,maxV:S.maxV,coins:S.coins,loops:S.loops,passes:S.passes,thermals:S.thermals,
   bounces:S.bounces,mach:!!S.flags.mach,space:!!S.flags.karman,crashed:S.crashed,landed:!!S.landed,banked:!!S.banked,fuelFrac:K.fuelMax?S.fuel/K.fuelMax:0,
   touchgos:S.touchgos||0,combos:S.combos||0,landX:S.x,t:S.t,timeout:!!S.timeout,becalmed:!!S.becalmed}}
-// Bullseye: landing targets every 100 m, hit within 6 m (world.js draws them when the mod is owned)
-const TARGET_EVERY=100, TARGET_R=6;
-const onTarget=x=>x>TARGET_EVERY/2&&Math.abs(x-Math.round(x/TARGET_EVERY)*TARGET_EVERY)<=TARGET_R;
 
 /* ---------- scoring: distance x multipliers ---------- */
 // repeated tricks pay less each time: the n-th loop or low pass is worth 1/(1+0.5(n-1)) of the first,
@@ -527,13 +523,12 @@ function scoreFlight(f,ctx){
   if(has('bouquet'))addM('Balloon Bouquet',mv('bouquet')*(ctx.balloons||0));
   if(has('hedgehop')&&f.maxY<=30&&f.dist>0)addX('Hedgehopper',mv('hedgehop'));
   if(has('touchgo')&&f.touchgos)addM(pl(f.touchgos,'touch-and-go'),repeats(f.touchgos)*mv('touchgo'));
-  if(has('bullseye')&&f.landed&&onTarget(f.landX))addX('Bullseye',mv('bullseye'));
   if(has('showboat')&&f.combos)addM(pl(f.combos,'combo'),repeats(f.combos)*mv('showboat'));
   // run-long counts: ctx holds the run so far, this flight is added here
   const streak=f.landed?(ctx.streak||0)+1:f.crashed?0:(ctx.streak||0);
   if(has('flyer')&&streak)addM('Frequent Flyer',mv('flyer')*streak);
   if(has('fanclub'))addM('Fan Club',mv('fanclub')*((ctx.loopsRun||0)+Math.min(3,f.loops||0)));
-  if(has('understudy'))addM('Understudy',mv('understudy')*(ctx.empty||0));
+  if(has('understudy'))addX('Understudy',Math.round(Math.pow(mv('understudy'),ctx.empty||0)*100)/100);
   if(has('carpenter'))addM('Carpenter',mv('carpenter')*(ctx.frames||0));
   if(has('longhaul')&&f.landed&&f.t>=60)addM('Long Haul',mv('longhaul')*Math.floor(f.t/60));
   if(has('magpie'))addM('Magpie',mv('magpie')*((ctx.coinsRun||0)+(f.coins||0)));
@@ -576,6 +571,16 @@ const modPrice=(run,id)=>RARITY[MODS[id].r].price+2*(modLevels(run)[id]||0);
 function offerPrice(run,kind,o){return priceOf(run,kind==='part'?PARTS[o.t].price:kind==='pack'?RARE_PACK_PRICE:kind==='tune'?tuneCost(run.tune[o.k]||0):modPrice(run,o.id))}
 const rerollCost=run=>2+run.shop.rerolls;
 const sellValue=(id,L)=>Math.floor(RARITY[MODS[id].r].price/2)+2*((L||1)-1);
+// mods taken out of the game (Bullseye in 0.12.1: you cannot brake on the ground, so landing on a target was luck). A run
+// that owns one gets it removed and refunded at its rarity's price plus 2 per level above 1; offers of it disappear.
+const REMOVED_MODS={bullseye:'U'};
+function dropRemovedMods(run){
+  if(!run)return 0;let refund=0;
+  for(const id of (run.mods||[]).filter(id=>!MODS[id])){refund+=(REMOVED_MODS[id]?RARITY[REMOVED_MODS[id]].price:0)+2*(((run.modLv&&run.modLv[id])||1)-1);if(run.modLv)delete run.modLv[id]}
+  if(run.mods)run.mods=run.mods.filter(id=>MODS[id]);
+  if(run.shop&&run.shop.mods)run.shop.mods=run.shop.mods.filter(o=>MODS[o.id]);
+  if(run.boonOffer)run.boonOffer=run.boonOffer.filter(o=>!o.mod||MODS[o.mod]);
+  run.coins=(run.coins||0)+refund;return refund}
 // can this offer be bought right now (coins aside)? New mods need a free slot, upgrades do not
 function canBuy(run,kind,o){if(o.sold)return false;if(kind==='mod'){const L=modLevels(run)[o.id];return L?L<MODMAX:run.mods.length<modSlots(run)}return true}
 function applyPurchase(run,kind,o){
@@ -685,7 +690,7 @@ export {
   SOCK, STRUCT, linkage, connected, balanceOf, makeCraft, hs, groundY,
   COINSEG, COINR, thermalSeg, coinAt, newFlight, segDist, flag, step,
   popBalloons, summaryOf, scoreFlight, trickVal, wpick, PART_W, rollMods, rollTunes, genShop,
-  rerollShop, priceOf, offerPrice, rerollCost, sellValue, newRun, craftCounts, flightCtx, onTarget, TARGET_EVERY, settleFlight,
+  rerollShop, priceOf, offerPrice, rerollCost, sellValue, newRun, craftCounts, flightCtx, dropRemovedMods, settleFlight,
   PACKS, FIRST_PACKS, rollPacks, grantPacks, openPack, RARE, RARE_CHANCE, RARE_PACK_PRICE, isRare, baseOf, partName,
   MODMAX, modLevels, modVal, modDesc, modPrice, canBuy, applyPurchase, sellMod, flightStats, repeats, severity,
   MAX_CEILING, CEILING_RULES, ceilingRules, REDLINE, CLOUD9, ALT_STEP, altBonus, altMilestones, altReached,

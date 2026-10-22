@@ -605,12 +605,6 @@ const MOTIF = {
     solid(g, D, p => RR(p, -28, 20, 56, 7, 2), C.wood, C.wood2, 2);
     for (const x of [-6, 0, 6]) if (!D.small) ln(g, D, p => { p.moveTo(x, 19); p.lineTo(x - 3, 13); }, .7, C.brass2);
   },
-  bullseye(g, D) {
-    for (const [r, col] of [[26, C.red], [18, C.canvas], [10, C.red]]) solid(g, D, p => O(p, 0, 2, r), col, col === C.red ? C.red2 : C.paper2, r > 20 ? D.k : 2.2);
-    solid(g, D, p => O(p, 0, 2, 3.6), C.brass, null);
-    tube(g, D, p => { p.moveTo(2, 0); p.lineTo(27, -25); }, 3, C.wood);
-    solid(g, D, p => P(p, [24, -31, 31, -23, 33, -33]), C.teal, C.teal2, 1.8);
-  },
   showboat(g, D) {
     // three stars chained by a ribbon: tricks back to back
     tube(g, D, p => { p.moveTo(-22, 14); p.quadraticCurveTo(-11, -6, 0, 4); p.quadraticCurveTo(11, 14, 22, -10); }, 3, C.teal);

@@ -7,7 +7,7 @@ import {
   SOCK, STRUCT, linkage, connected, balanceOf, makeCraft, hs, groundY,
   COINSEG, COINR, thermalSeg, coinAt, newFlight, segDist, flag, step,
   popBalloons, summaryOf, scoreFlight, trickVal, wpick, PART_W, rollMods, rollTunes, genShop,
-  rerollShop, priceOf, offerPrice, rerollCost, sellValue, newRun, craftCounts, flightCtx, onTarget, TARGET_EVERY, settleFlight,
+  rerollShop, priceOf, offerPrice, rerollCost, sellValue, newRun, craftCounts, flightCtx, dropRemovedMods, settleFlight,
   PACKS, FIRST_PACKS, rollPacks, grantPacks, openPack, RARE, RARE_CHANCE, RARE_PACK_PRICE, isRare, baseOf, partName,
   MODMAX, modLevels, modVal, modDesc, modPrice, canBuy, applyPurchase, sellMod, flightStats, repeats, severity,
   MAX_CEILING, CEILING_RULES, ceilingRules, REDLINE, CLOUD9, ALT_STEP, altBonus, altMilestones, altReached,
@@ -36,6 +36,8 @@ const META0={runs:0,wins:0,bestStage:0,bestFlight:0,deepest:0,level:0};
   history.replaceState(null,'',location.pathname+location.search)}}
 // t: when this device last changed the save (cloud sync keeps the newer copy); cloud.rev: the server's revision we hold
 let save=(()=>{try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s&&s.meta)return {meta:{...META0,...s.meta},run:s.run||null,daily:s.daily||null,online:s.online||null,room:s.room||null,t:s.t||0,cloud:s.cloud||{rev:0}}}catch(e){}return {meta:{...META0},run:null,daily:null,online:null,room:null}})();
+// mods taken out of the game are removed (and refunded) from saved runs
+for(const k of ['run','daily','online'])dropRemovedMods(save[k]);
 if(save.daily&&save.daily.phase==='done')save.daily=null;
 function persist(){save.t=Date.now();store();cloudSoon()}
 const store=()=>{try{localStorage.setItem(KEY,JSON.stringify(save))}catch(e){}};
@@ -53,6 +55,7 @@ const cloudLabel=()=>({ok:'Saved to the cloud ✓',saving:'Saving…',off:'Offli
 // take the cloud's save: it replaces this device's progress (rooms and the current flight stay as they are)
 function adoptCloud(data,rev,t){
   save={...save,meta:{...META0,...(data.meta||{})},run:data.run||null,daily:data.daily||null,t:t||Date.now(),cloud:{rev}};
+  dropRemovedMods(save.run);dropRemovedMods(save.daily);
   if(slot!=='online')slot='run';store();
   if(!$('title').hidden)renderTitle();else if(!$('hangar').hidden&&R())renderHangar();
 }
@@ -761,7 +764,6 @@ function frame(now){
     F.ended=true;audio.stopEngine();F.endT=now;F.toasts.length=0;F.toastT=0;
     if(S.crashed){breakApart();sfx('crash');sfx('ooh');buzz([60,40,80]);toast('Crashed',has('crashtest')?`+${num(mv('crashtest'))} mult`:'');dust(S.x,S.y,30,true)}
     else if(S.landed)sfx('touchdown'),sfx('cheer',{intensity:.6}),buzz(25),toast('Touchdown',(has('greaser')?`×${num(mv('greaser'))} score`:'+0.5 mult')+(F.ctx.boons&&F.ctx.boons.land?` · +${num(.25*F.ctx.boons.land)} mult`:''));
-    if(S.landed&&has('bullseye')&&onTarget(S.x))F.cheer=1,sfx('cheer',{intensity:.9}),toast('Bullseye',`×${num(mv('bullseye'))} score`);
   }
   updParts(dt);draw(now);hud(dt);
   if(F.ended&&now-F.endT>(S.crashed?2600:1300)){if(F.online){if(!F.settled)finishOnline()}else{finish();return}}
@@ -829,7 +831,7 @@ function draw(now){
   const left=cam.x-vw/2/sc, right=cam.x+vw/2/sc;
   // the crowd cheers for tricks and records and gets livelier as the flight's hype builds
   F.cheer=Math.max(0,(F.cheer||0)-1/60*1.5);
-  drawWorld(ctx,{targets:F.ctx.lv.bullseye?TARGET_EVERY:0,vw,vh,sc,X,Y,camX:cam.x,camY:cam.y,left,right,now,RES,stage:R()?R().stage:0,town:R()?townOf(R().seed,R().stage).town:'',wx:F.wx,st,best:F.bestDist,hype:F.hype||0,cheer:F.cheer,pull:pre?Math.pow(clamp((1-F.pre/1.1)*1.3,0,1),2):0,launchT:pre?-1:S.t});
+  drawWorld(ctx,{vw,vh,sc,X,Y,camX:cam.x,camY:cam.y,left,right,now,RES,stage:R()?R().stage:0,town:R()?townOf(R().seed,R().stage).town:'',wx:F.wx,st,best:F.bestDist,hype:F.hype||0,cheer:F.cheer,pull:pre?Math.pow(clamp((1-F.pre/1.1)*1.3,0,1),2):0,launchT:pre?-1:S.t});
   const mag=st.magnetR>1;
   if(mag&&!S.done){const R0=COINR*st.magnetR*sc;ctx.save();ctx.strokeStyle='rgba(255,196,60,.45)';ctx.lineWidth=1.5;ctx.setLineDash([5,6]);ctx.lineDashOffset=-now/40;
     ctx.beginPath();ctx.arc(X(S.x),Y(S.y),R0,0,7);ctx.stroke();ctx.restore()}
