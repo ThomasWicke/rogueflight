@@ -220,7 +220,7 @@ const UNLOCKS=[
 const modUnlocked=(id,meta)=>!MODS[id].lock||(meta.bestStage||0)>=MODS[id].lock;
 
 /* ---------- contracts ---------- */
-const QUOTA=[500,1100,2000,4000,7500,16000,30000,54000];
+const QUOTA=[500,1300,2500,5000,9500,20000,38000,68000];
 function quotaFor(i,level){const q=i<CONTRACTS?QUOTA[i]:QUOTA[CONTRACTS-1]*Math.pow(2.5,i-CONTRACTS+1);return Math.round(q*(1+.25*(level||0))/10)*10}
 // Ceiling levels: every level adds +25% quota; even levels also add a rule (cumulative)
 const MAX_CEILING=10;
@@ -674,7 +674,7 @@ function settleFlight(run,meta,f){
   let pay=3+f.coins+modVal(lv,'sponsor')+invest+flightCoins(lv,f);
   // Piggy Bank: interest on the coins held once this flight has paid
   if(has('piggy'))pay+=Math.min(modVal(lv,'piggy'),Math.floor((run.coins+pay)/5));
-  run.coins+=pay;run.score+=sc.total;run.total+=sc.total;run.flight++;run.best=Math.max(run.best,sc.total);run.bestDist=Math.max(run.bestDist||0,f.dist);
+  run.coins+=pay;run.cPay=(run.cPay||0)+pay;run.score+=sc.total;run.total+=sc.total;run.flight++;run.best=Math.max(run.best,sc.total);run.bestDist=Math.max(run.bestDist||0,f.dist);
   // s: the flight's snapshot for balancing: the build it flew with, where the score came from, how it went
   const lvs=modLevels(run),r1=x=>Math.round(x*100)/100;
   run.log.push({stage:run.stage,flight:run.flight,score:sc.total,d:Math.round(f.dist),x:r1(sc.mult*sc.xm),
@@ -698,9 +698,12 @@ function settleFlight(run,meta,f){
 // a cleared contract: the reward (more for unused flights and storms), the next town's shop and packs, a storm reward
 function clearContract(run,meta,out={}){
   const unused=Math.max(0,FLIGHTS-run.flight), storm=isStorm(run.stage,run.level);
-  const reward=6+2*unused+(storm?4:0);
+  // every unused flight pays what this contract's flights paid on average, +2: clearing early no longer costs the
+  // coins those flights would have earned (it paid a flat 2 each until 0.13.1)
+  const perFlight=run.flight?Math.round((run.cPay||0)/run.flight):0;
+  const reward=6+unused*(perFlight+2)+(storm?4:0);run.cPay=0;
   run.coins+=reward;
-  Object.assign(out,{cleared:true,reward,unused,storm});
+  Object.assign(out,{cleared:true,reward,unused,perFlight,storm});
   run.stage++;run.flight=0;run.score=0;
   const before=meta.bestStage||0;meta.bestStage=Math.max(before,run.stage);meta.deepest=Math.max(meta.deepest||0,run.stage);
   out.unlocks=isOnline(run)?[]:UNLOCKS.filter(u=>u.at>before&&u.at<=meta.bestStage).map(u=>u.text);

@@ -459,3 +459,12 @@ test('Ground Effect stretches a low glide; Slingshot kicks once along the nose',
   assert.ok(kick(S, st)); assert.ok(Math.abs(S.vx - (20 + 15 * MODS.sling.v[0])) < 1e-9); assert.equal(kick(S, st), false);
   const st0 = stats({}, {}, weatherFx(null, 0)); assert.equal(kick(newFlight(K, st0), st0), false);
 });
+
+test('clearing early: every unused flight pays what the contract\'s flights paid on average, +2', () => {
+  const meta = { bestStage: 8 }, run = newRun(0, meta, { seed: 6 }); run.mods = ['sponsor']; run.modLv = { sponsor: 3 };
+  const f = { dist: 3000, maxY: 50, maxV: 30, coins: 5, loops: 0, passes: 0, thermals: 0, landed: true, fuelFrac: 0, t: 40 };
+  const out = settleFlight(run, meta, f);
+  assert.ok(out.cleared && out.unused === 2);
+  assert.equal(out.perFlight, out.pay); assert.equal(out.reward, 6 + 2 * (out.pay + 2));
+  assert.equal(run.cPay, 0);
+});
