@@ -110,7 +110,9 @@ const cellCodeOf=cells=>cells.map(c=>{const l=c.type==='cockpit'?'c':c.type[0];r
 
 const $=id=>document.getElementById(id);
 const veil=$('veil'), sheet=$('sheet'), bench=$('bench');
-function show(id){for(const s of ['title','hangar','flight'])$(s).hidden=s!==id;audio.music(id==='title'?'title':id==='hangar'?'hangar':'flight');if(id!=='hangar'){const d=$('dealer');d.classList.remove('open');d.hidden=true;tab='build'}}
+const THEME=document.querySelector('meta[name=theme-color]'),THEME0=THEME&&THEME.content;
+const themeTint=c=>{if(THEME)THEME.content=c};
+function show(id){for(const s of ['title','hangar','flight'])$(s).hidden=s!==id;if(id!=='flight')themeTint(THEME0);audio.music(id==='title'?'title':id==='hangar'?'hangar':'flight');if(id!=='hangar'){const d=$('dealer');d.classList.remove('open');d.hidden=true;tab='build'}}
 // which run the hangar and flight are showing: 'run', 'daily' or 'online'
 let slot='run';
 const R=()=>save[slot];
@@ -837,7 +839,9 @@ function draw(now){
   const left=cam.x-vw/2/sc, right=cam.x+vw/2/sc;
   // the crowd cheers for tricks and records and gets livelier as the flight's hype builds
   F.cheer=Math.max(0,(F.cheer||0)-1/60*1.5);
-  drawWorld(ctx,{vw,vh,sc,X,Y,camX:cam.x,camY:cam.y,left,right,now,RES,stage:R()?R().stage:0,town:R()?townOf(R().seed,R().stage).town:'',wx:F.wx,st,best:F.bestDist,hype:F.hype||0,cheer:F.cheer,pull:pre?Math.pow(clamp((1-F.pre/1.1)*1.3,0,1),2):0,launchT:pre?-1:S.t});
+  const wv={vw,vh,sc,X,Y,camX:cam.x,camY:cam.y,left,right,now,RES,stage:R()?R().stage:0,town:R()?townOf(R().seed,R().stage).town:'',wx:F.wx,st,best:F.bestDist,hype:F.hype||0,cheer:F.cheer,pull:pre?Math.pow(clamp((1-F.pre/1.1)*1.3,0,1),2):0,launchT:pre?-1:S.t};drawWorld(ctx,wv);
+  // the strip behind the phone's status bar shows the flight screen's background and theme-color: match the sky
+  if(wv.skyTop!==F.skyTop){F.skyTop=wv.skyTop;$('flight').style.backgroundColor=wv.skyTop;themeTint(wv.skyTop)}
   const mag=st.magnetR>1;
   if(mag&&!S.done){const R0=COINR*st.magnetR*sc;ctx.save();ctx.strokeStyle='rgba(255,196,60,.45)';ctx.lineWidth=1.5;ctx.setLineDash([5,6]);ctx.lineDashOffset=-now/40;
     ctx.beginPath();ctx.arc(X(S.x),Y(S.y),R0,0,7);ctx.stroke();ctx.restore()}

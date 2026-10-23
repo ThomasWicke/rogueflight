@@ -190,6 +190,8 @@ button:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
 .srow .m{color:var(--red);font-family:var(--display);font-size:14px}
 .srow .lb{font-style:normal;color:var(--brass2)}
 .srow .need.ok{color:var(--good)}
+/* on a narrow phone the score sum and the target line don't fit side by side: the target line wraps under the score */
+.srow{flex-wrap:wrap;row-gap:0}.srow .need{margin-left:auto}
 .fuel{height:12px;border-radius:3px;background:var(--paper2);border:2px solid var(--ink);overflow:hidden;position:relative}
 .fuel i{position:absolute;inset:0;background:repeating-linear-gradient(-45deg,var(--brass) 0 6px,#f0b84f 6px 12px);transform-origin:left center}
 /* Frugal: land with at least this much fuel left */

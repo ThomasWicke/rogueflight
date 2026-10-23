@@ -380,6 +380,7 @@ function drawWorld(ctx,v){
   const grey=v.wx==='headwind'||v.wx==='gusts'||v.wx==='ceiling'?.42:v.wx==='thin'?.28:0;
   if(grey){top=mix(top,night?'#141c2c':'#5a6878',grey);bot=mix(bot,night?'#26324a':'#a9b4bf',grey)}
   const sky=ctx.createLinearGradient(0,0,0,v.vh);sky.addColorStop(0,top);sky.addColorStop(1,bot);ctx.fillStyle=sky;ctx.fillRect(0,0,v.vw,v.vh);
+  v.skyTop=top; // the UI tints the status bar strip with it
   // stars at night or high up
   const starA=night?Math.max(.8-a1*.2,.6):clamp((alt-4000)/20000,0,1);
   if(starA>0){ctx.fillStyle=`rgba(255,248,225,${starA})`;for(let i=0;i<120;i++){const sx=((hs(i*1.7)*v.vw*1.3-parOff(v,.0004))%v.vw+v.vw)%v.vw,sy=hs(i*3.3)*v.vh*.8;const s=hs(i)*1.8+.6;ctx.fillRect(sx,sy,s,s)}}
