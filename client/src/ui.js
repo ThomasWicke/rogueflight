@@ -660,6 +660,10 @@ function resize(){const r=cv.getBoundingClientRect();vw=r.width;vh=r.height;dpr=
 // --reserve is env(safe-area-inset-top), which getPropertyValue cannot resolve, so measure it with a probe
 function reserveTop(){const p=document.createElement('div');p.style.cssText='position:fixed;top:0;height:0;visibility:hidden;padding-top:var(--reserve)';document.body.appendChild(p);const v=parseFloat(getComputedStyle(p).paddingTop)||0;p.remove();return v}
 window.addEventListener('resize',()=>{if(F)resize()});
+// iOS home-screen apps can keep the portrait 100dvh after the phone turns, so sheets sized from it ran off a landscape
+// screen: measure the height instead (--app-h; the CSS falls back to 100dvh)
+const setAppH=()=>document.documentElement.style.setProperty('--app-h',window.innerHeight+'px');setAppH();
+window.addEventListener('resize',setAppH);window.addEventListener('orientationchange',()=>{setAppH();setTimeout(setAppH,350)});if(window.visualViewport)visualViewport.addEventListener('resize',setAppH);
 function hold(id,on,off){const b=$(id);
   const dn=e=>{e.preventDefault();try{b.setPointerCapture(e.pointerId)}catch(_){}b.classList.add('held');on()};
   const up=()=>{b.classList.remove('held');off()};
@@ -719,7 +723,7 @@ function frame(now){
   if(!F)return;
   // turning the phone mid-flight: iOS can fire 'resize' before the layout has its new size, so the canvas kept the old
   // shape and the picture was stretched; check the canvas against its box every frame instead
-  if(Math.abs(cv.clientWidth-vw)>1||Math.abs(cv.clientHeight-vh)>1)resize();
+  if(Math.abs(cv.clientWidth-vw)>1||Math.abs(cv.clientHeight-vh)>1){resize();setAppH()}
   const dt=clamp((now-last)/1000,0,.05);last=now; // a frame stamped before startFlight's clock reading would run time backwards
   const {S,st}=F, lv=F.ctx.lv, has=k=>!!lv[k], mv=(k,key)=>modVal(lv,k,key);
   // what the n-th repeat of a trick adds, after the diminishing returns in scoreFlight

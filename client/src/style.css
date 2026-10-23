@@ -223,7 +223,8 @@ button:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
 .ftime.crit{color:var(--red);animation:pulse 1s ease-in-out infinite}
 
 /* sheets */
-.veil{position:fixed;inset:0;background:rgba(34,40,58,.55);display:flex;align-items:flex-end;justify-content:center;padding:calc(var(--reserve) + 16px) 16px calc(16px + env(safe-area-inset-bottom,0px));z-index:5}
+/* the veil takes the measured screen height (--app-h, set in ui.js), so its sheet always fits and scrolls */
+.veil{position:fixed;inset:0;bottom:auto;height:var(--app-h,100dvh);background:rgba(34,40,58,.55);display:flex;align-items:flex-end;justify-content:center;padding:calc(var(--reserve) + 16px) 16px calc(16px + env(safe-area-inset-bottom,0px));z-index:5}
 .sheet{width:100%;max-width:460px;border:var(--ol) solid var(--ink);border-radius:8px;padding:16px 16px 16px;display:grid;gap:12px;max-height:100%;overflow:auto;box-shadow:6px 6px 0 var(--ink);
   background-color:var(--paper);background-image:var(--grain),var(--halftone);background-size:160px 160px,6px 6px}
 .sheet h2{font-family:var(--display);font-weight:400;font-size:36px;line-height:1;margin:0;color:var(--ink)}
@@ -552,7 +553,7 @@ button:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
 .grid{margin:6px 0 4px}
 /* screens cover the whole viewport in the installed app (no band under the bottom bar) */
 .screen{position:fixed}
-html,body{height:100%;min-height:100dvh}
+html,body{height:100%;min-height:var(--app-h,100dvh)}
 .ptown small{font-family:var(--body);font-weight:900;font-size:12px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;margin-right:2px}
 .route{max-height:none;cursor:pointer}
 .pnext{margin-top:0;line-height:1.5}
@@ -674,7 +675,7 @@ body.offline::after{content:"Reconnecting…";position:fixed;left:50%;top:calc(v
 .cpic{flex:none;width:52px;height:52px;border:2.5px solid var(--ink);border-radius:5px;box-shadow:2px 2px 0 var(--ink);transform:rotate(3deg);background:var(--canvas)}
 /* the tour map */
 .veil.tour{align-items:center}
-.toursheet{padding:10px;gap:10px;max-width:min(460px,calc((100dvh - var(--reserve) - 150px) * .667 + 20px))}
+.toursheet{padding:10px;gap:10px;max-width:min(460px,calc((var(--app-h,100dvh) - var(--reserve) - 150px) * .667 + 20px))}
 .tmap{position:relative;width:100%;aspect-ratio:2/3;border:3px solid var(--ink);border-radius:5px;overflow:hidden;background:var(--map) center/cover,var(--paper2)}
 .tmap svg{position:absolute;inset:0;width:100%;height:100%}
 /* the svg is 100 x 150 over a 2:3 map, so one unit is about 4 px */
@@ -740,7 +741,7 @@ body.offline::after{content:"Reconnecting…";position:fixed;left:50%;top:calc(v
    fit above the launch bar; the tray sits beside the grid. --gw: what is left of the height after the toolbar, poster,
    card chrome and launch bar, as a 7:5 grid's width. */
 @media (min-width:640px) and (orientation:landscape) and (min-height:561px){
-  #hangar #bench>.card:first-child{--gw:max(260px,calc((100dvh - var(--reserve) - 450px) * 1.4));display:grid;
+  #hangar #bench>.card:first-child{--gw:max(260px,calc((var(--app-h,100dvh) - var(--reserve) - 450px) * 1.4));display:grid;
     grid-template-columns:minmax(0,var(--gw)) minmax(172px,1fr);grid-template-rows:auto auto auto 1fr;
     grid-template-areas:"head head" "grid pal" "legend pal" "blurb pal";column-gap:14px;align-items:start}
   #hangar #bench>.card:first-child>.row{grid-area:head}
@@ -772,7 +773,7 @@ body.offline::after{content:"Reconnecting…";position:fixed;left:50%;top:calc(v
   #hangar .poster .route{grid-area:route;max-height:40px}
   #hangar .poster .fcast{grid-area:route}
   /* the build card: the parts tray beside the grid, the grid sized from the height left over (at --z) */
-  #hangar #bench>.card:first-child{--gw:max(300px,calc((100dvh - var(--reserve) - 200px) / var(--z) * 1.4));display:grid;
+  #hangar #bench>.card:first-child{--gw:max(300px,calc((var(--app-h,100dvh) - var(--reserve) - 200px) / var(--z) * 1.4));display:grid;
     grid-template-columns:minmax(0,var(--gw)) minmax(180px,1fr);grid-template-rows:auto auto auto 1fr;
     grid-template-areas:"head head" "grid pal" "legend pal" "blurb pal";column-gap:14px;align-items:start}
   #hangar #bench>.card:first-child>.row{grid-area:head}
