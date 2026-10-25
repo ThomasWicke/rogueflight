@@ -1,173 +1,158 @@
 # Wingnut Circus
 
-Roguelite flying-machine builder for phones. Build a craft on a 7×5 grid (Bad Piggies style), launch it, fly it with simple but honest physics, and hit escalating score quotas across 8 contracts per run (Slay the Spire / CloverPit structure). Plain JS + Vite, no framework. Installed and played as a PWA, deployed on Cloudflare Pages.
+Roguelite flying-machine builder for phones, live at https://wingnut-circus.com. Build a craft on a 7×5 grid (Bad
+Piggies style), launch it, fly it with simple but honest physics, and hit rising score targets across 8 contracts per
+run (Slay the Spire / CloverPit structure). Plain JavaScript + Vite, no framework, no TypeScript. Installed and played as
+a PWA on phones; hosted on Cloudflare Pages (deploys automatically when `main` is pushed).
 
-Visual identity: **The Flying Circus**. A broke barnstorming troupe tours eight towns per season in a junk plane flown by a goat; every flight is a show and the score is the crowd. Read `docs/circus-style.md` before drawing or styling anything. Labels and rules use plain game terms (Run, Contract, Flight, Score, Target, Coins, Shop, Packs, Mods, Tuning, Storm reward, Difficulty, Endless); the fiction stays in visuals, town names and headlines.
+Visual identity: **The Flying Circus**, a broke barnstorming troupe touring eight towns in a junk plane flown by a goat.
+Read `docs/circus-style.md` before drawing or styling anything.
 
-The game was prototyped as a single-file Claude artifact under the working title **Skyward**, then shipped as **RogueFlight** and renamed **Wingnut Circus** on 2026-10-11 (an existing console game is called Rogue Flight). Hosting (2026-10-12): Cloudflare Pages project `wingnut-circus` (wingnut-circus.pages.dev, custom domain wingnut-circus.com registered at IONOS), D1 database `wingnut-circus` (runs and daily scores copied over from the old `rogueflight` database on 2026-10-12), game server Worker `wingnutcircus-server`. The old Pages project `rogueflight` (rogueflight.pages.dev), D1 database `rogueflight` and Worker `rogueflight-server` were deleted on 2026-10-12; saves made on rogueflight.pages.dev could not be handed over. Technical ids that still say `rogueflight` on purpose: the repo, localStorage keys (`rogueflight-1`, `rogueflight-client`, `rogueflight-audio`, so saves survive).
+The owner is Thomas. He plays the game himself, gives feedback with screenshots, and decides on design questions.
 
-Domain (2026-10-15): wingnut-circus.com is registered at IONOS (registrant email verified; transfer to Cloudflare Registrar possible from mid-December 2026, after the ICANN 60-day lock) with Cloudflare nameservers (bingo/otto.ns.cloudflare.com). The Cloudflare zone has proxied CNAMEs for @ and www to wingnut-circus.pages.dev, both added as custom domains of the Pages project. Since 0.7.8 `HOME` and `MOVED` in ui.js are https://wingnut-circus.com: the hosts in `OLD_HOSTS` (wingnut-circus.pages.dev, www.wingnut-circus.com, rogueflight.pages.dev) redirect there with the save, device id and cloud-save login in the URL fragment (`#move=`), which the new origin imports if it has none yet. The leftover IONOS mail records (MX, SPF, DKIM) in the zone are unused.
+## Where to read more
+
+- `docs/recipes.md`: step-by-step checklists (add or tune a mod, change targets or the economy, storms, parts,
+  layout, sheets, art). **Use the matching recipe for any such change.**
+- `docs/design-notes.md`: how every system works in detail, the numbers, and why (what was tried and dropped). Read the
+  section you are changing first, and add a sentence there when you change a rule or a number.
+- `docs/circus-style.md`: palette, outlines, type, materials, motion, sound.
+- `docs/security.md`: accounts, cloud saves, what is protected and how.
 
 ## Commands
 
 ```bash
 npm install
-npm run dev       # Vite dev server, host:true so a phone on the same Wi-Fi can open it
-npm test          # node:test checks of the simulation core (tests/sim.test.js)
-npm run bot -- 20 climb --seed=1   # balance harness: 20 scripted runs (policies: climb, hands; --verbose lists every flight;
-                                   #   --storm=<weather id>|none forces one storm onto contracts 3, 6, 8; --ceiling=N)
-npm run build     # -> dist/
-npm run preview   # serve dist/ (service worker only registers in production builds)
-npm run build:itch   # itch.io HTML5 build -> wingnutcircus-itch.zip (relative paths, no service worker; telemetry and invite links point to HOME in ui.js)
-ITCH_USER=<name> npm run itch:push   # build and upload to itch.io with butler (needs `butler login` once), tagged with package.json version
-npx wrangler deploy --config server/wrangler.toml   # deploy the game server (daily leaderboard + live rooms)
+npm run dev              # Vite dev server on http://localhost:5173 (host:true, so a phone on the same Wi-Fi can open it)
+npm test                 # node:test checks of the simulation (tests/sim.test.js), about 2 s
+npm run smoke            # browser smoke test: clicks through the game in headless Chrome on 3 screen sizes (~40 s)
+npm run build            # -> dist/
+npm run smoke -- --dist  # the same smoke test against the production build in dist/
+npm run bot -- 60 climb --seed=1   # balance harness: 60 scripted runs; prints contracts reached and wins
 ```
 
-## Releases
-`package.json` "version" is the release number players see (title screen, bottom) and is sent with telemetry as `version` = `<release>+<commit>`. Bump it for each release that goes out (web and itch together): patch for fixes, minor for new features. Store assets live in `store/itch/` (cover rendered by `client/dev/cover.html`, promo images by `client/dev/promo.html?k=social|wide|logo`; the favicon is `icons/icon-512.png`).
+Other commands (itch build, game server deploy) are in `docs/design-notes.md` under Commands and hosting.
 
-## Layout
+## Rules that must never break
+
+1. **`client/src/sim.js` has no DOM code.** Tests and the bot import it in node. All game rules, numbers and scoring
+   live there; the UI only displays and calls it.
+2. **No perpetual motion or endless farming.** Any new force, fuel source, refill or time bonus must stay bounded:
+   by the flight clock (`FLIGHT_TIME` + at most 3 Flight permits), by the fuel proration in `step()` (`fk`), or by a
+   per-flight cap. Ask "can I farm this forever?" and test it.
+3. **Plain game words in the UI**: Run, Contract, Flight, Score, Target, Coins, Shop, Packs, Mods, Tuning, Storm reward,
+   Difficulty, Endless. The circus fiction stays in pictures, town names and headlines.
+4. **Minimal text.** Thomas asked to trim explainers. Prefer icons, markers, chips; one line per mod.
+5. **Fair randomness.** Random bad luck is fine only when the player could see it coming (storms are shown at run
+   start). Never add hidden random penalties.
+6. **Phone first.** Portrait, one hand. Every UI change must also work sideways (844×390) and on desktop (1280×800).
+   Use `var(--app-h,100dvh)` for screen height, never `100vh`/`100dvh` alone.
+7. **Saves must survive.** localStorage keys stay `rogueflight-1`, `rogueflight-client`, `rogueflight-audio`,
+   `rogueflight-auth` (the old name, on purpose). New fields on `save` or `run` must default sensibly when missing,
+   because old saves don't have them. Removed mods go into `REMOVED_MODS` (refunded).
+8. **Behaviour-preserving refactors only when asked**, and then verified with `npm test`, `npm run smoke` and the bot.
+
+## Release checklist (every change that goes live)
+
+1. `npm test` (all pass) and `npm run build` (no errors), then `npm run smoke` for any UI change.
+2. Bump `"version"` in `package.json`: patch (0.13.3 → 0.13.4) for fixes, minor (0.13 → 0.14.0) for new features. The
+   title screen shows it.
+3. If you changed how something works, update `docs/design-notes.md` (and this file if a rule or command changed).
+4. Commit on `main` with a message like `0.13.4: what changed, in plain words`, ending with the co-author line your
+   tool asks for (for Claude: `Co-Authored-By: Claude … <noreply@anthropic.com>`).
+5. `git push` to `origin main` over SSH. If it fails with a publickey error, ask Thomas to run `ssh-add`; don't
+   switch to HTTPS or the `gh` token (it has no write access).
+6. Cloudflare Pages builds in about a minute. Check it is live:
+   `curl -s https://wingnut-circus.com | grep -o '/assets/index-[^"]*\.js'`, then
+   `curl -s https://wingnut-circus.com/assets/index-XXXX.js | grep -c '0.13.4'` (with the file name and new version).
+7. Tell Thomas what changed and what is live. Say plainly what you could not test (for example on a real iPhone).
+
+Never suggest itch.io uploads; Thomas does those himself when he wants. The website is the channel.
+
+## File map
 
 ```
-client/index.html        markup for all screens (title, hangar, flight, veil/sheet modal)
-client/src/main.js       entry: self-hosted fonts (@fontsource), style.css, ui.js, service-worker registration
-client/src/sim.js        PURE game logic, no DOM. Data tables, physics step, craft assembly, scoring, economy, run state
-client/src/art.js        Flying Circus part art (drawPart: wood, canvas, tin, brass) and the goat pilot (drawPilot with moods, drawParachute)
-client/src/world.js      flight backdrop: one biome per show, parallax, props, launch site with grandstand crowd, signposts, thermals, storms
-client/src/decals.js     sponsor decal icons for every mod (drawDecal, decalURL), rarity as material (paper, tin, enamel), levels as trim
-client/src/audio.js      procedural Web Audio: sfx library, live engine and wind, a small ragtime band with hype layers
-client/src/fiction.js    pure: town and show names per run seed, newspaper headlines for flights
-client/dev/*.html        preview pages for art, decals and audio (served by the dev server at /dev/...; not part of the build)
-docs/circus-style.md     the style guide: palette, outline and shape rules, type, materials, motion, sound, fiction mapping
-client/src/troupe.js     painted troupe art: home card pictures, the tour map and its town spots
-client/src/guide.js      "How to play" drawer: swipeable slides with small HTML/SVG illustrations (opened from the title and the ? chip in the hangar)
-client/src/ui.js         everything DOM/canvas: part art, hangar (build/shop/mods), flight loop + HUD + input, result screens
-client/src/style.css     all styles; dark blueprint theme, tokens on :root
-client/public/           manifest.webmanifest, sw.js, _headers (Cloudflare), icons/ (app icons and favicons since 0.10.1 cut from concept icon 6, the goat peeking over a propeller: source `store/icon-source.png`; favicons crop closer on the face; the maskable one is shrunk to 84% on the background red)
-tests/sim.test.js        headless sim checks (no browser)
-functions/api/run.js     Pages Function storing finished runs in D1 (schema.sql)
-client/src/net.js        client side of the game server: daily leaderboard fetches, room WebSocket with auto-reconnect
-client/src/bots.js       pure: Elimination bots: a style (propeller glider, booster, balloon glider) and skill per bot, builds that grow per round, pilot planned by test-flying (`planBot`)
-client/src/pilot.js      pure: bot pilot settings (climb angle, level-off height, throttle, flare, loops, balloon pop) and `tunePilot`, shared by the balance bot and Elimination bots
-server/accounts.js       accounts and cloud saves: Better Auth guest accounts (anonymous + bearer), /save, /link codes; tables in server/accounts.sql
-docs/security.md         what we protect, how, what was tested, the routine checks
-server/worker.js         game server Worker (wingnutcircus-server.thomaswi1998.workers.dev): /daily leaderboard in D1, Room Durable Object for live rooms
-server/wrangler.toml     its config: Durable Object ROOMS (class Room), D1 binding DB
-tools/bot.js             balance harness (scripted shopper, builder, pilot), prints contracts reached and per-contract score spread
+client/index.html        markup for all screens (title, hangar, flight, packs, guide, library, veil/sheet modal)
+client/src/main.js       entry: fonts, style.css, ui.js, service worker registration
+client/src/sim.js        PURE game logic: data tables (PARTS, MODS, TUNES, WEATHER, QUOTA…), physics step, craft
+                         assembly, scoring, shop and economy, run state. No DOM.
+client/src/ui.js         UI entry: imports the ui/ modules, wires hooks and sound, boots the title
+client/src/ui/core.js    shared by all screens: the save + cloud sync, `ui` screen state, formatting, part icons,
+                         $/veil/sheet, telemetry, sfx/buzz, confetti, notice. Imports no other ui module.
+client/src/ui/title.js   title screen (run card, profile, stats, unlocks), ending a run
+client/src/ui/hangar.js  hangar: drawer docking and tabs, poster, route, tour map, build grid, drag, launch button
+client/src/ui/shop.js    the drawer's contents: shop (buy, reroll) and your mods (sell, log)
+client/src/ui/rewards.js storm reward picker and the parts packs animation
+client/src/ui/library.js mods library drawer
+client/src/ui/flight.js  flight screen: input, frame loop (steps the sim), drawing, HUD, end of flight
+client/src/ui/results.js score tally after a flight, run won / run over sheets
+client/src/ui/daily.js   daily and random puzzles, leaderboard
+client/src/ui/rooms.js   live rooms (Team, Elimination): lobby, server state, ghosts, bots, spectating
+client/src/ui/profile.js history, name, cloud save settings and link codes
+client/src/art.js        code-drawn parts and the goat pilot (drawPart, drawPilot, drawParachute)
+client/src/world.js      flight backdrop: biomes, painted parallax layers, props, crowd, thermals, storm skies
+client/src/decals.js     sponsor decal icon for every mod (drawDecal, decalURL)
+client/src/audio.js      procedural Web Audio: sound effects, engine, wind, ragtime band
+client/src/fiction.js    town names and newspaper headlines (pure)
+client/src/troupe.js     painted pictures: home cards, tour map and its town spots
+client/src/guide.js      "How to play" slides
+client/src/net.js        client side of the game server (leaderboard, rooms, cloud save)
+client/src/bots.js       Elimination bots (pure); client/src/pilot.js bot pilot settings (pure)
+client/src/style.css     all styles; tokens on :root; landscape layouts at the end
+client/dev/*.html        dev-only preview pages (art, decals, audio, cover, promo) at /dev/… on the dev server
+client/public/           manifest, service worker (sw.js), _headers, icons, imprint and privacy page
+tests/sim.test.js        simulation tests (node:test)
+tests/smoke.mjs          browser smoke test (playwright-core with the installed Chrome)
+tools/bot.js             balance harness; tools/art/ scripts for painted layers and sprites
+functions/api/run.js     Pages Function storing run telemetry in D1 (schema.sql)
+server/                  game server Worker: daily leaderboard, live rooms, accounts and cloud saves
+docs/                    design notes, recipes, style guide, security, concept art
 ```
 
-`sim.js` must stay DOM-free: tests and the bot import it directly in node. `ui.js` imports every sim export by name.
+## UI modules: how they fit together
 
-Code style is dense (many one-line functions, short names: `S` flight state, `K` assembled craft, `st` derived stats, `r`/`run` run state, `F` current flight in the UI). It came from fast artifact iteration. Readability refactors are welcome but keep behavior identical and verify with `npm test`, the bot, and a manual play-through.
+- `ui/core.js` loads first and imports no other ui module. When core needs a screen (redraw after a cloud save
+  arrives), it calls `hooks.refresh()` / `hooks.flying()`, which `ui.js` fills in.
+- The other modules import each other freely (circular imports are fine) **as long as their top-level code only
+  declares things and binds their own buttons**. Never call another screen module's function at load time.
+- Shared screen state lives in the `ui` object in core: `ui.slot` (which run is shown: `'run'`, `'daily'` or
+  `'online'`), `ui.tab` (`'build'`, `'shop'`, `'mods'`), `ui.sel` (selected part), `ui.armAbandon`, `ui.armSell`.
+  An imported `let` cannot be assigned from another module, so shared values that change go into `ui`; the current
+  flight `F` is changed only inside flight.js (`dropFlight()` clears it), room state `ROOM`/`NET` only inside rooms.js.
+- `R()` is the run being shown (`save[ui.slot]`). After changing it, call `persist()` (saves locally and to the cloud
+  a few seconds later), then re-render (`renderHangar()`, `renderTitle()` …).
+- Every UI module imports the sim names it uses from `../sim.js`. When you add an export to sim.js, import it by name
+  where you use it.
+- Pop-ups: one modal, `#veil` with `#sheet` inside (see `notice()` in core.js and "Add a screen or sheet" in recipes).
+- In dev builds `window.__rf` exposes the flight for debugging (`__rf.F()`, `__rf.frame(t)`, `__rf.ctl`).
 
-## How the game works
+## Code style and short names
 
-### Run structure
-- `newRun(ceilingLevel, meta)`: every run starts the same (`START`): cockpit alone on the bench, empty inventory, 12 coins, shop open, and 4 parts packs.
-- Parts packs (`grantPacks`, `openPack`): one random part each (`PART_W` weights), saved in `run.packs` until opened. Contract 1 gives 4 (always a tank, a wing, a propeller or rocket, plus one random, shuffled); every later contract gives 1 (2 before 0.5), which is a rare part with `RARE_CHANCE`=15%, when it starts (on clearing the previous one, and when endless begins). The hangar opens the pack screen whenever packs are waiting: tap to shake and tear, the part bursts out (gold rays for engines) and flies to the tray; "Open all" skips.
-- 8 contracts × 3 flights. A contract's score is the sum of its flights. `QUOTA=[500,1300,2500,5000,9500,20000,38000,68000]`, ×(1+0.25·ceiling). Raised in 0.13.1 (from 500/1100/2000/4000/7500/16000/30000/54000, about +25% from contract 3) to offset the early-clear reward and the 0.12–0.13 mods: bot `climb` 5.92 contracts and 25 wins of 180 in 0.13.0, 6.47 and 50 with the early-clear reward on the old targets, 5.97 and 28 with the new ones (+15%: 6.09 and 35). Endless mode after a win multiplies the quota by 2.5 per extra contract.
-- Difficulty 0–10 (shown to players as "Difficulty"; in code `level`, `MAX_CEILING`, `CEILING_RULES`; winning at level N unlocks N+1). Every level adds +25% quota; even levels also add a rule (`CEILING_RULES`, cumulative): 2 shop prices +1, 4 contract 5 is a storm too, 6 packs hold no rare parts and the shop has no rare pack, 8 storms hit harder (`severity` +2), 10 a 90-second flight clock. Bot at Ceiling 0→10 clears 4.8, 4.2, 3.3, 2.9, 2.3, 2.2, 2.0, 1.8, 1.5, 1.3, 1.2 contracts.
-- Storm contracts are 3, 6 and 8 (`isStorm`). Their weather is rolled at run start (`weatherOf`) and shown from the start as forecast chips. Weathers: headwind, thunderheads (altitude ceiling with downdraft), thin air (density ×0.5), gusts, mail run (cargo mass), fuel rationing, short catapult.
-- Shop: always open. 3 parts (wing 4, propeller 5, rocket 6, tank 4, balloon 4, frame 3 coins), 2 tunings and 3 mods. New stock arrives after a contract is cleared (`phase:'shop'` = between contracts, which shows START CONTRACT). A reroll (2 + rerolls so far) is a whole new shop, sold slots included. Purchases go through `applyPurchase` (UI and bot).
-- Storm rewards (`BOONS`): clearing a storm contract offers 1 of 2 (`rollBoons`, saved as `run.boonOffer`, applied by `pickBoon`; picked counts in `run.boons`). Hangar Bay (+1 mod slot, once per run, see `modSlots`), Prize Money (+15 coins), Field Upgrade (a named owned mod +1 level), Polished Hull (drag −8%), Updraft Charm (gravity −8%), Reserve Tanks (fuel +12%), and +0.1 mult per thermal / low pass / loop, +0.03 per coin, +0.25 on touchdown. Stat rewards stack multiplicatively in `flightStats`, score rewards via `ctx.boons`. The hangar shows the picker before the packs.
-- Mods (up to 5) level up to `MODMAX`=3: an owned mod can come back in the shop as an upgrade (weight ×0.7, price + 2 per owned level, no new slot). Each mod has `v` (and `w`) values per level; Lv 1 is weaker than the old flat value, Lv 3 a bit stronger. `modLevels(run)` gives `{id: level}` (`run.modLv`; older saves count as Lv 1), `modVal` the value, `modDesc` the text. Selling refunds half the price + 2 per level above 1.
-- Coins along the route (`coinAt(k, st.coinSalt)`): since 0.12.3 the layout comes from the run's seed (`coinSalt`, set in `flightStats` and for room bots in `botFlight`): the same on every flight of a run, so learning a route pays, but new each run (before, every run had the same coins and Thomas had memorised the opening sequence). Daily puzzles and rooms share a seed, so everyone there flies the same coins. Coins are drawn with a cream halo, an ink outline and a white glint (`drawCoin`); plain amber vanished over the meadow's wheat and the orchard's apples.
-- Economy: 3 coins per flight plus coins picked up in flight (Sponsor mod +3). Clearing a contract pays 6, +4 for a storm contract, and every unused flight pays what this contract's flights paid on average +2 (`run.cPay`, `perFlight`; 0.13.1, Thomas: clearing on the first flight lost too many coins). It was a flat 2 per unused flight, while a flight pays about 5-8 coins (more with coin mods); 98 of 416 logged clears came on the first flight. The average alone (without +2) gave the bot 6.24 contracts on the old targets. Piggy Bank pays interest after every flight since 0.13 (+1 per 5 coins held, up to 3/5/7); it paid only on a contract clear before, which made it strictly worse than Sponsor Decal.
-- Unlocks by contracts cleared in one run (`UNLOCKS`): contract 4 unlocks Afterburner and Ram Scoop, 6 unlocks Solar Wings and Antigravity Coil, 8 unlocks 4 rare score mods and Difficulty 1.
+The code is dense on purpose (it grew from fast prototyping): many one-line functions, template-string HTML, short
+names. Match the surrounding style; don't reformat files you aren't changing. Comments explain *why* in plain words.
 
-- Rare parts (0.5, `RARE`): one variant per part with one trait: Brass Propeller (+40% thrust), Long-Burn Rocket (40% less fuel), Silk Wing (+30% lift, 30% lighter), Copper Tank (+80% fuel), Zeppelin Cell (+60% lift; if every balloon is one, they burst 1 km higher), Balsa Frame (half the weight). Inventory key `wing+` etc. (`isRare`, `baseOf`, `partName`), a placed one is a normal cell with `rare:1`; `makeCraft` sums lift and power in base-part units (`wingLift`, `balLift`, `propPow`, tank fuel, `burstBonus`). Sources: later packs, and a rare parts pack (guaranteed rare, random type, `RARE_PACK_PRICE`=8) in about 1 shop in 4 (`shop.pack`, purchase kind `'pack'`). The art draws a brass sparkle; cell codes use upper case for rare parts. Balance bot: 5.02 contracts with 1 pack + rare parts, 5.03 with 2 packs before.
+| name | meaning |
+| --- | --- |
+| `S` | flight state from `newFlight` (position x/y, velocity vx/vy, angle th, fuel, t, events, done/landed/crashed) |
+| `K` | assembled craft from `makeCraft` (parts, mass m, counts, fuelMax, centre of mass com) |
+| `st` | derived stats for a flight from `flightStats(run)` / `stats()` (multipliers from mods, tunings, storm) |
+| `r`, `run` | run state (`newRun`): coins, inv, cells, mods, modLv, tune, stage (contract index), flight, log, shop, phase |
+| `F` | the current flight on screen (flight.js): `{st, K, S, ctx, cam, parts, toasts, …}` |
+| `ctx` | the scoring context from `flightCtx(run)`, **except** in flight.js drawing code, where `ctx` is the canvas 2D context and the scoring context is `F.ctx` |
+| `f`, `sum` | flight summary from `summaryOf(S, K)` (dist, maxY, maxV, landed, coins, loops …) |
+| `sc` | score result from `scoreFlight(f, ctx)`: `{base, mult, xm, total, lines}` |
+| `lv`, `mv`, `has` | mod levels `{id: level}`, mod value at its level, owned check |
+| `M` | one mod's entry in `MODS` |
+| `$` | `document.getElementById` |
+| `wv` | the view handed to `drawWorld` |
 
-### Building (`makeCraft`, `linkage`)
-- 7×5 grid, cockpit fixed at (2,2). Sockets per edge `[right(nose), top, left(tail), bottom]` in `SOCK`. Structural parts (`STRUCT`: cockpit, frame, tank) pass connections on; leaf parts must bolt to a structural part.
-- Wings mount on their bottom or side edges, balloons on their bottom edge (the string), props on their back edge, rockets on their top, bottom or nose edge. Props are blocked (no thrust, red outline) if the cell in front is occupied, rockets if the cell behind is occupied.
-- The bench overlay shows bolts and open sockets, the centre-of-mass marker, the centre-of-lift arrow, and dashed thrust lines (red when more than `GIMBAL`=0.4 m off the centre of mass).
-- Editor input: tap places the selected part or removes the same part. Press and hold (280 ms) to pick a part up; drop it on an empty cell to move it or onto a part to swap.
+Score formula: `score = (distance + flat points) × (1 + Σ additive mult) × Π ×mult`. Physics runs in fixed steps
+(`SIM_DT`), so the same inputs give the same flight on every device.
 
-### Flight physics (`step`, called in substeps of at most 12 ms and 0.6 m of travel; the tests use 1/240 s)
-- Commanded-lift model: an autopilot asks the wings for lift (`Lcmd`), capped by wing area × air density × v² and by balance (`balanceOf`: centre of lift vs centre of mass). A trim assist with limited authority keeps the nose stable. The player's pitch input adds or removes commanded lift. Tumbling loses lift.
-- Throttle 0–100% (one slider for props and rockets together) scales thrust and fuel burn. Engines push only for the fuel there is (`fk` in `step`, 0.13): a step that starts with a trace of fuel used to get a whole step of thrust, and Dive Recycler's per-step refills while gliding then kept an empty starter plane cruising level until the clock (448 m → 2,639 m; logged early flights with Recycler had a median of 1,099 m vs 447 m without). Any new refill (or fuel-free thrust) must be checked against this. Engines idle with no fuel or at 0% throttle; a slow, idle craft that is not descending ends the flight ("becalmed").
-- Quadratic drag. Air density is exp(−y/8500). Extra vacuum drag terms appear at altitude, and speed is capped at the speed of light.
-- Balloons lift ∝ density and burst at 2 km (Weather Envelope: 4/6/8 km by level) or when the POP button is pressed.
-- A flight ends as "becalmed" when an idle craft hovers (under 6 m/s, vertical speed under 1 m/s) for 5 s, or makes no forward progress for 6 s while neither climbing nor sinking. Climbing is not stalling, so balloons rise until they burst (bounded by burst altitude and the clock).
-- Thermals push with 6 m/s² × Thermal Rider (1.2/1.4/1.6) × gravity factor, so they never out-lift gravity (even with Antigravity): no hovering or endless climbs in a thermal.
-- Thermals are smooth columns (cos² profile). Gusts are time-varying vertical forces that sink slightly more than they lift, plus a small nose-rocking torque. The net upward push per flight (lift minus sink, `S.gustE`) is capped at about 17 m/s of velocity, whichever way the craft moves, so gusts cannot be ridden or pumped. (An earlier cap only counted upward pushes while climbing, so gliders could float on gusts. Until 0.6.5 the cap counted only upward pushes: after about 15 s gusts could only push down, about 17% extra gravity on contract 5, and the bot cleared contract 5 at Difficulty 5 in 22% of runs under gusts vs 37–50% under other storms; with the net cap 51%.)
-- A flight ends after `st.flightTime`: `FLIGHT_TIME` (120 s of sim time since 0.4, "Out of time"; it was 300 s) plus 60 s per Flight permit tuning, capped at 3 permits (5 min). The cap matters: the clock is what bounds fuel-free thrust (Solar Wings, Ram Scoop), so never let it grow without limit. The HUD shows the time left under the speed, amber from 60 s, red and pulsing from 20 s.
-- Crash if a touchdown impact exceeds 15 m/s, or exceeds 5 m/s nose-down past 45°. Rubber Hull bounces instead.
-- Keyboard (desktop, itch): ↑/W nose up, ↓/S nose down, ←/→ or A/D throttle ∓10%, Space pops balloons, F fast-forward. Small key caps (`.kcap`) show on the flight buttons only where there is a mouse (`hover:hover and pointer:fine`).
-- Far zoomed out, the craft keeps a minimum on-screen size (about 32 px across) with a soft halo, instead of shrinking to nothing.
-- Fast-forward is a manual toggle (the ▸▸ button above NOSE UP, `save.meta.ff`, remembered between flights): 2× speed (`FF_SPEED`), inputs do not cancel it, and the nose buttons act at half strength (`FF_PITCH`) so the craft turns about as fast on screen. Off in live rooms. It replaced an automatic fast-forward (up to 4×, cancelled by any input) that players found fiddly.
+## How to verify a change
 
-### Scoring (`scoreFlight`)
-`score = (distance + flat) × (1 + Σ additive mult) × Π xmult`.
-- Altitude milestones (`ALT_AT` 100/250/500/750/1000 m, then every 250 m; `ALT_PAY` 200/300/500/750/1000, then +250 more each) add flat points to the base, so multipliers apply (`altBonus`), but only on a landing: it is a landing bonus (`ALT_CRASH`/`ALT_AIR` = 0). Partial credit was tried and dropped: 4 balloons just floating up to 1.66 km would score 4,233 a flight at ×0.75 for ending in the air (a tuned prop plane that climbs and lands: 4,134) and 2,858 at ×0.5. While airborne the HUD shows the score as its sum, `(distance points + pending landing bonus) ×mult`. A wingless balloon craft can still collect it with Rubber Hull: small bounces are damped (restitution 0.18 below 3 m/s) and a flight that stalls right after touching the ground counts as a landing, not becalmed (before, 99 of 126 tilted Rubber Hull drops ended becalmed). The bot (prop, 35° climb) clears 5.03 contracts with the 2-minute clock and milestones, 4.83 with the clock alone, 5.06 before both.
-- Additive: clean touchdown +0.5, low pass +0.25, loop +0.5, thermal +0.1, coin +0.05 each, Redline +1 (500 km/h, `REDLINE`), Cloud nine +2 (5 km, `CLOUD9`). These two replaced the sound barrier and 100 km space, which no craft could reach (best rocket builds top out near 2 km and 600–800 km/h).
-- Distance milestones (0.12, `distBonus`, `distMilestones`, `distReached`): the altitude ladder at 5× the spacing (500, 1250, 2500, 3750, 5000 m, then every 1250 m) with the same pay, also a landing bonus (`landingShare`), shown in flight as a pop-up and in the score sum, and on the results as "Distance 2500 m". Before, distance paid only linearly while height grew quadratically and coins snowballed, so distance builds were barely worth it (Thomas, 2026-10-22). The spacing came from the logged flights: distance median 850 m, 90% under 3.3 km, 99% under 9.5 km; landed height median 65 m, 90% under 440 m, 99% under 4.1 km. A doubling ladder (500, 1000, 2000, 4000 …) was considered and dropped: its bonus shrinks relative to the distance the farther you fly. Bot `climb` (3 seeds × 60 runs, same seeds): 5.32 contracts on average before, 5.63 with distance milestones and the new mods (the bot flies distance and lands). The HUD's "to target" line counts the landing bonus waiting in the air, like the score sum.
-- 0.12 economy mods for the other builds (coins after the flight, `flightCoins`, each capped per flight): Skywriter (+1 per altitude milestone, on a landing), Mileage Club (+1 per distance milestone, on a landing), Speed Bounty (+1 per 100 km/h over 200), Tip Jar (+1 per loop, low pass, thermal, touch-and-go). Golden Parachute (rare, unlocked by contract 6): a flight that ends in the air keeps 10/20/30% of the landing bonus (50/60/70% in 0.12); a crash still keeps nothing (else crashing straight down from height would replace the landing). At 50% three balloons with Weather Envelope floated up hands-off to 13,305 points a flight (contract 6 target 16,000 for three flights). At 10/20/30% that float makes 2,705 / 5,355 / 8,005; a maxed float (4 balloons, Envelope Lv 3, a permit, Cloud nine on the way) still makes 39,765 at Lv 1, accepted because it takes as many lucky pieces as a space run. Thomas's 0.7.11 Solar run would have kept going past contract 14 at 10% (its 37 km timeout: 147k → 9.8M). Two other fixes were considered and dropped: keep the share only below half the top height (works, not elegant) and only while coming down (Envelope bursts the balloons by itself, so a hands-off float is falling at the clock anyway); extra time to land instead of a share fails because a Solar glider needs 4–5 more minutes to dive home from 20–25 km. Thomas's best landed height is 25.7 km (0.7.11, Solar Wings + Slipstream glider, landed at 4:43 of 5:00); his 37 km flight ran out of time in the air. Note: with Weather Envelope, balloons floating up and running out of time also collect the parachute share.
-- Catapult spring: +50% launch speed per level since 0.12.4 (54 → 81 / 122 / 182 km/h; it was +20%, which nobody bought). At +50% a hands-off starter prop plane flies 503 → 613 / 838 / 1134 m and an engineless glider 173 → 262 / 432 / 707 m; bot `climb` unchanged (5.88 vs 5.83 contracts, 3 seeds × 60 runs). At the old +20%, measured in the sim (0.12.2): a hands-off starter prop plane flies +7/+19/+32% farther at Lv 1/2/3; an engineless glider +18/+45/+83%; and on Mail run or Short catapult storms it decides whether a heavy craft gets off the ramp at all (crash at 50-60 m vs 380-650 m flights).
-- Speed Trap and Speed Bounty count full 50 km/h steps over 150 km/h (`speedSteps`, 0.13; Speed Trap .15/.25/.35 per step). They started at 200 km/h in 100 km/h steps, so the first step needed 300 km/h, which only 6% of logged flights reached (median top speed 134 km/h); Bounty paid 0.11 coins a flight on real flights.
-- Slingshot (0.13) also gives one KICK per flight: the POP button becomes KICK once balloons are gone (or from the start without balloons) and `kick()` adds 15 × the Slingshot value m/s along the nose. Since 0.12.4 the Catapult spring tuning had made its launch boost pointless outside engineless gliders.
-- What one loop, low pass, thermal or coin adds is `trickVal(ctx, kind)`: the base value or its mod's, plus storm rewards. scoreFlight and the in-flight pop-ups both use it (before 0.11.5 the pop-ups ignored storm rewards).
-- Repeated loops and low passes pay less each time (`repeats`: the n-th is worth 1/(1+0.5(n−1))), so 40 loops count as about 6.6.
-- Mods modify these values. Greaser (since 0.13) keeps the +0.5 touchdown and multiplies by ×1.15/1.3/1.5 on top: it replaced the +0.5 with ×1.25 before, which only wins above mult 2, and the median logged mult before touchdown is 1.25, so Lv 1 cost about 7%. Overdrive and Escape Plan have the same "instead of" form but pay +34% / +66% at Lv 1 on the flights where they fire (Redline and Cloud nine come late, with big mults), so they stayed. Xmult mods: Greaser, Storm Chaser (0.13), Opening Act, Third Time Lucky, Frugal, Minimalist, Logbook, Compound Interest, Overdrive (formerly Sonic Boom), Escape Plan, Silent Flight, Hedgehopper, Understudy (since 0.12.1: ×1.2/1.3/1.4 per empty mod slot; it was +0.3 mult per slot, never worth giving up a slot).
-- 0.5 mods: Long Haul (+mult per full landed minute), Investor (coins per 1,000 points), Overachiever (coins per 10% over the target on a clear; not in dailies/rooms), Magpie (+mult per coin collected this run, `run.coinsRun`).
-- Mod-only events (they score nothing without their mod): touch-and-go (`S.touchgos`: a ground touch slower than 7 m/s down at over 10 m/s, then climbing back above 2 m; Touch and Go, +1/1.5/2 since 0.13: at 5 m/s, 12 m/s, 3 m and +0.4 none of the 7 logged flights with it scored one, and a sim pilot lost about 40% of the distance for it), combos (`S.combos`: a loop, low pass, thermal or touch-and-go within `COMBO_S`=10 s of the previous one, see `trick()`; Showboat; it was 3 s until 0.12.2, but a full loop takes about 9 s). Bullseye (land within 6 m of a target every 100 m) was removed in 0.12.1: you cannot brake on the ground, so where you stop is luck. `dropRemovedMods` (with `REMOVED_MODS`) takes a removed mod out of saved runs, refunds it, and drops it from shop and storm-reward offers.
-- Run-long counters on the run: `run.streak` (landings in a row, reset by a crash; Frequent Flyer) and `run.loopsRun` (loops this run, at most 3 per flight; Fan Club). `flightCtx(run)` builds the scoring context (also empty mod slots, balloon/frame/engine counts) for both the UI and `settleFlight`.
-- 0.13 mods: Ground Effect (Body, below 10 m drag ×.75/.6/.5; flying 6 m low it takes the starter plane 348 → 461 / 621 m, a physics mod for Hedgehopper, Crop Duster and Touch and Go), Engine Room (+.3/.45/.6 mult per propeller or rocket, `ctx.engines`), Storm Chaser (storm contracts ×1.3/1.6/2, `ctx.storm`, not in dailies), Mechanic (+.05/.08/.12 mult per tuning level, `ctx.tunes`), Hot Streak (+.1/.15/.2 mult per full second over 300 km/h, up to 3/4/5, `S.hotT`). Reworked in 0.13: Crash Test pays +.5/.75/1 mult per 100 km/h of impact speed (`S.impactV`; it was a flat +1/2/3 and never bought, a crash still paid less than a landing), Overclock burns ×1.8 fuel (×2.5 made it −26% to −48% at Lv 1 on prop planes), Ram Scoop starts at 400 km/h (`RAM_V`; at 540 km/h it added nothing even in the Afterburner + Slipstream combo, which peaks at 436 km/h; at 400 km/h that late combo runs away to 1,900 km/h at Lv 1, bounded by the clock), Thermal Rider pays .2/.3/.4 a thermal (Lv 1 was only +.05 over the base), Magpie .02/.03/.04 a coin (the weakest Rare by far). Frugal's 30% shows as a mark on the fuel bar while owned.
-- 0.4 physics mods: Dive Bomber (drag × v while descending nose-down past 30°: height becomes speed, Redline from a balloon dive with Slipstream), Sailplane (drag × v while no engine pushes), Supercharger (prop thrust × v with the nose up past 15°, no extra fuel), Booster (rocket thrust × v for the first 3 s), Hot-Air Burner (balloons regain part of the lift thin air takes, paid with fuel at 0.06 per balloon per unit of lost density), Carpenter (frames weigh nothing). Ballast Drop and Upside Down were tried and dropped: a lighter craft glides slower in this model, and a side-view game has no real inverted flight (tumbling counted).
-
-## Design principles (from the player's feedback)
-- The player loves roguelites (Slay the Spire, CloverPit), physics games (Bad Piggies, Learn to Fly) and systems. An earlier idle-style version with infinite upgrades "went nuclear" (speed of light, trillions of coins) and was rebuilt as a roguelite: runs are scored and limited, and runaway "criticality" should be rare and spectacular, not the default.
-- **No perpetual motion or infinite exploits.** Past fixes: Ram Scoop, Recycler and Solar were gated; the gust pumping exploit is capped by energy; holding nose-up forever no longer works; hovering on balloons ends the flight. Test any new force or mod against "can I farm this forever?".
-- **UI should be intuitive with minimal text.** The player explicitly asked to trim explainers. Prefer visuals (sockets, markers, chips, icons) and one-line mod descriptions.
-- **Fair randomness.** Bad luck is fine when it punishes a risk the player could see; it is unfair when hidden or unavoidable. Hence storms are revealed at run start. Ask "could the player have seen it and responded?" before adding random modifiers.
-- Mobile portrait, played one-handed in short sessions. Landscape screens at least 640 wide (desktop, the itch.io embed, tablets and phones on their side; `WIDE` in ui.js and the media queries at the end of style.css) turn the hangar into a CSS grid: toolbar across the top, the phone hangar (`.hmid` = poster + bench) left, the shop / mods drawer right (`dock()` moves `#dealer` into `#hangar` as `.drawer.docked`, with Shop | Mods tabs in place of the bar's buttons; `side` remembers the tab), the launch bar across the bottom. The panel is only as tall as its content and capped by its grid row, so it never overlaps the launch bar (an earlier version positioned it with offsets measured in JS, which went stale on iPad). Both columns are stacks of cards on the wall (the docked drawer drops its panel frame), one `--gap` everywhere, each column scrolls as a whole with a fade at the bottom. On tablets and desktops (landscape, at least 561 tall) the build card puts the parts tray beside the grid and sizes the grid from the screen height (`--gw`), so grid and tray fit above the launch bar; the craft stats sit below in two columns. Sideways phones (landscape, at most 560 tall) also scale the hangar to `--z` with CSS zoom, let the left column take all the width the shop column leaves, show the poster as one strip (town | score bar over the storm | route), and put the parts tray beside a grid sized from the screen height, so grid and tray fit above the launch bar (0.11.5). The home screen stays the single phone column (a two-column home was tried on 2026-10-14 and dropped). In flight the HUD is one band across the top on every screen: score over fuel on the left, a stats tag on the right with the distance (big, top line), height, speed and clock (0.11.6; the distance had its own big box before). On narrow phones the score row's target / total line wraps under the score sum (0.13.2; it ran into the stats tag). The strip behind the phone's status bar shows the flight screen's background and `theme-color`, so both follow the sky's top colour during a flight (`skyTop` from `drawWorld`, `themeTint`) and `theme-color` goes back to the barn brown on other screens (0.13.2; it was a fixed blue). Sideways phones get smaller pad buttons and throttle (0.11.4). The flight checks its canvas against its box every frame and resizes: iOS can fire `resize` before the rotated layout has its size, which left a portrait canvas stretched across a landscape screen. Screen-height sizing uses `--app-h` (window.innerHeight, set by `setAppH` in ui.js on resize, orientationchange, visualViewport resize and when the flight canvas changes size; CSS falls back to 100dvh): on Thomas's iPhone home-screen app `100dvh` kept the portrait height after turning the phone, so the tour map and the results sheet ran off the landscape screen (0.13.3). The veil is `--app-h` tall, so its sheet fits and scrolls. Respect safe areas (`--reserve` = `env(safe-area-inset-top)`). Installed on iPhones the app uses a solid black status bar (`apple-mobile-web-app-status-bar-style: black`), not black-translucent: with the translucent bar iOS made the page a status bar shorter than the screen but started it at the top, leaving an unreachable strip at the bottom (measured window 793 / screen 852 / safe top 59). Changing that meta tag only takes effect after re-adding the app to the home screen.
-- Telemetry: production builds POST the run to `/api/run` after every flight and when it ends (one row per run, upserted by `run_id` = client:mode:seed, with `mode`, `flights`, `finished`). Each log entry carries a snapshot `s` (mods with levels, tunings, cells, score lines, max height, top speed in km/h, how it ended: land/crash/bank/time/calm/air, flight seconds `t` against its clock `clock`, fuel, coins) and `run.ev` notes buys, sells, rerolls, packs and storm rewards as `[kind, contract, flight, ...]`. `functions/api/run.js` (a Pages Function) stores it in D1 (binding `DB`, schema in `schema.sql`; see README for setup). Anonymous: a random per-browser id plus the run code. Without the binding the endpoint accepts and drops runs. Set up on 2026-10-10 (D1 database `rogueflight`, binding `DB` on Production); row 1 is a `setup-test` row.
-- Balance feedback: every finished run is in D1 (`runs.data`, daily puzzles in `daily_scores.data`); the in-game "Copy run" buttons were removed. The run code (`runCode` in ui.js) is JSON with mods (`id:level` above Lv 1), tune, inv, a compact cells string (`c22 p32 …` = type initial + column + row), and a log of `[contract, flight, score, distance, mult]`.
-
-## Balance notes
-- Bot policies: `climb` (default, fast) and `smart` (pilot.js: tunes 24 pilot settings per build, test-flies mods and tunings before buying them, 3x longer layout search). `smart` clears about 5.56 contracts on average vs 5.02 for `climb` (0.5, seeds 7 and 11 × 40 runs) and takes ~8x longer; use it when balance numbers matter.
-- 0.4 mod batch (15 mods, pool 37 → 52): bot `climb` 5.06 contracts on average with them vs 5.02 without (3 seeds × 40 runs). The bot only buys the ones it can use (`MOD_VALUE`); balloon, glider, dive and trick niches are for humans.
-- The bot starts from the universal start, opens its packs and shops before every flight, and picks its layout by test-flying variants of its inventory in the forecast weather. Pilots press buttons like a player (pitch −1/0/+1, re-decided every 0.2 s). `climb` waits for flying speed, climbs at about 35° under power, then glides hands-off, using full or 60% throttle (whichever tested better for the build). That is how a good human flies. `hands` is the old weak baseline. `--seed=N` makes runs repeatable, so compare balance changes with the same seed.
-- Current baseline (mod levels, full reroll, new goals; 5×100 runs, Ceiling 0): `climb` clears 4.75 contracts on average (5.53 before those changes); with storm rewards 5.0. The numbers below were measured before them; compare trends, not absolutes.
-- Storms compared with `--storm` (bot, 3×100 runs each; clear rate of contracts 3 / 6 / 8 among runs that reached them; no storm: 98% / 65% / 52%, 5.81 contracts on average):
-  fuel rationing 87 / 42 / 31 (5.19), thin air 87 / 57 / 52 (5.37), headwind 98 / 41 / 30 (5.51), gusts 98 / 40 / 35 (5.51), short catapult 93 / 55 / 47 (5.57), mail run 96 / 57 / 52 (5.72), thunderheads identical to no storm (the bot never climbs above the ceiling; it only bites players who climb high).
-  Headwind was softened from 5+2·s to 2+0.8·s m/s (54 → 22 km/h on contract 6; it had dropped the bot to 7% there) and gusts were made a real threat (amplitude 5+0.6·s, downward bias, capped lift); before, gusts slightly helped.
-- Flight permit (added after the baseline below) cost the bot about 0.2 contracts (5.61 → 5.39 over 5×100 seeded runs), mostly because it takes one of the two tuning slots in a shop and the bot rarely needs it. Seeded runs diverge as soon as one purchase differs, so compare balance changes over several seeds, not one.
-- Baseline with packs (30 runs, `--seed=7`, Ceiling 0): `climb` clears 5.8 contracts on average and wins 5 of 30; `hands` clears 5.2 and wins 1. Over 200 runs the pack economy came out even with the old one (5.68 vs 5.75 contracts for `climb`). Median flight scores fall behind the quota from contract 3 on, so runs are won by the occasional big flight (thermals, sound barrier, xmult mods).
-- One human data point: the player won all 8 contracts on their first serious run with a light, strong-prop glider (before quotas 6–8 were raised by about 20%). A balloon-heavy build later died to thin air on contract 6; that loss motivated revealing storms early.
-- Additive per-part mods (Wingman +0.3 per wing, Fuel Hauler +0.4 per tank) stack strongly with big builds.
-- Mod review (0.13, 2026-10-22): every mod scored against the 981 logged run flights (147 runs, about 15 players) as if the flight had owned it at Lv 1 and Lv 3, plus sim tests with pilots that chase each condition (scripts were in the session scratchpad; the method: rebuild `f` and `ctx` from each log snapshot and call `scoreFlight` with and without the mod). Findings fixed in 0.13: the fuel trickle bug (Dive Recycler), Greaser Lv 1 losing points, Overclock as a trap, Piggy Bank dominated by Sponsor, Crash Test, Touch and Go, Ram Scoop and the speed mods doing nothing, Golden Parachute balloon floats. Thomas wants every mod to do something, not every mod to be equally good (luck stays part of a run). Behaviour mods (Frugal, Hedgehopper, tricks) look weak in the logs because players without them do not chase their condition; judge those in the sim.
-
-## Legal
-- `client/public/imprint-and-privacy-policy.html` (served at /imprint-and-privacy-policy, linked as Imprint and Privacy in the title footer): German imprint (§ 5 DDG) and GDPR privacy policy for Thomas Wicke. Keep the privacy part in sync when the game starts storing anything new (it lists: Cloudflare hosting, local storage keys, guest accounts with session IP/user agent, link codes, rate-limit IP counters, run telemetry with the random device id, daily leaderboard nicknames, room nicknames and positions).
-
-## Accounts and cloud saves
-- Every player is a guest account (no personal data). The game signs in on first start, keeps the token in localStorage (`rogueflight-auth`) and uploads the save (`meta`, `run`, `daily`; not rooms) a few seconds after each change and when the app goes to the background. On start the newer copy wins (device `save.t` vs server `t`; `save.cloud.rev` guards overwrites). The Profile card on the title (name with an edit button, avatar) has a settings button that opens "Your progress": the sync state, "Use on another device" makes a link code, "Enter a code" takes that account's progress onto this device.
-- On iPhones a home-screen app and Safari have separate storage, and deleting the home-screen app deletes its storage: the cloud save plus a link code is how progress survives that.
-- Later: Sign in with Apple attaches to the same account (Better Auth social provider). See docs/security.md.
-
-## History
-- `save.meta.history` (newest first, at most `HIST_MAX`=40, synced with the cloud save): one entry per finished run (`endRun`) and puzzle (`leaveMode`), with the last flight's build (`cells` code), mods with levels and tunings, and the result: run = Difficulty, contracts cleared, town, best single flight, endless/lost; daily = day and total (rank shown while `meta.daily` still holds it); random puzzle = total. Opened from the History button in the Profile card's Stats row (`showHistory`, `miniCraft` draws the cropped build with the bench icons). Added in 0.8.0 after a Reddit request, so older runs are not in it.
-
-## Art: code-drawn plus painted layers (0.9.0)
-- Parts, the goat, decals, UI and most of the world are drawn in code (sharp at every zoom, animated, tiny download). Since 0.10.0 every town flies over painted sprite layers: `LAYERS` in world.js replaces each biome's two hill silhouettes with generated art (`client/src/assets/<town>-far.webp` and `-near.webp`, 1.8 MB for all 16; only the current town's two load, via `preloadLayers` when the hangar opens). Storm weather washes them grey like the code-drawn hills (`tinted`, baked once per image). Over a painted backdrop the code-drawn props are skipped except small ground clutter (`SMALL_PROPS`: grass, rocks). Layers are anchored to the ground line in screen pixels, scroll at the silhouettes' parallax speeds (.05 and .12) and repeat side by side. Parallax offsets advance by the camera's movement times the current zoom each frame (`parStep`/`parOff`): computing them as camX*sc*par made layers slide backwards when the camera zoomed out fast on a dive. until loaded, the silhouette is drawn. Asset URLs must be written literally in `new URL('./assets/x.webp', import.meta.url)` or Vite does not bundle them.
-- Making a layer (0.9.1): generate it with the Codex CLI (docs/concept/README.md) with land at the bottom, flat #FF00FF above, and a tile instruction (plain hills within 15% of both edges, edges at the same height). Generate a second panorama of the same layer with other landmarks, passing the first as a reference. `tools/art/build_layers.sh <png folder>` rebuilds all 16 from the picked versions: every town was generated twice (docs/concept/parallax and parallax-v2) and Thomas picked version 2 for meadow, river and canyon, version 1 for the rest (2026-10-22; version 1's meadow had a two-headed sheep). Generate two versions and let him pick when making new art. Per layer: `tools/art/key_layer.py out.webp a.png b.png --tile` (ComfyUI venv Python, numpy + Pillow) cuts both out, stitches them and makes the wrap seamless: each join is cut along the least-different path through a 120 px overlap (image quilting). For soft far layers whose horizons don't meet, add `--morph --band=360`: both ends bend toward a shared horizon and cross-fade. Two panoramas double the repeat (about 1,900 css px for the meadow), so landmarks don't show twice on one screen. The first try used mirrored repeats, which showed twin trees at every seam.
-- App icon options (2026-10-21): 8 in docs/concept/icons/, on the board; Thomas chose 6 (propeller peek), live since 0.10.1.
-- The troupe (0.11.0, docs/concept/v011, two versions each, picker https://claude.ai/artifact/3Dq8Y38GKHAEaseAEkJRBx): host portraits with three expressions (raccoon dealer in the shop, hen mechanic on the Build card, owl announcer on the flight results, basset ringmaster on contract cleared and run won / over) were tried in 0.11.0 and removed in 0.11.2 and 0.11.3: Thomas found they cluttered the interface. Their sheets stay in docs/concept/v011; `tools/art/cut_sprites.py host` keys such a sheet. Home cards carry a small picture at the end of their header row (`CARD`, `cardHead`; 0.11.0 pinned it over the top right corner, where it covered the buttons on phones). The hangar's backdrop is a painted barn workshop (`#hangar` in style.css, an upright and a wide version). The tour map (`showTour`) opens after "Next contract" (the plane flies from the last town to the next, then the packs) and from the route strip; the eight town spots (`MAP_TOWNS`, percent of the 2:3 map) were measured on the picked version 2, which leaves a sandy clearing at each town (version 1's spots are in a comment there; it also paints a plane of its own). `tools/art/cut_sprites.py host out.webp sheet.png` keys a three-expression sheet; `fit` resizes the rest.
-- Code-only items from the concept board (0.11.0): a catapult spring on the ramp that squeezes in the wind-up and wobbles out on launch (`spring`, `v.pull`, `v.launchT`), thermals as rising swirls with arrowheads and chevrons, a sky for every storm (leaves in headwind, gust curls, rain under the thunderheads, ice glints and a violet wash in thin air, letters on a mail run, heat haze under fuel rationing, crows over a short catapult), and live-room pilots: every seat gets an animal and scarf colour (`KINS` in art.js: goat, pig, fox, dog, sheep, cat; `kinOf(id)` by join order, the same on every phone), shown on the planes, the bench cockpit and the lobby list.
-- Concept art pass: docs/concept/ (24 images with prompts), board https://claude.ai/artifact/WZpMz2pq3DjUyvN8Zjwe3r. Quick wins taken from it in 0.9.0: packs are kraft parcels with a goat wax seal (purple paper with brass corners when the pack holds a rare part, `isRare(run.packs[i])`), rare parts are drawn with purple enamel trim, a balsa crate or a copper tank (`ACC`/`CRATE`/`TANKC` swapped inside drawPart), Redline fires a brass shockwave with speed streaks, a sea of cloud tops at 3.6 km fades in above 3.9 km (`cloudSea`), the goat bows after a clean landing (mood `'bow'`, pilotMood), and storms show a pictogram (`WXI`, `wxIcon`) on the storm chip, the route list, the endless forecast and the flight banner.
-
-## Modes
-- **Run** (`save.run`): the main 8-contract run, unchanged.
-- **Daily puzzle** (`save.daily`, mode `'daily'`): one contract, 3 flights, 100 coins, no storms, seed `dailySeed(dailyNumber())` (day 1 = 2026-10-11 UTC). The score is the sum of the 3 flights. Ranked on the first try: the result is stored in `meta.daily[day]` and `meta.dailyPending` until the server has it, with the nickname `meta.name`. After the first finished daily, **Random puzzle** (unranked, any seed) appears.
-- **Live rooms** (`save.room` = 4-letter code, `save.online` = the room's run, modes `'team'` and `'elim'`). The Room Durable Object holds the shared state: lobby → build (everyone taps READY) → countdown → flight (all launch at `launchAt`) → round results → build. Each phone simulates its own flight and streams `pos` at 10 Hz; others are drawn as translucent ghosts with name tags (edge tags when off-screen). After landing you spectate whoever is still flying. No fast-forward; flights are 2 min (+20 s per Flight permit).
-  - Team: a normal run where the team's flight scores add up toward `quota × players`; the server decides clear/fail, clients apply it with `clearContract`.
-  - Elimination: one flight per round, the bottom third (at least one, ties survive) is out each round; survivors get the clear reward, a new shop and packs. Bots (host adds them in the lobby) fly deterministically on every phone from `botFlight(seed, stage, i)`; the first phone to finish a bot's flight reports its score. When no humans are left, the best bot wins.
-  - Puzzles and rooms use a fixed meta (all unlocks) so everyone gets the same shop pool, and never touch the player's records or telemetry.
-  - Invite links: `/?room=CODE`. Friends-only beta: the server trusts client scores.
-
-## Open items / ideas
-- Multiplayer follow-ups: a public Elimination queue with bots topping up rooms, chat/emotes, showing ghosts' scores live, a proper HUD while spectating (the focused pilot's numbers), server-side validation (replay inputs) once strangers play.
-- Circus rework follow-ups: season postcards to share (render the craft at its best moment), decals stuck on the plane itself, liveries unlocked by milestones, a decal album. Tune the procedural audio by ear on a phone.
-- Consider a browser smoke test (Playwright) for the main flow: start → buy → build → launch → results.
-- Deploy: Cloudflare Pages, build `npm run build`, output `dist`. `_headers` keeps `sw.js` and HTML uncached. Bump `CACHE` in `client/public/sw.js` if cached files ever need a hard reset.
+- Rules, numbers, scoring, physics: `npm test`, plus a new or updated test in `tests/sim.test.js`. For balance, the
+  bot on 3 seeds before and after (see recipes).
+- UI: `npm run smoke`, then look at it: `npm run dev`, open http://localhost:5173 at phone size (390×844), sideways
+  (844×390) and desktop. Check the browser console for errors.
+- Never claim something works on a phone if you only saw it in a desktop browser; say what you checked.

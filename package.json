@@ -1,6 +1,6 @@
 {
   "name": "wingnutcircus",
-  "version": "0.13.3",
+  "version": "0.13.4",
   "private": true,
   "type": "module",
   "description": "Roguelite flying-machine builder. Build a craft on a grid, fly it with real-ish physics, hit escalating score quotas.",
@@ -11,7 +11,8 @@
     "preview": "vite preview --host",
     "test": "node --test tests/*.test.js",
     "bot": "node tools/bot.js",
-    "itch:push": "npm run build:itch && butler push wingnutcircus-itch.zip $ITCH_USER/wingnut-circus:html5 --userversion $npm_package_version"
+    "itch:push": "npm run build:itch && butler push wingnutcircus-itch.zip $ITCH_USER/wingnut-circus:html5 --userversion $npm_package_version",
+    "smoke": "node tests/smoke.mjs"
   },
   "dependencies": {
     "@fontsource/bowlby-one": "^5.3.0",
@@ -20,6 +21,7 @@
     "better-auth": "1.7.7"
   },
   "devDependencies": {
+    "playwright-core": "^1.49.1",
     "vite": "^8.3.4"
   },
   "engines": {
