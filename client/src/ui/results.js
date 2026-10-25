@@ -33,14 +33,14 @@ export function showResults(out,S,f){
   const news=headline({...f,cleared:!!out.cleared},{town:town.town,pilot:'Goat'},r.seed+out.stage*7+out.flightNo);
   sheet.className='sheet tallysheet';
   sheet.innerHTML=`<div class="stamp ${kind}">${title}</div>
-    <span class="label">${town.town} · flight ${out.flightNo} of ${FLIGHTS}</span>
+    <div class="tc1"><span class="label">${town.town} · flight ${out.flightNo} of ${FLIGHTS}</span>
     <div class="eqn"><span class="drum" id="tyBase">0</span><i>×</i><span id="tyM">1</span><i>=</i><b id="tyT">0</b></div>
     ${extra.length?`<div class="hype bpts">${extra.map(l=>`<span class="hc b in">${l.label}<b>+${fmt(l.v)}</b></span>`).join('')}</div>`:''}
-    <div class="hype" id="tyHype">${hype.map((l,k)=>{const m=lineMod(l.label);return `<span class="hc ${l.t}" data-k="${k}">${m&&DECAL?`<img alt="" src="${DECAL(m,48,modLevels(r)[m]||1)}">`:''}${l.label}<b>${l.t==='x'?'×':'+'}${num(l.v)}</b></span>`}).join('')||'<span class="hc none">No stunts this time</span>'}</div>
-    <div class="cbar${out.cleared?' done':''}"><i id="rbar" style="transform:scaleX(${p0})"></i><span id="rbarT">${barT(out.prevScore)}</span></div>
+    <div class="hype" id="tyHype">${hype.map((l,k)=>{const m=lineMod(l.label);return `<span class="hc ${l.t}" data-k="${k}">${m&&DECAL?`<img alt="" src="${DECAL(m,48,modLevels(r)[m]||1)}">`:''}${l.label}<b>${l.t==='x'?'×':'+'}${num(l.v)}</b></span>`}).join('')||'<span class="hc none">No stunts this time</span>'}</div></div>
+    <div class="tc2"><div class="cbar${out.cleared?' done':''}"><i id="rbar" style="transform:scaleX(${p0})"></i><span id="rbarT">${barT(out.prevScore)}</span></div>
     ${result}
     <div class="clip" id="tyNews" hidden><small>The ${town.town} Gazette</small>${news}</div>
-    <button class="big" type="button" id="next">${btn}</button>`;
+    <button class="big" type="button" id="next">${btn}</button></div>`;
   veil.hidden=false;veil.classList.add('tally');
   const el=id=>$(id), rm=reduceMotion();
   // roll a number up over d ms, ticking digits like a mechanical counter

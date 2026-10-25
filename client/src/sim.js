@@ -115,7 +115,7 @@ const MODS={
   crashtest:{name:'Crash Test',r:'U',tag:'Score',d:'Crash: +{v} mult per 100 km/h of impact.',v:[.5,.75,1],how:'Crash, and the faster you hit the ground the more it pays. When a flight is ending anyway, climb, point the nose down and dive in.'},
   logbook:{name:'Logbook',r:'R',tag:'Score',d:'×{v} more per contract cleared.',v:[.15,.25,.35],lock:8,how:'Grows with every contract cleared this run. Does nothing on contract 1, so daily puzzles never offer it.',noDaily:1},
   compound:{name:'Compound Interest',r:'R',tag:'Score',d:'×0.05 per coin held, up to ×{v}.',v:[2,3,4],lock:8,how:'Counts the coins you hold when the flight ends: 20 coins = ×2. Spend less, score more.'},
-  piggy:{name:'Piggy Bank',r:'C',tag:'Coins',d:'+1 coin per 5 held after each flight, up to {v}.',v:[3,5,7],how:'After every flight you earn interest on the coins you hold.'},
+  piggy:{name:'Piggy Bank',r:'C',tag:'Coins',d:'+1 coin per 5 held after each flight, up to {v}.',v:[6,10,14],how:'After every flight you earn interest on the coins you hold.'},
   coupon:{name:'Coupon Book',r:'U',tag:'Coins',d:'Shop prices −{v}%.',v:[15,25,35],how:'Everything in the shop costs less.'},
   magnet:{name:'Coin Magnet',r:'C',tag:'Coins',d:'Pulls in coins from ×{v} as far.',v:[2,2.5,3],how:'Grabs coins from farther away, so you can collect them without hitting them dead on.'},
   // added in 0.4: niches for balloons, gliders, dives, rockets, frames and low flying, plus run-long mods
@@ -135,15 +135,15 @@ const MODS={
   burner:{name:'Hot-Air Burner',r:'U',tag:'Air',d:'Balloons keep {v%} of their lift high up. Burns fuel.',v:[.5,.75,1],how:'Balloons normally stall around 1.7 km as the air thins. The burner keeps them rising while there is fuel. Burst height still applies.'},
   // added in 0.5
   longhaul:{name:'Long Haul',r:'U',tag:'Score',d:'+{v} mult per full minute in the air, if you land.',v:[.3,.4,.5],how:'Every full minute between the catapult and the landing adds mult. Flight permits give you more minutes; a crash or running out of time pays nothing.'},
-  investor:{name:'Investor',r:'U',tag:'Coins',d:'+1 coin per 1,000 points, up to {v} a flight.',v:[4,6,8],how:'After each flight, its score pays coins: one per full 1,000 points.'},
-  overachiever:{name:'Overachiever',r:'U',tag:'Coins',d:'Clearing a contract: +{v} coins per 10% over the target, up to {w}.',v:[1,2,3],w:[6,10,14],how:'When a contract clears, every full 10% your contract score is above the target pays coins. Not in daily puzzles or rooms.',noDaily:1},
+  investor:{name:'Investor',r:'U',tag:'Coins',d:'+1 coin per 1,000 points, up to {v} a flight.',v:[8,12,16],how:'After each flight, its score pays coins: one per full 1,000 points.'},
+  overachiever:{name:'Overachiever',r:'U',tag:'Coins',d:'Clearing a contract: +{v} coins per 10% over the target, up to {w}.',v:[1,2,3],w:[12,20,28],how:'When a contract clears, every full 10% your contract score is above the target pays coins. Not in daily puzzles or rooms.',noDaily:1},
   magpie:{name:'Magpie',r:'R',tag:'Score',d:'+{v} mult per coin collected this run.',v:[.02,.03,.04],how:'Every coin you fly through this run adds to it for good. Coins get rarer the farther out you fly.'},
   sponsor:{name:'Sponsor Decal',r:'C',tag:'Coins',d:'+{v} coins per flight.',v:[2,3,4],how:'Extra coins after every flight, whatever happens.'},
   // added in 0.12: coins for the other builds (height, distance, speed, tricks), and a way to keep part of the landing bonus
-  skywriter:{name:'Skywriter',r:'U',tag:'Coins',d:'+1 coin per altitude milestone, up to {v}, if you land.',v:[4,7,10],how:'Climb past 100, 250, 500, 750, 1000 m and on: every height you pass pays a coin after a landing.'},
-  mileage:{name:'Mileage Club',r:'U',tag:'Coins',d:'+1 coin per distance milestone, up to {v}, if you land.',v:[4,7,10],how:'Fly past 500, 1250, 2500, 3750, 5000 m and on: every mark you pass pays a coin after a landing.'},
-  bounty:{name:'Speed Bounty',r:'C',tag:'Coins',d:'+1 coin per 50 km/h over 150, up to {v}.',v:[3,5,8],how:'Counts your top speed: every full 50 km/h above 150 pays a coin, however the flight ends.'},
-  tipjar:{name:'Tip Jar',r:'C',tag:'Coins',d:'+1 coin per trick, up to {v}.',v:[3,5,8],how:'The crowd tips for every loop, low pass, thermal and touch-and-go in a flight.'},
+  skywriter:{name:'Skywriter',r:'U',tag:'Coins',d:'+1 coin per altitude milestone, up to {v}, if you land.',v:[8,14,20],how:'Climb past 100, 250, 500, 750, 1000 m and on: every height you pass pays a coin after a landing.'},
+  mileage:{name:'Mileage Club',r:'U',tag:'Coins',d:'+1 coin per distance milestone, up to {v}, if you land.',v:[8,14,20],how:'Fly past 500, 1250, 2500, 3750, 5000 m and on: every mark you pass pays a coin after a landing.'},
+  bounty:{name:'Speed Bounty',r:'C',tag:'Coins',d:'+1 coin per 50 km/h over 150, up to {v}.',v:[6,10,16],how:'Counts your top speed: every full 50 km/h above 150 pays a coin, however the flight ends.'},
+  tipjar:{name:'Tip Jar',r:'C',tag:'Coins',d:'+1 coin per trick, up to {v}.',v:[6,10,16],how:'The crowd tips for every loop, low pass, thermal and touch-and-go in a flight.'},
   parachute:{name:'Golden Parachute',r:'R',tag:'Score',d:'Still flying when time runs out: keep {v%} of the landing bonus.',v:[.1,.2,.3],lock:6,how:'The altitude and distance bonus normally needs a landing. With this, a flight that ends in the air (out of time, or stuck hovering) keeps part of it. A crash still pays nothing.'},
   // added in 0.13: a physics mod for low flying, a payoff for engines, storms, tunings and holding speed
   groundeffect:{name:'Ground Effect',r:'U',tag:'Body',d:'Below 10 m: drag ×{v}.',v:[.75,.6,.5],how:'Fly close to the ground (under 10 m) and the air cushion under your wings cuts drag. Low and long.'},
@@ -224,7 +224,7 @@ const QUOTA=[500,1300,2500,5000,9500,20000,38000,68000];
 function quotaFor(i,level){const q=i<CONTRACTS?QUOTA[i]:QUOTA[CONTRACTS-1]*Math.pow(2.5,i-CONTRACTS+1);return Math.round(q*(1+.25*(level||0))/10)*10}
 // Ceiling levels: every level adds +25% quota; even levels also add a rule (cumulative)
 const MAX_CEILING=10;
-const CEILING_RULES={2:'Shop prices +1',4:'Contract 5 has a storm too',6:'Packs hold no rare parts',8:'Storms hit harder',10:'90-second flight clock'};
+const CEILING_RULES={2:'Shop prices +1',4:'Contract 5 has a storm too',6:'Rare packs cost +10%',8:'Storms hit harder, rare packs +25%',10:'90-second flight clock, rare packs +50%'};
 const ceilingRules=level=>Object.keys(CEILING_RULES).filter(k=>+k<=(level||0)).map(k=>CEILING_RULES[k]);
 const isStorm=(i,level)=>i===CONTRACTS-1||i%3===2||((level||0)>=4&&i===4);
 // storm strength grows with the contract; from Ceiling 8 every storm counts as two contracts later
@@ -582,7 +582,7 @@ function _rollTunes(run,n,exclude){
 function genShop(run,meta){return seeded(run,()=>_genShop(run,meta))}
 function _genShop(run,meta){return {parts:[0,1,2].map(()=>({t:wpick(PART_W)})),tunes:rollTunes(run,2,[]).map(k=>({k})),mods:rollMods(run,meta,3,[]).map(id=>({id})),rerolls:0,pack:rollRarePack(run)}}
 // sometimes the shop has a rare parts pack: a guaranteed rare part of a random type (rolled now, revealed when opened)
-const rollRarePack=run=>(run.level||0)<6&&rnd()<RARE_PACK_CHANCE?{t:wpick(PART_W)+'+'}:null;
+const rollRarePack=run=>rnd()<RARE_PACK_CHANCE?{t:wpick(PART_W)+'+'}:null;
 // a reroll is a whole new shop, sold slots included; only the mods on offer right now are kept out of the new picks
 function rerollShop(run,meta){note(run,'reroll',run.shop.rerolls);return seeded(run,()=>_rerollShop(run,meta))}
 function _rerollShop(run,meta){
@@ -595,7 +595,9 @@ function _rerollShop(run,meta){
 const priceOf=(run,p)=>{const lv=modLevels(run);if(lv.coupon)p=Math.max(1,Math.floor(p*(1-modVal(lv,'coupon')/100)));return p+((run.level||0)>=2?1:0)};
 // an upgrade costs the rarity price plus 2 per level already owned
 const modPrice=(run,id)=>RARITY[MODS[id].r].price+2*(modLevels(run)[id]||0);
-function offerPrice(run,kind,o){return priceOf(run,kind==='part'?PARTS[o.t].price:kind==='pack'?RARE_PACK_PRICE:kind==='tune'?tuneCost(run.tune[o.k]||0):modPrice(run,o.id))}
+// Difficulty 6 / 8 / 10: rare packs cost 10% / 25% / 50% more (they used to vanish from Difficulty 6)
+const rarePackPrice=run=>Math.round(RARE_PACK_PRICE*((run.level||0)>=10?1.5:(run.level||0)>=8?1.25:(run.level||0)>=6?1.1:1));
+function offerPrice(run,kind,o){return priceOf(run,kind==='part'?PARTS[o.t].price:kind==='pack'?rarePackPrice(run):kind==='tune'?tuneCost(run.tune[o.k]||0):modPrice(run,o.id))}
 const rerollCost=run=>2+run.shop.rerolls;
 const sellValue=(id,L)=>Math.floor(RARITY[MODS[id].r].price/2)+2*((L||1)-1);
 // mods taken out of the game (Bullseye in 0.12.1: you cannot brake on the ground, so landing on a target was luck). A run
@@ -655,7 +657,7 @@ function rollPacks(first,rareOk=true){
   for(let i=out.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[out[i],out[j]]=[out[j],out[i]]}
   return out}
 function grantPacks(run){return seeded(run,()=>_grantPacks(run))}
-function _grantPacks(run){const first=run.stage===0&&!run.endless;(run.packs=run.packs||[]).push(...rollPacks(first,(run.level||0)<6))}
+function _grantPacks(run){const first=run.stage===0&&!run.endless;(run.packs=run.packs||[]).push(...rollPacks(first))}
 function openPack(run){const t=run.packs&&run.packs.shift();if(t){run.inv[t]=(run.inv[t]||0)+1;note(run,'pack',t)}return t}
 function craftCounts(cells){const l=connected(cells);const n=t=>l.filter(c=>c.type===t).length;
   return {parts:l.length,wings:n('wing'),tanks:n('tank'),balloons:n('balloon'),frames:n('frame'),engines:n('prop')+n('rocket')}}

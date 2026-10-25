@@ -822,3 +822,24 @@ body.offline::after{content:"Reconnecting…";position:fixed;left:50%;top:calc(v
 
 /* storm pictograms next to storm names */
 .wxi{width:1.15em;height:1.15em;vertical-align:-.22em;margin-right:.3em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* the two halves of the tally and the history head: plain stacks in portrait (display:contents), side by side in the short landscape block below */
+.tc1,.tc2{display:contents}
+.hhead{position:sticky;top:-16px;z-index:1;margin:-16px -16px 0;padding:16px 16px 8px;background:var(--paper);display:flex;align-items:center;justify-content:space-between;gap:12px}
+.hhead .big{width:auto;min-width:96px;font-size:16px;padding:7px 14px}
+
+/* phones held sideways: the tally and the tour map are laid out horizontally so they fit without scrolling */
+@media (orientation:landscape) and (max-height:560px){
+  .veil{padding-top:calc(var(--reserve) + 8px);padding-bottom:calc(8px + env(safe-area-inset-bottom,0px))}
+  .tallysheet{max-width:min(720px,100%);grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:18px;align-items:center;padding:26px 16px 12px;gap:8px}
+  .tc1,.tc2{display:grid;gap:8px;align-content:center;min-width:0}
+  .tallysheet .eqn .drum{font-size:24px}
+  .tallysheet .eqn b{font-size:28px}
+  .tallysheet .hype{min-height:0}
+  .tallysheet .soldout{font-size:20px}
+  .tallysheet .clip{font-size:13px;padding:4px 8px 6px}
+  .tallysheet .big{font-size:16px;padding:8px 12px}
+  .toursheet{max-width:min(640px,100%);grid-template-columns:auto minmax(0,1fr);align-items:center;column-gap:14px}
+  .toursheet .tmap{width:calc((var(--app-h,100dvh) - var(--reserve) - 16px - 26px) * .667)}
+  .toursheet .tfoot{align-content:center}
+}

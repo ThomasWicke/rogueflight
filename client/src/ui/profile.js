@@ -44,7 +44,7 @@ export function histEntry(e){
 }
 export function showHistory(){
   const h=save.meta.history||[];
-  sheet.className='sheet';sheet.innerHTML=`<span class="label">History</span><div class="hlist">${h.map(histEntry).join('')}</div><button class="big" id="hOk" type="button">Close</button>`;
+  sheet.className='sheet';sheet.innerHTML=`<div class="hhead"><span class="label">History</span><button class="big" id="hOk" type="button">Close</button></div><div class="hlist">${h.map(histEntry).join('')}</div>`;
   veil.hidden=false;$('hOk').onclick=()=>{veil.hidden=true};
 }
 

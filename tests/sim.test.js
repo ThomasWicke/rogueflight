@@ -129,13 +129,14 @@ test('owned mods level up to MODMAX, cost more each level and need no new slot',
   for (let i = 0; i < 300; i++) assert.ok(!rollMods(run, { bestStage: 8 }, 3, []).includes('third'));
 });
 
-test('ceiling rules: pricier shop, a fourth storm, fewer packs, a shorter clock', () => {
+test('ceiling rules: pricier shop, a fourth storm, pricier rare packs, a shorter clock', () => {
   const meta = { bestStage: 0 };
   const r1 = newRun(1, meta), r2 = newRun(2, meta);
   assert.equal(offerPrice(r2, 'part', { t: 'wing' }), offerPrice(r1, 'part', { t: 'wing' }) + 1);
   assert.ok(!isStorm(4, 3) && isStorm(4, 4));
-  // Difficulty 6: packs never hold rare parts and the shop has no rare pack
-  { let rare = 0; for (let i = 0; i < 200; i++) { const r = newRun(6, meta, { seed: i }); r.packs = []; r.stage = 1; grantPacks(r); rare += r.packs.filter((t) => t.endsWith('+')).length + (r.shop.pack ? 1 : 0); } assert.equal(rare, 0); }
+  // Difficulty 6 / 8 / 10: rare parts stay, the shop's rare pack costs 10% / 25% / 50% more
+  { let rare = 0; for (let i = 0; i < 200; i++) { const r = newRun(6, meta, { seed: i }); r.packs = []; r.stage = 1; grantPacks(r); rare += r.packs.filter((t) => t.endsWith('+')).length + (r.shop.pack ? 1 : 0); } assert.ok(rare > 0); }
+  const pk = (l) => offerPrice(newRun(l, meta), 'pack', {}); assert.deepEqual([5, 6, 8, 10].map(pk), [8 + 1, 9 + 1, 10 + 1, 12 + 1]);
   const r5 = newRun(5, meta); r5.packs = []; r5.stage = 1; grantPacks(r5); assert.equal(r5.packs.length, PACKS);
   assert.equal(flightStats(newRun(9, meta)).flightTime, 120);
   assert.equal(flightStats(newRun(10, meta)).flightTime, 90);
@@ -328,7 +329,7 @@ test('0.5 mods: Long Haul counts landed minutes, Magpie the coins of the run, In
   const meta = { bestStage: 8 }, run = newRun(0, meta, { seed: 5 }); run.mods = ['investor', 'overachiever']; run.modLv = { investor: 1, overachiever: 2 };
   const coins0 = run.coins, out = settleFlight(run, meta, f({ dist: 3000 }));
   assert.ok(out.cleared && out.sc.total >= 3000);
-  const invest = Math.min(4, Math.floor(out.sc.total / 1000)), over = Math.min(10, 2 * Math.floor((out.sc.total - 500) / 500 * 10));
+  const invest = Math.min(8, Math.floor(out.sc.total / 1000)), over = Math.min(20, 2 * Math.floor((out.sc.total - 500) / 500 * 10));
   assert.equal(out.over, over);
   assert.equal(run.coins - coins0, 3 + 4 + invest + over + out.reward);
   assert.equal(run.coinsRun, 4);
@@ -378,10 +379,10 @@ test('0.12 coin mods: altitude and distance milestones on a landing, top speed, 
   assert.equal(flightCoins({ skywriter: 1 }, f), 2);                    // 100 and 250 m
   assert.equal(flightCoins({ mileage: 1 }, f), 3);                      // 500, 1250, 2500 m
   assert.equal(flightCoins({ mileage: 1 }, { ...f, landed: false }), 0);
-  assert.equal(flightCoins({ bounty: 1 }, f), 3);                       // 650 km/h: 10 full 50s over 150, capped at 3
+  assert.equal(flightCoins({ bounty: 1 }, f), 6);                       // 650 km/h: 10 full 50s over 150, capped at 6
   assert.equal(flightCoins({ bounty: 3 }, { ...f, maxV: 420 / 3.6 }), 5); // 420 km/h: 5 full 50s
-  assert.equal(flightCoins({ tipjar: 1 }, f), 3);                       // 6 tricks, capped at 3
-  assert.equal(flightCoins({ tipjar: 3 }, f), 6);
+  assert.equal(flightCoins({ tipjar: 1 }, f), 6);                       // 6 tricks, cap 6
+  assert.equal(flightCoins({ tipjar: 3 }, f), 6); assert.equal(flightCoins({ tipjar: 3 }, { ...f, loops: 12 }), 16);
   const run = newRun(0, {}); run.mods = ['tipjar']; run.modLv = { tipjar: 3 };
   const before = run.coins, out = settleFlight(run, {}, { ...f, coins: 0, crashed: false, fuelFrac: 0, t: 30 });
   assert.equal(out.pay, 3 + 6); assert.ok(run.coins >= before + 9);
@@ -428,7 +429,7 @@ test('0.13 reworks: Greaser on top of the touchdown, Crash Test by impact speed,
   assert.equal(lab(f({ maxV: 260 / 3.6 }), { speedtrap: 1 })['Speed Trap'], 0.3);
   const meta = { bestStage: 8 }, run = newRun(0, meta, { seed: 3 }); run.mods = ['piggy']; run.modLv = { piggy: 1 }; run.coins = 20;
   const out = settleFlight(run, meta, f({ dist: 100 }));
-  assert.equal(out.pay, 3 + 3); assert.equal(run.coins, 26);
+  assert.equal(out.pay, 3 + 4); assert.equal(run.coins, 27);
 });
 
 test('0.13 mods: Engine Room, Mechanic, Hot Streak and Storm Chaser count the right things', () => {
