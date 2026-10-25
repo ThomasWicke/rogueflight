@@ -32,8 +32,9 @@ export function showResults(out,S,f){
   else{const left=FLIGHTS-out.flightNo;btn='Continue';next='hangar';result=`<p class="tres">${isFinite(q)?fmt(q-out.contractScore)+' to target · ':''}${plural(left,'flight')} left · +${out.pay} coins</p>`}
   const news=headline({...f,cleared:!!out.cleared},{town:town.town,pilot:'Goat'},r.seed+out.stage*7+out.flightNo);
   sheet.className='sheet tallysheet';
-  sheet.innerHTML=`<div class="stamp ${kind}">${title}</div>
-    <div class="tc1"><span class="label">${town.town} · flight ${out.flightNo} of ${FLIGHTS}</span>
+  // tc1 / tc2: the score and the outcome; plain stacks upright, side by side on a sideways phone (style.css)
+  sheet.innerHTML=`<div class="tc1"><div class="stamp ${kind}">${title}</div>
+    <span class="label">${town.town} · flight ${out.flightNo} of ${FLIGHTS}</span>
     <div class="eqn"><span class="drum" id="tyBase">0</span><i>×</i><span id="tyM">1</span><i>=</i><b id="tyT">0</b></div>
     ${extra.length?`<div class="hype bpts">${extra.map(l=>`<span class="hc b in">${l.label}<b>+${fmt(l.v)}</b></span>`).join('')}</div>`:''}
     <div class="hype" id="tyHype">${hype.map((l,k)=>{const m=lineMod(l.label);return `<span class="hc ${l.t}" data-k="${k}">${m&&DECAL?`<img alt="" src="${DECAL(m,48,modLevels(r)[m]||1)}">`:''}${l.label}<b>${l.t==='x'?'×':'+'}${num(l.v)}</b></span>`}).join('')||'<span class="hc none">No stunts this time</span>'}</div></div>

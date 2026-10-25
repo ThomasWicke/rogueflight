@@ -27,24 +27,24 @@ is the most common way to break the game quietly. Finish every recipe with the r
 6. `tools/bot.js`: add to `MOD_VALUE` (0–10, how much the scripted bot wants it) if the bot can use it; add to `FIXED`
    if its value can't be measured by test-flying (coins, run-long effects).
 7. `tests/sim.test.js`: a test that the mod changes the score or the flight (see the 0.13 mod tests near the end).
-8. Run `npm test`, then the bot on 3 seeds before and after (below). Note the numbers in `docs/design-notes.md`
-   (Scoring section, one sentence: what it does, why, measured effect).
+8. Run `npm test`, then `npm run balance`. Note its table in `docs/design-notes.md` (Scoring section, one sentence:
+   what it does, why, measured effect) and in your reply.
 
 Removing a mod: delete it from `MODS` and add its id and rarity to `REMOVED_MODS`, so saved runs get a refund.
 
 ## Change a mod's numbers
 
-`v`/`w` in `MODS`, and the `d` text if the wording changes. Update the matching test in `tests/sim.test.js`. Run the
-bot before and after. Write the old and new values and the reason into `docs/design-notes.md`.
+`v`/`w` in `MODS`, and the `d` text if the wording changes. Update the matching test in `tests/sim.test.js`. Run
+`npm run balance`. Write the old and new values, the reason and the balance table into `docs/design-notes.md`.
 
 ## Change score targets or the economy
 
 - Targets: `QUOTA` in `sim.js` (8 contracts). Endless and Difficulty scale from it (`quotaFor`).
 - Coins: `settleFlight` (per flight), `clearContract` (contract reward, unused flights), `flightCoins` (coin mods),
   shop prices in `PARTS`, `RARITY`, `tuneCost`, `rerollCost`.
-- Always measure: `npm run bot -- 60 climb --seed=1`, then `--seed=2` and `--seed=3`, on the old code and on the new
-  code (a copy made with `git stash` or `git worktree`). Compare the average contracts and wins. Runs are noisy
-  (about ±0.3 contracts), so one seed proves nothing. Record both numbers in `docs/design-notes.md`.
+- Always measure: `npm run balance` runs the bot on the last commit and on your working copy (3 seeds × 60 runs,
+  Difficulty 0 and 6) and prints contracts and wins before and after. Add `--levels=0,4,8` for Difficulty changes.
+  Differences under about 0.3 contracts are noise. Record the table in `docs/design-notes.md`.
 
 ## Add or change a storm
 
@@ -64,7 +64,8 @@ letter (`cellCodeOf` in `ui/core.js`, `cellsOf` in `bots.js`), and the bot. Ask 
 ## Change the layout or styles
 
 - All styles are in `client/src/style.css`; colours and sizes are tokens on `:root`. Follow `docs/circus-style.md`.
-- Check three sizes: phone portrait (390×844), sideways phone (844×390) and desktop (1280×800). `npm run smoke` runs
+- Check four sizes: phone portrait (390×844), sideways phones (844×390 and 667×375) and desktop (1280×800), with the
+  biggest realistic content (see How to verify in CLAUDE.md). `npm run smoke` runs
   all three and fails if the tour sheet runs off a sideways phone; for anything visual, also look at it with the dev
   server and a phone-sized window.
 - Screen height: use `var(--app-h,100dvh)`, never plain `100dvh` or `100vh` (iOS keeps the portrait height after

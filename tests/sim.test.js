@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  newRun, stats, weatherFx, makeCraft, newFlight, step, popBalloons, summaryOf, scoreFlight, settleFlight,
+  ceilingRules, newRun, stats, weatherFx, makeCraft, newFlight, step, popBalloons, summaryOf, scoreFlight, settleFlight,
   quotaFor, openPack, PACKS, FIRST_PACKS, rollTunes, thermalSeg, G0, repeats, rerollShop, applyPurchase, offerPrice, rollMods,
   isStorm, grantPacks, flightStats, MODMAX, pickBoon, rollBoons, modSlots, dailySeed, clearContract, ONLINE_TIME, SIM_DT,
   craftCounts, flightCtx, dropRemovedMods, MODS, trickVal, coinAt, coinSalt, distBonus, distMilestones, altBonus, flightCoins, landingShare,
@@ -136,7 +136,10 @@ test('ceiling rules: pricier shop, a fourth storm, pricier rare packs, a shorter
   assert.ok(!isStorm(4, 3) && isStorm(4, 4));
   // Difficulty 6 / 8 / 10: rare parts stay, the shop's rare pack costs 10% / 25% / 50% more
   { let rare = 0; for (let i = 0; i < 200; i++) { const r = newRun(6, meta, { seed: i }); r.packs = []; r.stage = 1; grantPacks(r); rare += r.packs.filter((t) => t.endsWith('+')).length + (r.shop.pack ? 1 : 0); } assert.ok(rare > 0); }
-  const pk = (l) => offerPrice(newRun(l, meta), 'pack', {}); assert.deepEqual([5, 6, 8, 10].map(pk), [8 + 1, 9 + 1, 10 + 1, 12 + 1]);
+  const pk = (l) => offerPrice(newRun(l, meta), 'pack', {}); assert.deepEqual([5, 6, 7, 8, 10].map(pk), [8 + 1, 9 + 1, 9 + 1, 10 + 1, 12 + 1]);
+  // the rules list shows the rare pack's current markup once
+  assert.deepEqual(ceilingRules(8), ['Shop prices +1', 'Contract 5 has a storm too', 'Rare packs +25%', 'Storms hit harder']);
+  assert.equal(ceilingRules(10).filter((t) => t.startsWith('Rare packs')).join(), 'Rare packs +50%');
   const r5 = newRun(5, meta); r5.packs = []; r5.stage = 1; grantPacks(r5); assert.equal(r5.packs.length, PACKS);
   assert.equal(flightStats(newRun(9, meta)).flightTime, 120);
   assert.equal(flightStats(newRun(10, meta)).flightTime, 90);
@@ -381,8 +384,8 @@ test('0.12 coin mods: altitude and distance milestones on a landing, top speed, 
   assert.equal(flightCoins({ mileage: 1 }, { ...f, landed: false }), 0);
   assert.equal(flightCoins({ bounty: 1 }, f), 6);                       // 650 km/h: 10 full 50s over 150, capped at 6
   assert.equal(flightCoins({ bounty: 3 }, { ...f, maxV: 420 / 3.6 }), 5); // 420 km/h: 5 full 50s
-  assert.equal(flightCoins({ tipjar: 1 }, f), 6);                       // 6 tricks, cap 6
-  assert.equal(flightCoins({ tipjar: 3 }, f), 6); assert.equal(flightCoins({ tipjar: 3 }, { ...f, loops: 12 }), 16);
+  assert.equal(flightCoins({ tipjar: 1 }, { ...f, loops: 5 }), 6);      // 9 tricks, capped at 6
+  assert.equal(flightCoins({ tipjar: 3 }, f), 6); assert.equal(flightCoins({ tipjar: 3 }, { ...f, loops: 14 }), 16); // 18 tricks, capped at 16
   const run = newRun(0, {}); run.mods = ['tipjar']; run.modLv = { tipjar: 3 };
   const before = run.coins, out = settleFlight(run, {}, { ...f, coins: 0, crashed: false, fuelFrac: 0, t: 30 });
   assert.equal(out.pay, 3 + 6); assert.ok(run.coins >= before + 9);

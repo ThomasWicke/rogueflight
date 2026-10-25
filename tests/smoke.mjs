@@ -150,6 +150,31 @@ async function landscape(browser, url) {
   await page.context().close();
 }
 
+// the tallest score sheet (a cleared contract, many stunts, unlocks) on a small sideways phone: its button must be on
+// screen and the sheet must fit or scroll (dev server only: it opens the sheet through window.__rf)
+async function bigTally(browser, url) {
+  console.log('small sideways phone 667x375');
+  const page = await newPage(browser, { width: 667, height: 375 }, 'small landscape');
+  await page.goto(url);
+  await page.click('#start');
+  await openPacks(page);
+  if (!(await page.evaluate(() => !!window.__rf))) { step('skipped (production build has no __rf)'); await page.context().close(); return; }
+  await page.evaluate(() => {
+    const lines = [{ t: 'b', label: 'Distance 1234 m', v: 1234, dist: 1 }, { t: 'b', label: 'Altitude 500 m', v: 500 }, { t: 'b', label: 'Distance 1250 m', v: 300 }];
+    for (const [l, v] of [['Clean touchdown', .5], ['Loop', 1.1], ['Low pass', .6], ['Thermal', .4], ['Coins', .6], ['Redline', 1], ['Greaser', 1.3], ['Showboat', 1], ['Speed Trap', .5], ['Engine Room', .9], ['Mechanic', .4]]) lines.push({ t: l === 'Greaser' ? 'x' : 'm', label: l, v });
+    window.__rf.results({ sc: { lines, base: 2034, mult: 8.4, xm: 1.3, total: 22211 }, stage: 0, quota: 500, prevScore: 0, contractScore: 22211, cleared: true, won: false, reward: 6, pay: 9, over: 0, unused: 2, unlocks: ['Afterburner, Ram Scoop'], flightNo: 1 },
+      { landed: true }, { dist: 1234, maxY: 520, maxV: 140, landed: true, loops: 3, coins: 12 });
+  });
+  await page.click('#sheet .eqn');
+  await page.waitForTimeout(300);
+  const next = await page.locator('#next').boundingBox();
+  if (next.y < 0 || next.y + next.height > 375) fail(`score sheet button off screen (${Math.round(next.y)}..${Math.round(next.y + next.height)} of 375)`);
+  const fits = await page.evaluate(() => { const s = document.getElementById('sheet'), r = s.getBoundingClientRect(); return (r.top >= 0 && r.bottom <= innerHeight) || getComputedStyle(s).overflowY === 'auto'; });
+  if (!fits) fail('score sheet runs off the screen and cannot scroll');
+  step('big score sheet');
+  await page.context().close();
+}
+
 async function desktop(browser, url) {
   console.log('desktop 1280x800');
   const page = await newPage(browser, { width: 1280, height: 800 }, 'desktop');
@@ -177,6 +202,7 @@ try {
     : { channel: 'chrome', headless: !process.env.SMOKE_HEADED });
   await portrait(browser, url);
   await landscape(browser, url);
+  await bigTally(browser, url);
   await desktop(browser, url);
 } catch (e) {
   errors.push(e.message.split('\n')[0]);

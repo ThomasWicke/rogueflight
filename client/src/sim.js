@@ -224,8 +224,11 @@ const QUOTA=[500,1300,2500,5000,9500,20000,38000,68000];
 function quotaFor(i,level){const q=i<CONTRACTS?QUOTA[i]:QUOTA[CONTRACTS-1]*Math.pow(2.5,i-CONTRACTS+1);return Math.round(q*(1+.25*(level||0))/10)*10}
 // Ceiling levels: every level adds +25% quota; even levels also add a rule (cumulative)
 const MAX_CEILING=10;
-const CEILING_RULES={2:'Shop prices +1',4:'Contract 5 has a storm too',6:'Rare packs cost +10%',8:'Storms hit harder, rare packs +25%',10:'90-second flight clock, rare packs +50%'};
-const ceilingRules=level=>Object.keys(CEILING_RULES).filter(k=>+k<=(level||0)).map(k=>CEILING_RULES[k]);
+const CEILING_RULES={2:'Shop prices +1',4:'Contract 5 has a storm too',6:'Rare packs cost more',8:'Storms hit harder',10:'90-second flight clock'};
+// the rare pack's markup by Difficulty (the rules list shows one line with the current step, not one line per step)
+const RARE_PACK_UP={6:.1,8:.25,10:.5};
+const rarePackUp=level=>Math.max(0,...Object.keys(RARE_PACK_UP).filter(k=>+k<=(level||0)).map(k=>RARE_PACK_UP[k]));
+const ceilingRules=level=>Object.keys(CEILING_RULES).filter(k=>+k<=(level||0)).map(k=>+k===6?`Rare packs +${Math.round(rarePackUp(level)*100)}%`:CEILING_RULES[k]);
 const isStorm=(i,level)=>i===CONTRACTS-1||i%3===2||((level||0)>=4&&i===4);
 // storm strength grows with the contract; from Ceiling 8 every storm counts as two contracts later
 const severity=(run,i)=>i+((run.level||0)>=8?2:0);
@@ -595,8 +598,8 @@ function _rerollShop(run,meta){
 const priceOf=(run,p)=>{const lv=modLevels(run);if(lv.coupon)p=Math.max(1,Math.floor(p*(1-modVal(lv,'coupon')/100)));return p+((run.level||0)>=2?1:0)};
 // an upgrade costs the rarity price plus 2 per level already owned
 const modPrice=(run,id)=>RARITY[MODS[id].r].price+2*(modLevels(run)[id]||0);
-// Difficulty 6 / 8 / 10: rare packs cost 10% / 25% / 50% more (they used to vanish from Difficulty 6)
-const rarePackPrice=run=>Math.round(RARE_PACK_PRICE*((run.level||0)>=10?1.5:(run.level||0)>=8?1.25:(run.level||0)>=6?1.1:1));
+// Difficulty 6 / 8 / 10: rare packs cost 10% / 25% / 50% more (RARE_PACK_UP; they used to vanish from Difficulty 6)
+const rarePackPrice=run=>Math.round(RARE_PACK_PRICE*(1+rarePackUp(run.level)));
 function offerPrice(run,kind,o){return priceOf(run,kind==='part'?PARTS[o.t].price:kind==='pack'?rarePackPrice(run):kind==='tune'?tuneCost(run.tune[o.k]||0):modPrice(run,o.id))}
 const rerollCost=run=>2+run.shop.rerolls;
 const sellValue=(id,L)=>Math.floor(RARITY[MODS[id].r].price/2)+2*((L||1)-1);

@@ -28,7 +28,8 @@ npm test                 # node:test checks of the simulation (tests/sim.test.js
 npm run smoke            # browser smoke test: clicks through the game in headless Chrome on 3 screen sizes (~40 s)
 npm run build            # -> dist/
 npm run smoke -- --dist  # the same smoke test against the production build in dist/
-npm run bot -- 60 climb --seed=1   # balance harness: 60 scripted runs; prints contracts reached and wins
+npm run balance          # balance check: the bot on the last commit vs your working copy, same seeds (~3 min)
+npm run bot -- 60 climb --seed=1   # the balance bot itself: 60 scripted runs; prints contracts reached and wins
 ```
 
 Other commands (itch build, game server deploy) are in `docs/design-notes.md` under Commands and hosting.
@@ -55,6 +56,9 @@ Other commands (itch build, game server deploy) are in `docs/design-notes.md` un
 ## Release checklist (every change that goes live)
 
 1. `npm test` (all pass) and `npm run build` (no errors), then `npm run smoke` for any UI change.
+   **If you changed numbers or rules in sim.js** (mods, targets, prices, coins, Difficulty, physics), run
+   `npm run balance` and put its table in your reply to Thomas and in `docs/design-notes.md`. The bot buys mods of every
+   kind, coin mods included; if a change is one it can't measure, say so and still post the table.
 2. Bump `"version"` in `package.json`: patch (0.13.3 → 0.13.4) for fixes, minor (0.13 → 0.14.0) for new features. The
    title screen shows it.
 3. If you changed how something works, update `docs/design-notes.md` (and this file if a rule or command changed).
@@ -66,6 +70,8 @@ Other commands (itch build, game server deploy) are in `docs/design-notes.md` un
    `curl -s https://wingnut-circus.com | grep -o '/assets/index-[^"]*\.js'`, then
    `curl -s https://wingnut-circus.com/assets/index-XXXX.js | grep -c '0.13.4'` (with the file name and new version).
 7. Tell Thomas what changed and what is live. Say plainly what you could not test (for example on a real iPhone).
+   If you skipped a step of this checklist or of a recipe, write "skipped" and why. Never give a reason about the code
+   ("the bot can't measure this", "this can't overflow") that you haven't checked.
 
 Never suggest itch.io uploads; Thomas does those himself when he wants. The website is the channel.
 
@@ -151,8 +157,11 @@ Score formula: `score = (distance + flat points) × (1 + Σ additive mult) × Π
 
 ## How to verify a change
 
-- Rules, numbers, scoring, physics: `npm test`, plus a new or updated test in `tests/sim.test.js`. For balance, the
-  bot on 3 seeds before and after (see recipes).
+- Rules, numbers, scoring, physics: `npm test`, plus a new or updated test in `tests/sim.test.js` (a cap test must use
+  more than the cap, so it fails if the cap is wrong). Then `npm run balance`.
 - UI: `npm run smoke`, then look at it: `npm run dev`, open http://localhost:5173 at phone size (390×844), sideways
-  (844×390) and desktop. Check the browser console for errors.
+  (844×390 **and** the small 667×375) and desktop. Check the browser console for errors.
+- Test layouts with the **biggest realistic content**, not a light mock-up: a cleared contract with a dozen stunt chips
+  and unlocks, a long history, long town names, three storms. In dev builds `window.__rf.results(out, S, f)` opens the
+  score sheet with any made-up result. A sheet must fit or scroll; its main button must always be reachable.
 - Never claim something works on a phone if you only saw it in a desktop browser; say what you checked.
