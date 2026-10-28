@@ -138,8 +138,8 @@ test('ceiling rules: pricier shop, a fourth storm, pricier rare packs, a shorter
   { let rare = 0; for (let i = 0; i < 200; i++) { const r = newRun(6, meta, { seed: i }); r.packs = []; r.stage = 1; grantPacks(r); rare += r.packs.filter((t) => t.endsWith('+')).length + (r.shop.pack ? 1 : 0); } assert.ok(rare > 0); }
   const pk = (l) => offerPrice(newRun(l, meta), 'pack', {}); assert.deepEqual([5, 6, 7, 8, 10].map(pk), [8 + 1, 9 + 1, 9 + 1, 10 + 1, 12 + 1]);
   // the rules list shows the rare pack's current markup once
-  assert.deepEqual(ceilingRules(8), ['Shop prices +1', 'Contract 5 has a storm too', 'Rare packs +25%', 'Storms hit harder']);
-  assert.equal(ceilingRules(10).filter((t) => t.startsWith('Rare packs')).join(), 'Rare packs +50%');
+  assert.deepEqual(ceilingRules(8), ['Shop prices +1', 'Contract 5 has a storm too', 'Rare packs cost +25%', 'Storms hit harder']);
+  assert.equal(ceilingRules(10).filter((t) => t.startsWith('Rare packs')).join(), 'Rare packs cost +50%');
   const r5 = newRun(5, meta); r5.packs = []; r5.stage = 1; grantPacks(r5); assert.equal(r5.packs.length, PACKS);
   assert.equal(flightStats(newRun(9, meta)).flightTime, 120);
   assert.equal(flightStats(newRun(10, meta)).flightTime, 90);

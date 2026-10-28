@@ -228,7 +228,7 @@ const CEILING_RULES={2:'Shop prices +1',4:'Contract 5 has a storm too',6:'Rare p
 // the rare pack's markup by Difficulty (the rules list shows one line with the current step, not one line per step)
 const RARE_PACK_UP={6:.1,8:.25,10:.5};
 const rarePackUp=level=>Math.max(0,...Object.keys(RARE_PACK_UP).filter(k=>+k<=(level||0)).map(k=>RARE_PACK_UP[k]));
-const ceilingRules=level=>Object.keys(CEILING_RULES).filter(k=>+k<=(level||0)).map(k=>+k===6?`Rare packs +${Math.round(rarePackUp(level)*100)}%`:CEILING_RULES[k]);
+const ceilingRules=level=>Object.keys(CEILING_RULES).filter(k=>+k<=(level||0)).map(k=>+k===6?`Rare packs cost +${Math.round(rarePackUp(level)*100)}%`:CEILING_RULES[k]);
 const isStorm=(i,level)=>i===CONTRACTS-1||i%3===2||((level||0)>=4&&i===4);
 // storm strength grows with the contract; from Ceiling 8 every storm counts as two contracts later
 const severity=(run,i)=>i+((run.level||0)>=8?2:0);
